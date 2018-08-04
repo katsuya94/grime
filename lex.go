@@ -12,13 +12,10 @@ import (
 type Lexeme interface{}
 
 type Identifier string
-
-type Number int
-
-const (
-	LeftParenthesis = iota
-	RightParenthesis
-)
+type Boolean bool
+type Number string
+type LeftParenthesis struct{}
+type RightParenthesis struct{}
 
 type Lexer struct {
 	reader *bufio.Reader
@@ -198,22 +195,81 @@ func (l *Lexer) readIdentifier() (Lexeme, error) {
 		runes []rune
 	)
 	if r, err := l.next(); initial(r) && err == nil {
-		log.Printf("valid initial %#v", string(r))
 		runes = append(runes, r)
 	} else {
-		l.snap(len(runes) + 1)
+		l.back()
 		return nil, err
 	}
 	for {
 		if r, err := l.next(); subsequent(r) && err == nil {
-			log.Printf("valid subsequent %#v", string(r))
 			runes = append(runes, r)
 		} else if (delimiter(r) && err == nil) || err == io.EOF {
 			log.Printf("delimiter %#v", string(r))
 			l.back()
 			return Identifier(runes), err
+		} else if err == nil {
+			return nil, fmt.Errorf("unexpected rune: %#v", string(r))
 		} else {
-			l.snap(len(runes) + 1)
+			return nil, err
+		}
+	}
+}
+
+func (l *Lexer) readBoolean() (Lexeme, error) {
+	if r, err := l.next(); r != '#' {
+		l.back()
+		return nil, err
+	}
+	r, err := l.next()
+	if err != nil {
+		return nil, err
+	}
+	var lexeme Lexeme
+	switch r {
+	case 'f':
+		lexeme = Boolean(false)
+	case 'F':
+		lexeme = Boolean(false)
+	case 't':
+		lexeme = Boolean(true)
+	case 'T':
+		lexeme = Boolean(true)
+	default:
+		l.back()
+		l.back()
+		return nil, nil
+	}
+    if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
+		log.Printf("delimiter %#v", string(r))
+		l.back()
+		return lexeme, err
+	} else if err == nil {
+		return nil, fmt.Errorf("expected delimiter; got: %#v", string(r))
+	} else {
+		return nil, err
+	}
+}
+
+func (l *Lexer) readNumber() (Lexeme, error) {
+	var (
+		runes []rune
+	)
+	if r, err := l.next(); digit(r) && err == nil {
+		runes = append(runes, r)
+	} else {
+		l.back()
+		return nil, err
+	}
+	for {
+		if r, err := l.next(); digit(r) && err == nil {
+			runes = append(runes, r)
+		} else if (delimiter(r) && err == nil) || err == io.EOF {
+			log.Printf("delimiter %#v", string(r))
+			l.back()
+			return Number(runes), err
+		} else if err == nil {
+			return nil, fmt.Errorf("unexpected rune: %#v", string(r))
+		} else {
 			return nil, err
 		}
 	}
@@ -225,15 +281,25 @@ func (l *Lexer) readLexeme() (Lexeme, error) {
 	} else if identifier != nil {
 		return identifier, err
 	}
+	if boolean, err := l.readBoolean(); err != nil && err != io.EOF {
+		return nil, err
+	} else if boolean != nil {
+		return boolean, err
+	}
+	if number, err := l.readNumber(); err != nil && err != io.EOF {
+		return nil, err
+	} else if number != nil {
+		return number, err
+	}
 	r, err := l.next()
 	if err != nil {
 		return nil, err
 	}
 	switch r {
 	case '(':
-		return LeftParenthesis, nil
+		return LeftParenthesis{}, nil
 	case ')':
-		return RightParenthesis, nil
+		return RightParenthesis{}, nil
 	default:
 		return nil, fmt.Errorf("unexpected rune: %#v", string(r))
 	}
