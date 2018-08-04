@@ -21,6 +21,11 @@ func TestLex(t *testing.T) {
 			"  id ",
 			[]Lexeme{Identifier("id")},
 		},
+		{
+			"two identifiers",
+			"id name",
+			[]Lexeme{Identifier("id"), Identifier("name")},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

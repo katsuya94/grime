@@ -2,9 +2,11 @@ package grime
 
 import (
 	"bufio"
-	"io"
-	"strings"
 	"fmt"
+	"io"
+	"log"
+	"strings"
+	"unicode"
 )
 
 type Lexeme interface{}
@@ -32,7 +34,7 @@ func (l *Lexer) back() {
 }
 
 func (l *Lexer) snap(i int) {
-	for i; i > 0; i-- {
+	for ; i > 0; i-- {
 		l.back()
 	}
 }
@@ -54,13 +56,29 @@ func (l *Lexer) readInterlexemeSpace() error {
 }
 
 func letter(r rune) bool {
-	return (65 <= r && r < 91 ) ||
+	return (65 <= r && r < 91) ||
 		(97 <= r && r < 123)
 }
 
 func constituent(r rune) bool {
-	return letter(r) ||
-		r > 127 // TODO unicode categories
+	return letter(r) || (r > 127 &&
+		unicode.In(r,
+			unicode.Lu,
+			unicode.Ll,
+			unicode.Lt,
+			unicode.Lm,
+			unicode.Lo,
+			unicode.Mn,
+			unicode.Nl,
+			unicode.No,
+			unicode.Pd,
+			unicode.Pc,
+			unicode.Po,
+			unicode.Sc,
+			unicode.Sm,
+			unicode.Sk,
+			unicode.So,
+			unicode.Co))
 }
 
 func specialInitial(r rune) bool {
@@ -118,7 +136,10 @@ func whitespace(r rune) bool {
 	case '\x85':
 		return true
 	default:
-		return false // TODO unicode categories
+		return unicode.In(r,
+			unicode.Zs,
+			unicode.Zl,
+			unicode.Zp)
 	}
 }
 
@@ -143,41 +164,66 @@ func delimiter(r rune) bool {
 	}
 }
 
-func subsequent(r rune) bool {
+func digit(r rune) bool {
+	return 48 <= r && r < 58
+}
 
+func specialSubsequent(r rune) bool {
+	switch r {
+	case '+':
+		return true
+	case '-':
+		return true
+	case '.':
+		return true
+	case '@':
+		return true
+	default:
+		return false
+	}
+}
+
+func subsequent(r rune) bool {
+	return initial(r) ||
+		digit(r) ||
+		unicode.In(r,
+			unicode.Nd,
+			unicode.Mc,
+			unicode.Me) ||
+		specialSubsequent(r)
 }
 
 func (l *Lexer) readIdentifier() (Lexeme, error) {
 	var (
 		runes []rune
 	)
-	r, err := l.next();
-	runes = append(runes, r)
-	if err != nil {
+	if r, err := l.next(); initial(r) && err == nil {
+		log.Printf("valid initial %#v", string(r))
+		runes = append(runes, r)
+	} else {
+		l.snap(len(runes) + 1)
 		return nil, err
-	} else if !initial(r) {
-		l.snap(len(runes))
-		return nil, nil
 	}
 	for {
-		r, err := l.next();
-		runes = append(runes, r)
-		if err != nil {
+		if r, err := l.next(); subsequent(r) && err == nil {
+			log.Printf("valid subsequent %#v", string(r))
+			runes = append(runes, r)
+		} else if (delimiter(r) && err == nil) || err == io.EOF {
+			log.Printf("delimiter %#v", string(r))
+			l.back()
+			return Identifier(runes), err
+		} else {
+			l.snap(len(runes) + 1)
 			return nil, err
-		} else if delimiter(r) {
-			return Identifier(runes), nil
-		} else if !subsequent(r) {
-			l.snap(len(runes))
-			return nil, nil
 		}
 	}
 }
 
 func (l *Lexer) readLexeme() (Lexeme, error) {
-	if identifier, err := l.readIdentifier(); err != nil {
+	if identifier, err := l.readIdentifier(); err != nil && err != io.EOF {
 		return nil, err
-	} else if identifier != "" {
-		return identifier, nil
+	} else if identifier != nil {
+		return identifier, err
 	}
 	r, err := l.next()
 	if err != nil {
@@ -189,7 +235,7 @@ func (l *Lexer) readLexeme() (Lexeme, error) {
 	case ')':
 		return RightParenthesis, nil
 	default:
-		return nil, fmt.Errorf("unexpected rune: %v", string(r))
+		return nil, fmt.Errorf("unexpected rune: %#v", string(r))
 	}
 }
 
@@ -200,20 +246,22 @@ func (l *Lexer) Lex() ([]Lexeme, error) {
 		if err == io.EOF {
 			return lexemes, nil
 		} else if err != nil {
-			return nil, nil
+			return nil, err
 		}
+		log.Printf("reading lexeme...")
 		lexeme, err := l.readLexeme()
+		log.Printf("lexeme: %#v err: %v", lexeme, err)
 		lexemes = append(lexemes, lexeme)
 		if err == io.EOF {
 			return lexemes, nil
 		} else if err != nil {
-			return nil, nil
+			return nil, err
 		}
 	}
 }
 
 func NewLexer(r io.Reader) *Lexer {
-	return &Lexer{bufio.NewReader(r) }
+	return &Lexer{bufio.NewReader(r)}
 }
 
 func Lex(r io.Reader) ([]Lexeme, error) {
