@@ -319,10 +319,66 @@ func (l *Lexer) readInterlexemeSpace() error {
 }
 
 func (l *Lexer) readIdentifier() (Lexeme, error) {
-	// TODO peculiar identifier
 	var runes []rune
-	if r, err := l.nextSatisfying(initial); err == nil {
+	if r, err := l.nextNonDelimiter(); initial(r) && err == nil {
 		runes = append(runes, r)
+	} else if err == nil {
+		switch r {
+		case '+':
+			if _, err := l.nextNonDelimiter(); err == io.EOF {
+				log.Print("here")
+				l.delimit()
+				return Identifier("+"), nil
+			} else if err == nil {
+				l.delimit()
+				return nil, nil
+			} else {
+				return nil, err
+			}
+		case '-':
+			if r, err := l.nextNonDelimiter(); err == io.EOF {
+				l.delimit()
+				return Identifier("-"), nil
+			} else if r == '>' && err == nil {
+				runes = []rune{'-', '>'}
+				for {
+					if r, err := l.nextNonDelimiterExpecting(subsequent); err == nil {
+						runes = append(runes, r)
+					} else if err == io.EOF {
+						l.delimit()
+						return Identifier(runes), nil
+					} else {
+						return nil, err
+					}
+				}
+			} else if err == nil {
+				l.delimit()
+				return nil, nil
+			} else {
+				return nil, err
+			}
+		case '.':
+			if r, err := l.nextNonDelimiter(); err == io.EOF {
+				l.restore()
+				return nil, nil
+			} else if r != '.' && err == nil {
+				return nil, fmt.Errorf("unexpected rune: %#v", string(r))
+			} else if err != nil {
+				return nil, err
+			}
+			if err := l.nextExpectingExact('.'); err != nil {
+				return nil, err
+			}
+			if err := l.nextExpectingDelimiter(); err == nil {
+				l.delimit()
+				return Identifier("..."), nil
+			} else {
+				return nil, err
+			}
+		default:
+			l.delimit()
+			return nil, nil
+		}
 	} else if err == io.EOF {
 		l.delimit()
 		return nil, nil
@@ -429,7 +485,7 @@ func (l *Lexer) readHex() (rune, error) {
 					break
 				}
 			}
-			if len(hexDigits) - i > 8 {
+			if len(hexDigits)-i > 8 {
 				return 0, fmt.Errorf(`character out of range: \#x%v`, string(hexDigits))
 			}
 			hexDigits = hexDigits[i:]

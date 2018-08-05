@@ -23,7 +23,7 @@ func equal(a AST, b AST) bool {
 
 type Pairr struct {
 	First AST
-	Rest AST
+	Rest  AST
 }
 
 func (pair *Pairr) Equal(ast AST) bool {
@@ -34,7 +34,7 @@ func (pair *Pairr) Equal(ast AST) bool {
 	return equal(pair.First, other.First) && equal(pair.Rest, other.Rest)
 }
 
-type Symbol struct{
+type Symbol struct {
 	name string
 }
 

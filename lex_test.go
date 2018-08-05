@@ -1,16 +1,16 @@
 package grime
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestLex(t *testing.T) {
 	tests := []struct {
-		name string
-		source string
+		name    string
+		source  string
 		lexemes []Lexeme
-		error string
+		error   string
 	}{
 		{
 			"identifier",
@@ -204,6 +204,42 @@ func TestLex(t *testing.T) {
 			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, UnquoteSplice{}, Identifier("a"), RightParenthesis{}},
 			"",
 		},
+		{
+			"pair",
+			"(a . b)",
+			[]Lexeme{LeftParenthesis{}, Identifier("a"), Pair{}, Identifier("b"), RightParenthesis{}},
+			"",
+		},
+		{
+			"identifier +",
+			"+",
+			[]Lexeme{Identifier("+")},
+			"",
+		},
+		{
+			"identifier -",
+			"-",
+			[]Lexeme{Identifier("-")},
+			"",
+		},
+		{
+			"identifier ...",
+			"...",
+			[]Lexeme{Identifier("...")},
+			"",
+		},
+		{
+			"identifier ->",
+			"->",
+			[]Lexeme{Identifier("->")},
+			"",
+		},
+		{
+			"identifier -> with trailing",
+			"->id",
+			[]Lexeme{Identifier("->id")},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -214,7 +250,7 @@ func TestLex(t *testing.T) {
 				t.Errorf("\nexpected error: %v\n     got error: %v\n", test.error, err.Error())
 			}
 			if test.lexemes != nil && !reflect.DeepEqual(lexemes, test.lexemes) {
-				t.Errorf("\nexpected: %v\n     got: %v", test.lexemes, lexemes)
+				t.Errorf("\nexpected: %#v\n     got: %#v", test.lexemes, lexemes)
 			}
 		})
 	}
