@@ -2,12 +2,12 @@ package grime
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
 	"strings"
 	"unicode"
-	"encoding/hex"
 )
 
 type Lexeme interface{}
@@ -21,37 +21,44 @@ type RightParenthesis struct{}
 
 type Lexer struct {
 	reader *bufio.Reader
+	buffer []rune
+	offset int
+	eof    bool
 }
 
 func (l *Lexer) next() (rune, error) {
-	r, _, err := l.reader.ReadRune()
+	var (
+		r   rune
+		err error
+	)
+	if l.offset < len(l.buffer) {
+		r = l.buffer[l.offset]
+	} else if l.eof {
+		err = io.EOF
+	} else {
+		r, _, err = l.reader.ReadRune()
+		if err == io.EOF {
+			log.Printf("EOF")
+			l.eof = true
+		} else {
+			log.Printf("read %#v", string(r))
+			l.buffer = append(l.buffer, r)
+		}
+	}
+	l.offset += 1
+	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 	return r, err
 }
 
-func (l *Lexer) back() {
-	l.reader.UnreadRune()
+func (l *Lexer) delimit() {
+	l.buffer = l.buffer[l.offset-1:]
+	l.offset = 0
+	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 }
 
-func (l *Lexer) snap(i int) {
-	for ; i > 0; i-- {
-		l.back()
-	}
-}
-
-func (l *Lexer) readInterlexemeSpace() error {
-	for {
-		r, err := l.next()
-		if err != nil {
-			return err
-		}
-		switch r {
-		case ' ':
-		case '\n':
-		default:
-			l.back()
-			return nil
-		}
-	}
+func (l *Lexer) restore() {
+	l.offset = 0
+	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 }
 
 func letter(r rune) bool {
@@ -198,23 +205,89 @@ func subsequent(r rune) bool {
 		specialSubsequent(r)
 }
 
+func (l *Lexer) nextNonDelimiter() (rune, error) {
+	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
+		return 0, io.EOF
+	} else {
+		return r, err
+	}
+}
+
+func (l *Lexer) expectNonDelimiter() (rune, error) {
+	if r, err := l.nextNonDelimiter(); err == io.EOF {
+		return 0, fmt.Errorf("unexpected delimiter %#v", string(r))
+	} else {
+		return r, err
+	}
+}
+
+func (l *Lexer) expectDelimiter() error {
+	if r, err := l.nextNonDelimiter(); err == io.EOF {
+		return nil
+	} else if err == nil {
+		return fmt.Errorf("expected delimiter; got %#v", string(r))
+	} else {
+		return err
+	}
+}
+
+func (l *Lexer) nextSatisfying(p func(rune) bool) (rune, error) {
+	if r, err := l.next(); p(r) && err == nil {
+		return r, nil
+	} else if err == nil {
+		return 0, io.EOF
+	} else {
+		return 0, err
+	}
+}
+
+func (l *Lexer) nextExact(e rune) error {
+	if r, err := l.next(); r == e && err == nil {
+		return nil
+	} else if err == nil {
+		return io.EOF
+	} else {
+		return err
+	}
+}
+
+func (l *Lexer) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
+	if r, err := l.nextNonDelimiter(); p(r) && err == nil {
+		return r, nil
+	} else if err == nil {
+		return 0, fmt.Errorf("unexpected rune: %#v", string(r))
+	} else {
+		return 0, err
+	}
+}
+
+func (l *Lexer) readInterlexemeSpace() error {
+	for {
+		if r, err := l.next(); (!whitespace(r) && err == nil) || err == io.EOF {
+			l.delimit()
+			return err
+		} else if err != nil {
+			return err
+		}
+	}
+}
+
 func (l *Lexer) readIdentifier() (Lexeme, error) {
 	var runes []rune
-	if r, err := l.next(); initial(r) && err == nil {
+	if r, err := l.nextSatisfying(initial); err == nil {
 		runes = append(runes, r)
+	} else if err == io.EOF {
+		l.delimit()
+		return nil, nil
 	} else {
-		l.back()
 		return nil, err
 	}
 	for {
-		if r, err := l.next(); subsequent(r) && err == nil {
+		if r, err := l.nextNonDelimiterExpecting(subsequent); err == nil {
 			runes = append(runes, r)
-		} else if (delimiter(r) && err == nil) || err == io.EOF {
-			log.Printf("delimiter %#v", string(r))
-			l.back()
-			return Identifier(runes), err
-		} else if err == nil {
-			return nil, fmt.Errorf("unexpected rune: %#v", string(r))
+		} else if err == io.EOF {
+			l.delimit()
+			return Identifier(runes), nil
 		} else {
 			return nil, err
 		}
@@ -222,35 +295,33 @@ func (l *Lexer) readIdentifier() (Lexeme, error) {
 }
 
 func (l *Lexer) readBoolean() (Lexeme, error) {
-	if r, err := l.next(); r != '#' {
-		l.back()
+	if err := l.nextExact('#'); err == io.EOF {
+		l.delimit()
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
-	r, err := l.next()
+	r, err := l.expectNonDelimiter()
 	if err != nil {
 		return nil, err
 	}
-	var lexeme Lexeme
+	var boolean Lexeme
 	switch r {
 	case 'f':
-		lexeme = Boolean(false)
+		boolean = Boolean(false)
 	case 'F':
-		lexeme = Boolean(false)
+		boolean = Boolean(false)
 	case 't':
-		lexeme = Boolean(true)
+		boolean = Boolean(true)
 	case 'T':
-		lexeme = Boolean(true)
+		boolean = Boolean(true)
 	default:
-		l.back()
-		l.back()
+		l.restore()
 		return nil, nil
 	}
-    if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
-		log.Printf("delimiter %#v", string(r))
-		l.back()
-		return lexeme, err
-	} else if err == nil {
-		return nil, fmt.Errorf("expected delimiter; got: %#v", string(r))
+	if err := l.expectDelimiter(); err == nil {
+		l.delimit()
+		return boolean, nil
 	} else {
 		return nil, err
 	}
@@ -258,21 +329,20 @@ func (l *Lexer) readBoolean() (Lexeme, error) {
 
 func (l *Lexer) readNumber() (Lexeme, error) {
 	var runes []rune
-	if r, err := l.next(); digit(r) && err == nil {
+	if r, err := l.nextSatisfying(digit); err == nil {
 		runes = append(runes, r)
+	} else if err == io.EOF {
+		l.delimit()
+		return nil, nil
 	} else {
-		l.back()
 		return nil, err
 	}
 	for {
-		if r, err := l.next(); digit(r) && err == nil {
+		if r, err := l.nextNonDelimiterExpecting(digit); err == nil {
 			runes = append(runes, r)
-		} else if (delimiter(r) && err == nil) || err == io.EOF {
-			log.Printf("delimiter %#v", string(r))
-			l.back()
+		} else if err == io.EOF {
+			l.delimit()
 			return Number(runes), err
-		} else if err == nil {
-			return nil, fmt.Errorf("unexpected rune: %#v", string(r))
 		} else {
 			return nil, err
 		}
@@ -280,41 +350,48 @@ func (l *Lexer) readNumber() (Lexeme, error) {
 }
 
 func (l *Lexer) readCharacter() (Lexeme, error) {
-	if r, err := l.next(); r != '#' {
-		l.back()
+	if r, err := l.next(); err != nil {
 		return nil, err
+	} else if r != '#' {
+		l.delimit()
+		return nil, nil
 	}
-	if r, err := l.next(); r != '\\' {
-		l.back()
-		l.back()
+	if r, err := l.next(); r != '\\' && err == nil {
+		l.restore()
+		return nil, nil
+	} else if (delimiter(r) && err == nil) || err == io.EOF {
+		return nil, fmt.Errorf("unexpected delimiter %#v", string(r))
+	} else if err != nil {
 		return nil, err
 	}
 	r, err := l.next()
-	if err != nil {
-		l.back()
-		l.back()
-		l.back()
+	if (delimiter(r) && err == nil) || err == io.EOF {
+		return nil, fmt.Errorf("unexpected delimiter %#v", string(r))
+	} else if err != nil {
 		return nil, err
 	}
 	first := r
 	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
 		log.Printf("delimiter %#v", string(r))
-		l.back()
+		l.delimit()
 		return Character(r), err
 	} else if first == 'x' {
 		var hexDigits []byte
 		for {
 			if r, err := l.next(); hexDigit(r) && err == nil {
-				hexDigits = append(hexDigits, r)
+				hexDigits = append(hexDigits, byte(r))
 			} else if (delimiter(r) && err == nil) || err == io.EOF {
-				if len(hexDigits) % 2 == 1 {
+				if len(hexDigits)%2 == 1 {
 					hexDigits = append([]byte{'0'}, hexDigits...)
 				}
-				var bytes []byte
+				var (
+					i     int
+					b     byte
+					bytes []byte
+				)
 				hex.Decode(bytes, hexDigits)
-				var i
-				for i, byte := bytes {
-					if byte != 0 {
+				for i, b = range bytes {
+					if b != 0 {
 						break
 					}
 				}
@@ -356,6 +433,11 @@ func (l *Lexer) readLexeme() (Lexeme, error) {
 	} else if number != nil {
 		return number, err
 	}
+	if character, err := l.readCharacter(); err != nil && err != io.EOF {
+		return nil, err
+	} else if character != nil {
+		return character, err
+	}
 	r, err := l.next()
 	if err != nil {
 		return nil, err
@@ -392,7 +474,7 @@ func (l *Lexer) Lex() ([]Lexeme, error) {
 }
 
 func NewLexer(r io.Reader) *Lexer {
-	return &Lexer{bufio.NewReader(r)}
+	return &Lexer{bufio.NewReader(r), nil, 0, false}
 }
 
 func Lex(r io.Reader) ([]Lexeme, error) {

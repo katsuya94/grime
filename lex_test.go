@@ -82,12 +82,18 @@ func TestLex(t *testing.T) {
 			"boolean without delimiter",
 			"#fn",
 			nil,
-			`expected delimiter; got: "n"`,
+			`expected delimiter; got "n"`,
 		},
 		{
 			"number",
 			"123",
 			[]Lexeme{Number("123")},
+			"",
+		},
+		{
+			"character x",
+			`#\x`,
+			[]Lexeme{Character('x')},
 			"",
 		},
 	}
