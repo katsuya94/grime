@@ -21,13 +21,13 @@ func equal(a AST, b AST) bool {
 	return a.Equal(b)
 }
 
-type Pair struct {
+type Pairr struct {
 	First AST
 	Rest AST
 }
 
-func (pair *Pair) Equal(ast AST) bool {
-	other, ok := ast.(*Pair)
+func (pair *Pairr) Equal(ast AST) bool {
+	other, ok := ast.(*Pairr)
 	if !ok {
 		return false
 	}

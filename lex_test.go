@@ -192,6 +192,18 @@ func TestLex(t *testing.T) {
 			[]Lexeme{String("")},
 			"",
 		},
+		{
+			`unquote`,
+			"`(,a)",
+			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, Unquote{}, Identifier("a"), RightParenthesis{}},
+			"",
+		},
+		{
+			`unquote splicing`,
+			"`(,@a)",
+			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, UnquoteSplice{}, Identifier("a"), RightParenthesis{}},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

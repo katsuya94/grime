@@ -9,7 +9,7 @@ package grime
 	  {
 	  	"hello world",
 	  	`(print "hello world")`,
-		  &Pair{intern("print"), &Pair{String("hello world"), nil}},
+		  &Pairr{intern("print"), &Pairr{String("hello world"), nil}},
 	  },
 	}
 	for _, test := range tests {
