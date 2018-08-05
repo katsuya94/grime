@@ -96,6 +96,36 @@ func TestLex(t *testing.T) {
 			[]Lexeme{Character('x')},
 			"",
 		},
+		{
+			"character hex",
+			`#\x6e`,
+			[]Lexeme{Character('n')},
+			"",
+		},
+		{
+			"character hex capital",
+			`#\x6E`,
+			[]Lexeme{Character('n')},
+			"",
+		},
+		{
+			"character hex with zeros",
+			`#\x06e`,
+			[]Lexeme{Character('n')},
+			"",
+		},
+		{
+			"character hex with many zeros",
+			`#\x000000006e`,
+			[]Lexeme{Character('n')},
+			"",
+		},
+		{
+			"character hex out of range",
+			`#\x123456789abcdef`,
+			nil,
+			`character out of range: \#x123456789abcdef`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

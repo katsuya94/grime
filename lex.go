@@ -2,7 +2,6 @@ package grime
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -62,8 +61,8 @@ func (l *Lexer) restore() {
 }
 
 func letter(r rune) bool {
-	return (65 <= r && r < 91) ||
-		(97 <= r && r < 123)
+	return ('a' <= r && r <= 'z') ||
+		('A' <= r && r <= 'Z')
 }
 
 func constituent(r rune) bool {
@@ -171,13 +170,13 @@ func delimiter(r rune) bool {
 }
 
 func digit(r rune) bool {
-	return 48 <= r && r < 58
+	return '0' <= r && r <= '9'
 }
 
 func hexDigit(r rune) bool {
 	return digit(r) ||
-		(65 <= r && r < 71) ||
-		(97 <= r && r < 103)
+		('a' <= r && r <= 'f') ||
+		('A' <= r && r <= 'F')
 }
 
 func specialSubsequent(r rune) bool {
@@ -213,7 +212,7 @@ func (l *Lexer) nextNonDelimiter() (rune, error) {
 	}
 }
 
-func (l *Lexer) expectNonDelimiter() (rune, error) {
+func (l *Lexer) nextExpectingNonDelimiter() (rune, error) {
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		return 0, fmt.Errorf("unexpected delimiter %#v", string(r))
 	} else {
@@ -221,7 +220,7 @@ func (l *Lexer) expectNonDelimiter() (rune, error) {
 	}
 }
 
-func (l *Lexer) expectDelimiter() error {
+func (l *Lexer) nextExpectingDelimiter() error {
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		return nil
 	} else if err == nil {
@@ -258,6 +257,18 @@ func (l *Lexer) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
 		return 0, fmt.Errorf("unexpected rune: %#v", string(r))
 	} else {
 		return 0, err
+	}
+}
+
+func (l *Lexer) nextExactExpectingNonDelimiter(e rune) error {
+	if r, err := l.nextNonDelimiter(); r == e && err == nil {
+		return nil
+	} else if err == nil {
+		return io.EOF
+	} else if err == io.EOF {
+		return fmt.Errorf("unexpected delimiter %#v", string(r))
+	} else {
+		return err
 	}
 }
 
@@ -301,7 +312,7 @@ func (l *Lexer) readBoolean() (Lexeme, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	r, err := l.expectNonDelimiter()
+	r, err := l.nextExpectingNonDelimiter()
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +330,7 @@ func (l *Lexer) readBoolean() (Lexeme, error) {
 		l.restore()
 		return nil, nil
 	}
-	if err := l.expectDelimiter(); err == nil {
+	if err := l.nextExpectingDelimiter(); err == nil {
 		l.delimit()
 		return boolean, nil
 	} else {
@@ -349,70 +360,75 @@ func (l *Lexer) readNumber() (Lexeme, error) {
 	}
 }
 
+func hexValue(r rune) rune {
+	if '0' <= r && r <= '9' {
+		return r - '0'
+	} else if 'a' <= r && r <= 'f' {
+		return 10 + r - 'a'
+	} else if 'A' <= r && r <= 'F' {
+		return 10 + r - 'A'
+	} else {
+		panic(fmt.Sprintf("invalid hex digit: %#v", string(r)))
+	}
+}
+
 func (l *Lexer) readCharacter() (Lexeme, error) {
-	if r, err := l.next(); err != nil {
-		return nil, err
-	} else if r != '#' {
+	if err := l.nextExact('#'); err == io.EOF {
 		l.delimit()
 		return nil, nil
-	}
-	if r, err := l.next(); r != '\\' && err == nil {
-		l.restore()
-		return nil, nil
-	} else if (delimiter(r) && err == nil) || err == io.EOF {
-		return nil, fmt.Errorf("unexpected delimiter %#v", string(r))
 	} else if err != nil {
 		return nil, err
 	}
-	r, err := l.next()
-	if (delimiter(r) && err == nil) || err == io.EOF {
-		return nil, fmt.Errorf("unexpected delimiter %#v", string(r))
+	if err := l.nextExactExpectingNonDelimiter('\\'); err == io.EOF {
+		l.delimit()
+		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
-	first := r
-	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
-		log.Printf("delimiter %#v", string(r))
+	first, err := l.nextExpectingNonDelimiter()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := l.nextNonDelimiter(); err == io.EOF {
 		l.delimit()
-		return Character(r), err
-	} else if first == 'x' {
-		var hexDigits []byte
+		return Character(first), err
+	} else if err == nil && first == 'x' {
+		var hexDigits []rune
+		l.delimit()
 		for {
-			if r, err := l.next(); hexDigit(r) && err == nil {
-				hexDigits = append(hexDigits, byte(r))
-			} else if (delimiter(r) && err == nil) || err == io.EOF {
-				if len(hexDigits)%2 == 1 {
-					hexDigits = append([]byte{'0'}, hexDigits...)
-				}
+			if r, err := l.nextNonDelimiterExpecting(hexDigit); err == nil {
+				hexDigits = append(hexDigits, r)
+			} else if err == io.EOF {
+				l.delimit()
 				var (
-					i     int
-					b     byte
-					bytes []byte
+					i int
+					r rune
 				)
-				hex.Decode(bytes, hexDigits)
-				for i, b = range bytes {
-					if b != 0 {
+				for i, r = range hexDigits {
+					if r > '0' {
 						break
 					}
 				}
-				bytes = bytes[i:]
-				if len(bytes) > 4 {
-					return nil, fmt.Errorf("character out of range: %v bytes for maximum 4", len(bytes))
+				if len(hexDigits) - i > 8 {
+					return nil, fmt.Errorf(`character out of range: \#x%v`, string(hexDigits))
 				}
+				log.Print(string(hexDigits))
+				hexDigits = hexDigits[i:]
+				log.Print(string(hexDigits))
 				r = 0
-				for _, byte := range bytes {
-					r <<= 1
-					r += rune(byte)
+				for _, hexDigit := range hexDigits {
+					r <<= 4
+					r += hexValue(hexDigit)
 				}
 				return Character(r), err
-			} else if err == nil {
-				return nil, fmt.Errorf("unexpected rune: %#v", string(r))
-			} else {
+			} else if err != nil {
 				return nil, err
 			}
 		}
-	} else {
+	} else if err == nil {
 		return nil, fmt.Errorf("TODO")
+	} else {
+		return nil, err
 	}
 
 }
