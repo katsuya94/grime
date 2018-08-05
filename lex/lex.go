@@ -22,8 +22,8 @@ type RightBracket struct{}
 type Quote struct{}
 type QuasiQuote struct{}
 type Unquote struct{}
-type UnquoteSplice struct{}
-type Pair struct{}
+type UnquoteSplicing struct{}
+type Dot struct{}
 
 type LexemeReader struct {
 	reader *bufio.Reader
@@ -738,13 +738,13 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 		return QuasiQuote{}, nil
 	case ',':
 		if err := l.nextExact('@'); err == nil {
-			return UnquoteSplice{}, nil
+			return UnquoteSplicing{}, nil
 		} else {
 			l.delimit()
 			return Unquote{}, nil
 		}
 	case '.':
-		return Pair{}, nil
+		return Dot{}, nil
 	default:
 		return nil, fmt.Errorf("unexpected rune: %#v", string(r))
 	}

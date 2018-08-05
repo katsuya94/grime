@@ -207,13 +207,13 @@ func TestLex(t *testing.T) {
 		{
 			"unquote splicing",
 			"`(,@a)",
-			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, UnquoteSplice{}, Identifier("a"), RightParenthesis{}},
+			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, UnquoteSplicing{}, Identifier("a"), RightParenthesis{}},
 			"",
 		},
 		{
 			"pair",
 			"(a . b)",
-			[]Lexeme{LeftParenthesis{}, Identifier("a"), Pair{}, Identifier("b"), RightParenthesis{}},
+			[]Lexeme{LeftParenthesis{}, Identifier("a"), Dot{}, Identifier("b"), RightParenthesis{}},
 			"",
 		},
 		{

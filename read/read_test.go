@@ -13,9 +13,39 @@ func TestRead(t *testing.T) {
 		error   string
 	}{
 		{
-			"identifier",
+			"boolean",
+			"#f",
+			[]Datum{Boolean(false)},
+			"",
+		},
+		{
+			"number",
+			"123",
+			[]Datum{Number("123")},
+			"",
+		},
+		{
+			"character",
+			`#\x`,
+			[]Datum{Character('x')},
+			"",
+		},
+		{
+			"string",
+			`"name"`,
+			[]Datum{String("name")},
+			"",
+		},
+		{
+			"symbol",
 			"id",
-			[]Datum{Identifier("id")},
+			[]Datum{Symbol("id")},
+			"",
+		},
+		{
+			"empty list",
+			"()",
+			[]Datum{nil},
 			"",
 		},
 	}
