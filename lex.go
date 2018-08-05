@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"unicode"
 )
@@ -25,14 +24,14 @@ type Unquote struct{}
 type UnquoteSplice struct{}
 type Pair struct{}
 
-type Lexer struct {
+type LexemeReader struct {
 	reader *bufio.Reader
 	buffer []rune
 	offset int
 	eof    bool
 }
 
-func (l *Lexer) next() (rune, error) {
+func (l *LexemeReader) next() (rune, error) {
 	var (
 		r   rune
 		err error
@@ -44,27 +43,22 @@ func (l *Lexer) next() (rune, error) {
 	} else {
 		r, _, err = l.reader.ReadRune()
 		if err == io.EOF {
-			log.Printf("EOF")
 			l.eof = true
 		} else {
-			log.Printf("read %#v", string(r))
 			l.buffer = append(l.buffer, r)
 		}
 	}
 	l.offset += 1
-	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 	return r, err
 }
 
-func (l *Lexer) delimit() {
+func (l *LexemeReader) delimit() {
 	l.buffer = l.buffer[l.offset-1:]
 	l.offset = 0
-	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 }
 
-func (l *Lexer) restore() {
+func (l *LexemeReader) restore() {
 	l.offset = 0
-	log.Printf("offset: %v buffer: %v eof: %v", l.offset, string(l.buffer), l.eof)
 }
 
 func letter(r rune) bool {
@@ -215,7 +209,7 @@ func intralineWhitespace(r rune) bool {
 	return r == '\x09' || unicode.Is(unicode.Zs, r)
 }
 
-func (l *Lexer) nextNonDelimiter() (rune, error) {
+func (l *LexemeReader) nextNonDelimiter() (rune, error) {
 	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
 		return 0, io.EOF
 	} else {
@@ -223,7 +217,7 @@ func (l *Lexer) nextNonDelimiter() (rune, error) {
 	}
 }
 
-func (l *Lexer) nextExpectingNonDelimiter() (rune, error) {
+func (l *LexemeReader) nextExpectingNonDelimiter() (rune, error) {
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		return 0, fmt.Errorf("unexpected delimiter %#v", string(r))
 	} else {
@@ -231,7 +225,7 @@ func (l *Lexer) nextExpectingNonDelimiter() (rune, error) {
 	}
 }
 
-func (l *Lexer) nextExpectingDelimiter() error {
+func (l *LexemeReader) nextExpectingDelimiter() error {
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		return nil
 	} else if err == nil {
@@ -241,7 +235,7 @@ func (l *Lexer) nextExpectingDelimiter() error {
 	}
 }
 
-func (l *Lexer) nextSatisfying(p func(rune) bool) (rune, error) {
+func (l *LexemeReader) nextSatisfying(p func(rune) bool) (rune, error) {
 	if r, err := l.next(); p(r) && err == nil {
 		return r, nil
 	} else if err == nil {
@@ -251,7 +245,7 @@ func (l *Lexer) nextSatisfying(p func(rune) bool) (rune, error) {
 	}
 }
 
-func (l *Lexer) nextExact(e rune) error {
+func (l *LexemeReader) nextExact(e rune) error {
 	if r, err := l.next(); r == e && err == nil {
 		return nil
 	} else if err == nil {
@@ -261,7 +255,7 @@ func (l *Lexer) nextExact(e rune) error {
 	}
 }
 
-func (l *Lexer) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
+func (l *LexemeReader) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
 	if r, err := l.nextNonDelimiter(); p(r) && err == nil {
 		return r, nil
 	} else if err == nil {
@@ -271,7 +265,7 @@ func (l *Lexer) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
 	}
 }
 
-func (l *Lexer) nextExactExpectingNonDelimiter(e rune) error {
+func (l *LexemeReader) nextExactExpectingNonDelimiter(e rune) error {
 	if r, err := l.nextNonDelimiter(); r == e && err == nil {
 		return nil
 	} else if err == nil {
@@ -283,7 +277,7 @@ func (l *Lexer) nextExactExpectingNonDelimiter(e rune) error {
 	}
 }
 
-func (l *Lexer) nextExpectingExact(e rune) error {
+func (l *LexemeReader) nextExpectingExact(e rune) error {
 	if r, err := l.next(); r == e && err == nil {
 		return nil
 	} else if err == nil {
@@ -295,7 +289,7 @@ func (l *Lexer) nextExpectingExact(e rune) error {
 	}
 }
 
-func (l *Lexer) nextExpecting(p func(rune) bool) (rune, error) {
+func (l *LexemeReader) nextExpecting(p func(rune) bool) (rune, error) {
 	if r, err := l.next(); p(r) && err == nil {
 		return r, nil
 	} else if err == nil {
@@ -307,7 +301,7 @@ func (l *Lexer) nextExpecting(p func(rune) bool) (rune, error) {
 	}
 }
 
-func (l *Lexer) readInterlexemeSpace() error {
+func (l *LexemeReader) readInterlexemeSpace() error {
 	for {
 		if r, err := l.next(); (!whitespace(r) && err == nil) || err == io.EOF {
 			l.delimit()
@@ -318,7 +312,7 @@ func (l *Lexer) readInterlexemeSpace() error {
 	}
 }
 
-func (l *Lexer) readIdentifier() (Lexeme, error) {
+func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 	var runes []rune
 	if r, err := l.nextNonDelimiter(); initial(r) && err == nil {
 		runes = append(runes, r)
@@ -326,7 +320,6 @@ func (l *Lexer) readIdentifier() (Lexeme, error) {
 		switch r {
 		case '+':
 			if _, err := l.nextNonDelimiter(); err == io.EOF {
-				log.Print("here")
 				l.delimit()
 				return Identifier("+"), nil
 			} else if err == nil {
@@ -397,7 +390,7 @@ func (l *Lexer) readIdentifier() (Lexeme, error) {
 	}
 }
 
-func (l *Lexer) readBoolean() (Lexeme, error) {
+func (l *LexemeReader) readBoolean() (Lexeme, error) {
 	if err := l.nextExact('#'); err == io.EOF {
 		l.delimit()
 		return nil, nil
@@ -430,7 +423,7 @@ func (l *Lexer) readBoolean() (Lexeme, error) {
 	}
 }
 
-func (l *Lexer) readNumber() (Lexeme, error) {
+func (l *LexemeReader) readNumber() (Lexeme, error) {
 	var runes []rune
 	if r, err := l.nextSatisfying(digit); err == nil {
 		runes = append(runes, r)
@@ -445,7 +438,7 @@ func (l *Lexer) readNumber() (Lexeme, error) {
 			runes = append(runes, r)
 		} else if err == io.EOF {
 			l.delimit()
-			return Number(runes), err
+			return Number(runes), nil
 		} else {
 			return nil, err
 		}
@@ -464,7 +457,7 @@ func hexValue(r rune) rune {
 	}
 }
 
-func (l *Lexer) readHex() (rune, error) {
+func (l *LexemeReader) readHex() (rune, error) {
 	var hexDigits []rune
 	if r, err := l.nextExpecting(hexDigit); err == nil {
 		hexDigits = append(hexDigits, r)
@@ -501,7 +494,7 @@ func (l *Lexer) readHex() (rune, error) {
 	}
 }
 
-func (l *Lexer) readCharacter() (Lexeme, error) {
+func (l *LexemeReader) readCharacter() (Lexeme, error) {
 	if err := l.nextExact('#'); err == io.EOF {
 		l.delimit()
 		return nil, nil
@@ -520,7 +513,7 @@ func (l *Lexer) readCharacter() (Lexeme, error) {
 	}
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		l.delimit()
-		return Character(first), err
+		return Character(first), nil
 	} else if err == nil && first == 'x' {
 		l.delimit()
 		r, err := l.readHex()
@@ -577,7 +570,7 @@ func (l *Lexer) readCharacter() (Lexeme, error) {
 
 }
 
-func (l *Lexer) readLineEnding() (bool, error) {
+func (l *LexemeReader) readLineEnding() (bool, error) {
 	r, err := l.next()
 	if err == io.EOF {
 		return false, fmt.Errorf("unexpected EOF")
@@ -613,7 +606,7 @@ func (l *Lexer) readLineEnding() (bool, error) {
 	}
 }
 
-func (l *Lexer) readString() (Lexeme, error) {
+func (l *LexemeReader) readString() (Lexeme, error) {
 	if err := l.nextExact('"'); err == io.EOF {
 		l.delimit()
 		return nil, nil
@@ -697,7 +690,7 @@ func (l *Lexer) readString() (Lexeme, error) {
 	}
 }
 
-func (l *Lexer) readLexeme() (Lexeme, error) {
+func (l *LexemeReader) readLexeme() (Lexeme, error) {
 	if identifier, err := l.readIdentifier(); err != nil && err != io.EOF {
 		return nil, err
 	} else if identifier != nil {
@@ -756,31 +749,35 @@ func (l *Lexer) readLexeme() (Lexeme, error) {
 	}
 }
 
-func (l *Lexer) Lex() ([]Lexeme, error) {
-	var lexemes []Lexeme
-	for {
-		err := l.readInterlexemeSpace()
-		if err == io.EOF {
-			return lexemes, nil
-		} else if err != nil {
-			return nil, err
-		}
-		lexeme, err := l.readLexeme()
-		lexemes = append(lexemes, lexeme)
-		if err == io.EOF {
-			return lexemes, nil
-		} else if err != nil {
-			return nil, err
-		}
+func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
+	if err := l.readInterlexemeSpace(); err != nil {
+		return nil, err
 	}
+	lexeme, err := l.readLexeme()
+	if err == io.EOF {
+		return nil, fmt.Errorf("unexpected EOF")
+	} else if err != nil {
+		return nil, err
+	}
+	return lexeme, nil
 }
 
-func NewLexer(r io.Reader) *Lexer {
-	return &Lexer{bufio.NewReader(r), nil, 0, false}
+func NewLexemeReader(r io.Reader) *LexemeReader {
+	return &LexemeReader{bufio.NewReader(r), nil, 0, false}
 }
 
 func Lex(r io.Reader) ([]Lexeme, error) {
-	return NewLexer(r).Lex()
+	lexemeReader := NewLexemeReader(r)
+	var lexemes []Lexeme
+	for {
+		if lexeme, err := lexemeReader.ReadLexeme(); err == nil {
+			lexemes = append(lexemes, lexeme)
+		} else if err == io.EOF {
+			return lexemes, nil
+		} else {
+			return nil, err
+		}
+	}
 }
 
 func LexString(s string) ([]Lexeme, error) {
