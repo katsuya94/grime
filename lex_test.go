@@ -127,6 +127,18 @@ func TestLex(t *testing.T) {
 			`character out of range: \#x123456789abcdef`,
 		},
 		{
+			"character named",
+			`#\nul`,
+			[]Lexeme{Character('\x00')},
+			"",
+		},
+		{
+			"character unrecognized name",
+			`#\foo`,
+			nil,
+			`unrecognized character: #\foo`,
+		},
+		{
 			"string",
 			`"name"`,
 			[]Lexeme{String("name")},

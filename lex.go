@@ -312,6 +312,7 @@ func (l *Lexer) readInterlexemeSpace() error {
 }
 
 func (l *Lexer) readIdentifier() (Lexeme, error) {
+	// TODO peculiar identifier
 	var runes []rune
 	if r, err := l.nextSatisfying(initial); err == nil {
 		runes = append(runes, r)
@@ -454,7 +455,7 @@ func (l *Lexer) readCharacter() (Lexeme, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := l.nextNonDelimiter(); err == io.EOF {
+	if r, err := l.nextNonDelimiter(); err == io.EOF {
 		l.delimit()
 		return Character(first), err
 	} else if err == nil && first == 'x' {
@@ -469,7 +470,44 @@ func (l *Lexer) readCharacter() (Lexeme, error) {
 		l.delimit()
 		return Character(r), err
 	} else if err == nil {
-		return nil, fmt.Errorf("TODO")
+		runes := []rune{first, r}
+		for {
+			if r, err := l.nextNonDelimiter(); err == io.EOF {
+				l.delimit()
+				switch string(runes) {
+				case "nul":
+					return Character('\x00'), nil
+				case "alarm":
+					return Character('\x07'), nil
+				case "backspace":
+					return Character('\x08'), nil
+				case "tab":
+					return Character('\x09'), nil
+				case "linefeed":
+					return Character('\x0a'), nil
+				case "newline":
+					return Character('\x0a'), nil
+				case "vtab":
+					return Character('\x0b'), nil
+				case "page":
+					return Character('\x0c'), nil
+				case "return":
+					return Character('\x0d'), nil
+				case "esc":
+					return Character('\x1b'), nil
+				case "space":
+					return Character('\x20'), nil
+				case "delete":
+					return Character('\x7f'), nil
+				default:
+					return nil, fmt.Errorf(`unrecognized character: #\%v`, string(runes))
+				}
+			} else if err == nil {
+				runes = append(runes, r)
+			} else {
+				return nil, err
+			}
+		}
 	} else {
 		return nil, err
 	}
