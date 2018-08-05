@@ -1,16 +1,16 @@
 package read
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestRead(t *testing.T) {
 	tests := []struct {
-		name    string
-		source  string
-		data []Datum
-		error   string
+		name   string
+		source string
+		data   []Datum
+		error  string
 	}{
 		{
 			"boolean",
@@ -43,9 +43,33 @@ func TestRead(t *testing.T) {
 			"",
 		},
 		{
+			"two data",
+			"id name",
+			[]Datum{Symbol("id"), Symbol("name")},
+			"",
+		},
+		{
 			"empty list",
 			"()",
 			[]Datum{nil},
+			"",
+		},
+		{
+			"list with one element",
+			"(id)",
+			[]Datum{Pair{Symbol("id"), nil}},
+			"",
+		},
+		{
+			"list with two elements",
+			"(id name)",
+			[]Datum{Pair{Symbol("id"), Pair{Symbol("name"), nil}}},
+			"",
+		},
+		{
+			"pair",
+			"(id . name)",
+			[]Datum{Pair{Symbol("id"), Symbol("name")}},
 			"",
 		},
 	}
@@ -63,4 +87,3 @@ func TestRead(t *testing.T) {
 		})
 	}
 }
-

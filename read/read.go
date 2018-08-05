@@ -1,10 +1,10 @@
 package read
 
-import(
+import (
+	"fmt"
 	"github.com/katsuya94/grime/lex"
 	"io"
 	"strings"
-	"fmt"
 )
 
 type Datum interface{}
@@ -14,10 +14,14 @@ type Number string
 type Character rune
 type String string
 type Symbol string
+type Pair struct {
+	first Datum
+	rest  Datum
+}
 
 const (
 	PARENTHESES = iota
-	BRACKET
+	BRACKETS
 )
 
 type DatumReader struct {
@@ -32,7 +36,7 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		switch v := lexeme.(type) {
+		switch lexeme.(type) {
 		case lex.RightParenthesis:
 			if kind == PARENTHESES {
 				return nil, nil
@@ -40,13 +44,48 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
 			}
 		case lex.RightBracket:
-			if kind == BRACKET {
+			if kind == BRACKETS {
 				return nil, nil
 			} else {
 				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
 			}
 		case lex.Dot:
-
+			datum, err := d.ReadDatum()
+			if err == io.EOF {
+				return nil, fmt.Errorf("unexpected EOF")
+			} else if err != nil {
+				return nil, err
+			}
+			lexeme, err := d.lexemeReader.ReadLexeme()
+			if err == io.EOF {
+				return nil, fmt.Errorf("unexpected EOF")
+			} else if err != nil {
+				return nil, err
+			}
+			switch lexeme.(type) {
+			case lex.RightParenthesis:
+				if kind != PARENTHESES {
+					return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+				}
+			case lex.RightBracket:
+				if kind != BRACKETS {
+					return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+				}
+			default:
+				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+			}
+			return datum, nil
+		default:
+			d.lexemeReader.UnreadLexeme()
+			first, err := d.ReadDatum()
+			if err != nil {
+				return nil, err
+			}
+			rest, err := d.readList(kind)
+			if err != nil {
+				return nil, err
+			}
+			return Pair{first, rest}, nil
 		}
 	}
 }
@@ -70,7 +109,7 @@ func (d *DatumReader) ReadDatum() (Datum, error) {
 	case lex.LeftParenthesis:
 		return d.readList(PARENTHESES)
 	case lex.LeftBracket:
-		return d.readList(BRACKET)
+		return d.readList(BRACKETS)
 	default:
 		return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
 	}

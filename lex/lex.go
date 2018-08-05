@@ -26,10 +26,12 @@ type UnquoteSplicing struct{}
 type Dot struct{}
 
 type LexemeReader struct {
-	reader *bufio.Reader
-	buffer []rune
-	offset int
-	eof    bool
+	reader     *bufio.Reader
+	buffer     []rune
+	offset     int
+	eof        bool
+	nextLexeme Lexeme
+	unread     bool
 }
 
 func (l *LexemeReader) next() (rune, error) {
@@ -751,6 +753,10 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 }
 
 func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
+	if l.unread {
+		l.unread = false
+		return l.nextLexeme, nil
+	}
 	if err := l.readInterlexemeSpace(); err != nil {
 		return nil, err
 	}
@@ -760,11 +766,28 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 	} else if err != nil {
 		return nil, err
 	}
+	l.nextLexeme = lexeme
 	return lexeme, nil
 }
 
+func (l *LexemeReader) UnreadLexeme() error {
+	if l.unread {
+		return fmt.Errorf("invalid usage of UnreadLexeme")
+	} else {
+		l.unread = true
+		return nil
+	}
+}
+
 func NewLexemeReader(r io.Reader) *LexemeReader {
-	return &LexemeReader{bufio.NewReader(r), nil, 0, false}
+	return &LexemeReader{
+		bufio.NewReader(r),
+		nil,
+		0,
+		false,
+		nil,
+		false,
+	}
 }
 
 func Lex(r io.Reader) ([]Lexeme, error) {
