@@ -126,6 +126,60 @@ func TestLex(t *testing.T) {
 			nil,
 			`character out of range: \#x123456789abcdef`,
 		},
+		{
+			"string",
+			`"name"`,
+			[]Lexeme{String("name")},
+			"",
+		},
+		{
+			`string escape "`,
+			`"\""`,
+			[]Lexeme{String(`"`)},
+			"",
+		},
+		{
+			`string escape \`,
+			`"\\"`,
+			[]Lexeme{String(`\`)},
+			"",
+		},
+		{
+			`string escape hex`,
+			`"\x6e;"`,
+			[]Lexeme{String("n")},
+			"",
+		},
+		{
+			`string escape hex unterminated`,
+			`"\x6e"`,
+			nil,
+			`expected ";"; got "\""`,
+		},
+		{
+			`string escape hex empty`,
+			`"\x;"`,
+			nil,
+			`unexpected rune: ";"`,
+		},
+		{
+			`string line ending`,
+			"\"\x0a\"",
+			[]Lexeme{String("\x0a")},
+			"",
+		},
+		{
+			`string carriage return line ending`,
+			"\"\x0d\x0a\"",
+			[]Lexeme{String("\x0a")},
+			"",
+		},
+		{
+			`string escape intraline whitespace line ending intraline whitespace`,
+			"\"\\ \x0a \"",
+			[]Lexeme{String("")},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

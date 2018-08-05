@@ -204,6 +204,10 @@ func subsequent(r rune) bool {
 		specialSubsequent(r)
 }
 
+func intralineWhitespace(r rune) bool {
+	return r == '\x09' || unicode.Is(unicode.Zs, r)
+}
+
 func (l *Lexer) nextNonDelimiter() (rune, error) {
 	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
 		return 0, io.EOF
@@ -266,9 +270,33 @@ func (l *Lexer) nextExactExpectingNonDelimiter(e rune) error {
 	} else if err == nil {
 		return io.EOF
 	} else if err == io.EOF {
-		return fmt.Errorf("unexpected delimiter %#v", string(r))
+		return fmt.Errorf("unexpected delimiter")
 	} else {
 		return err
+	}
+}
+
+func (l *Lexer) nextExpectingExact(e rune) error {
+	if r, err := l.next(); r == e && err == nil {
+		return nil
+	} else if err == nil {
+		return fmt.Errorf("expected %#v; got %#v", string(e), string(r))
+	} else if err == io.EOF {
+		return fmt.Errorf("unexpected EOF")
+	} else {
+		return err
+	}
+}
+
+func (l *Lexer) nextExpecting(p func(rune) bool) (rune, error) {
+	if r, err := l.next(); p(r) && err == nil {
+		return r, nil
+	} else if err == nil {
+		return 0, fmt.Errorf("unexpected rune: %#v", string(r))
+	} else if err == io.EOF {
+		return 0, fmt.Errorf("unexpected EOF")
+	} else {
+		return 0, err
 	}
 }
 
@@ -372,6 +400,43 @@ func hexValue(r rune) rune {
 	}
 }
 
+func (l *Lexer) readHex() (rune, error) {
+	var hexDigits []rune
+	if r, err := l.nextExpecting(hexDigit); err == nil {
+		hexDigits = append(hexDigits, r)
+	} else {
+		return 0, err
+	}
+	for {
+		if r, err := l.nextSatisfying(hexDigit); err == nil {
+			hexDigits = append(hexDigits, r)
+		} else if err == io.EOF {
+			l.delimit()
+			var (
+				i int
+				r rune
+			)
+			for i, r = range hexDigits {
+				if r > '0' {
+					break
+				}
+			}
+			if len(hexDigits) - i > 8 {
+				return 0, fmt.Errorf(`character out of range: \#x%v`, string(hexDigits))
+			}
+			hexDigits = hexDigits[i:]
+			r = 0
+			for _, hexDigit := range hexDigits {
+				r <<= 4
+				r += hexValue(hexDigit)
+			}
+			return r, nil
+		} else {
+			return 0, err
+		}
+	}
+}
+
 func (l *Lexer) readCharacter() (Lexeme, error) {
 	if err := l.nextExact('#'); err == io.EOF {
 		l.delimit()
@@ -393,44 +458,142 @@ func (l *Lexer) readCharacter() (Lexeme, error) {
 		l.delimit()
 		return Character(first), err
 	} else if err == nil && first == 'x' {
-		var hexDigits []rune
 		l.delimit()
-		for {
-			if r, err := l.nextNonDelimiterExpecting(hexDigit); err == nil {
-				hexDigits = append(hexDigits, r)
-			} else if err == io.EOF {
-				l.delimit()
-				var (
-					i int
-					r rune
-				)
-				for i, r = range hexDigits {
-					if r > '0' {
-						break
-					}
-				}
-				if len(hexDigits) - i > 8 {
-					return nil, fmt.Errorf(`character out of range: \#x%v`, string(hexDigits))
-				}
-				log.Print(string(hexDigits))
-				hexDigits = hexDigits[i:]
-				log.Print(string(hexDigits))
-				r = 0
-				for _, hexDigit := range hexDigits {
-					r <<= 4
-					r += hexValue(hexDigit)
-				}
-				return Character(r), err
-			} else if err != nil {
-				return nil, err
-			}
+		r, err := l.readHex()
+		if err != nil {
+			return nil, err
 		}
+		if err := l.nextExpectingDelimiter(); err != nil {
+			return nil, err
+		}
+		l.delimit()
+		return Character(r), err
 	} else if err == nil {
 		return nil, fmt.Errorf("TODO")
 	} else {
 		return nil, err
 	}
 
+}
+
+func (l *Lexer) readLineEnding() (bool, error) {
+	r, err := l.next()
+	if err == io.EOF {
+		return false, fmt.Errorf("unexpected EOF")
+	} else if err != nil {
+		return false, err
+	}
+	switch r {
+	case '\x0a':
+		return true, nil
+	case '\x0d':
+		r, err := l.next()
+		if err == io.EOF {
+			l.delimit()
+			return true, nil
+		} else if err != nil {
+			return false, err
+		}
+		switch r {
+		case '\x0a':
+			return true, nil
+		case '\x85':
+			return true, nil
+		default:
+			l.delimit()
+			return true, nil
+		}
+	case '\x85':
+		return true, nil
+	case '\u2028':
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func (l *Lexer) readString() (Lexeme, error) {
+	if err := l.nextExact('"'); err == io.EOF {
+		l.delimit()
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	var runes []rune
+	for {
+		if r, err := l.next(); r == '"' && err == nil {
+			if _, err := l.next(); err != nil && err != io.EOF {
+				return nil, err
+			}
+			l.delimit()
+			return String(string(runes)), nil
+		} else if r == '\\' && err == nil {
+			r, err := l.next()
+			if err == io.EOF {
+				return nil, fmt.Errorf("unexpected EOF")
+			} else if err != nil {
+				return nil, err
+			}
+			nothing := false
+			switch r {
+			case 'a':
+				r = '\x07'
+			case 'b':
+				r = '\x08'
+			case 't':
+				r = '\x09'
+			case 'n':
+				r = '\x0a'
+			case 'v':
+				r = '\x0b'
+			case 'f':
+				r = '\x0c'
+			case 'r':
+				r = '\x0d'
+			case '"':
+			case '\\':
+			case 'x':
+				r, err = l.readHex()
+				if err != nil {
+					return nil, err
+				}
+				if err := l.nextExpectingExact(';'); err != nil {
+					return nil, err
+				}
+			default:
+				if intralineWhitespace(r) {
+					if ok, err := l.readLineEnding(); err != nil {
+						return nil, err
+					} else if !ok {
+						return nil, fmt.Errorf("expected line ending")
+					}
+					if _, err := l.nextExpecting(intralineWhitespace); err == nil {
+						nothing = true
+					} else {
+						return nil, err
+					}
+				} else {
+					return nil, fmt.Errorf(`unrecognized escape pattern: \%v`, r)
+				}
+			}
+			if !nothing {
+				runes = append(runes, r)
+			}
+		} else if err == nil {
+			l.delimit()
+			if ok, err := l.readLineEnding(); err != nil {
+				return nil, err
+			} else if ok {
+				runes = append(runes, '\x0a')
+			} else {
+				runes = append(runes, r)
+			}
+		} else if err == io.EOF {
+			return nil, fmt.Errorf("unexpected EOF")
+		} else {
+			return nil, err
+		}
+	}
 }
 
 func (l *Lexer) readLexeme() (Lexeme, error) {
@@ -454,8 +617,15 @@ func (l *Lexer) readLexeme() (Lexeme, error) {
 	} else if character != nil {
 		return character, err
 	}
+	if string, err := l.readString(); err != nil && err != io.EOF {
+		return nil, err
+	} else if string != nil {
+		return string, err
+	}
 	r, err := l.next()
-	if err != nil {
+	if err == io.EOF {
+		return nil, fmt.Errorf("unexpected EOF")
+	} else if err != nil {
 		return nil, err
 	}
 	switch r {
@@ -477,9 +647,7 @@ func (l *Lexer) Lex() ([]Lexeme, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		log.Printf("reading lexeme...")
 		lexeme, err := l.readLexeme()
-		log.Printf("lexeme: %#v err: %v", lexeme, err)
 		lexemes = append(lexemes, lexeme)
 		if err == io.EOF {
 			return lexemes, nil
