@@ -72,6 +72,30 @@ func TestRead(t *testing.T) {
 			[]Datum{Pair{Symbol("id"), Symbol("name")}},
 			"",
 		},
+		{
+			"quote",
+			"'id",
+			[]Datum{Pair{Symbol("quote"), Pair{Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"quasiquote",
+			"`id",
+			[]Datum{Pair{Symbol("quasiquote"), Pair{Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"unquote",
+			",id",
+			[]Datum{Pair{Symbol("unquote"), Pair{Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"unquote splicing",
+			",@id",
+			[]Datum{Pair{Symbol("unquote-splicing"), Pair{Symbol("id"), nil}}},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -110,6 +110,30 @@ func (d *DatumReader) ReadDatum() (Datum, error) {
 		return d.readList(PARENTHESES)
 	case lex.LeftBracket:
 		return d.readList(BRACKETS)
+	case lex.Quote:
+		if datum, err := d.ReadDatum(); err == nil {
+			return Pair{Symbol("quote"), Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.QuasiQuote:
+		if datum, err := d.ReadDatum(); err == nil {
+			return Pair{Symbol("quasiquote"), Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.Unquote:
+		if datum, err := d.ReadDatum(); err == nil {
+			return Pair{Symbol("unquote"), Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.UnquoteSplicing:
+		if datum, err := d.ReadDatum(); err == nil {
+			return Pair{Symbol("unquote-splicing"), Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
 	}
