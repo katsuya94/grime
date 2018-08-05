@@ -1,4 +1,4 @@
-package grime
+package lex
 
 import (
 	"bufio"
