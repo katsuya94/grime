@@ -7,30 +7,18 @@ import (
 	"strings"
 )
 
-type Datum interface{}
-
-type Boolean bool
-type Number string
-type Character rune
-type String string
-type Symbol string
-type Pair struct {
-	first Datum
-	rest  Datum
-}
-
 const (
 	PARENTHESES = iota
 	BRACKETS
 )
 
 type DatumReader struct {
-	lexemeReader *lex.LexemeReader
+	reader *lex.LexemeReader
 }
 
 func (d *DatumReader) readList(kind int) (Datum, error) {
 	for {
-		lexeme, err := d.lexemeReader.ReadLexeme()
+		lexeme, err := d.reader.ReadLexeme()
 		if err == io.EOF {
 			return nil, fmt.Errorf("unexpected EOF")
 		} else if err != nil {
@@ -56,7 +44,7 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 			} else if err != nil {
 				return nil, err
 			}
-			lexeme, err := d.lexemeReader.ReadLexeme()
+			lexeme, err := d.reader.ReadLexeme()
 			if err == io.EOF {
 				return nil, fmt.Errorf("unexpected EOF")
 			} else if err != nil {
@@ -76,7 +64,7 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 			}
 			return datum, nil
 		default:
-			d.lexemeReader.UnreadLexeme()
+			d.reader.UnreadLexeme()
 			first, err := d.ReadDatum()
 			if err != nil {
 				return nil, err
@@ -91,7 +79,7 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 }
 
 func (d *DatumReader) ReadDatum() (Datum, error) {
-	lexeme, err := d.lexemeReader.ReadLexeme()
+	lexeme, err := d.reader.ReadLexeme()
 	if err != nil {
 		return nil, err
 	}

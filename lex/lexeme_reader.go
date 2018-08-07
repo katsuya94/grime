@@ -7,9 +7,9 @@ import (
 )
 
 type LexemeReader struct {
-	reader     *CheckpointedRuneReader
-	nextLexeme Lexeme
-	unread     bool
+	reader *CheckpointedRuneReader
+	next   Lexeme
+	unread bool
 }
 
 func (l *LexemeReader) nextNonDelimiter() (rune, error) {
@@ -552,7 +552,7 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 	if l.unread {
 		l.unread = false
-		return l.nextLexeme, nil
+		return l.next, nil
 	}
 	if err := l.readInterlexemeSpace(); err != nil {
 		return nil, err
@@ -563,7 +563,7 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	l.nextLexeme = lexeme
+	l.next = lexeme
 	return lexeme, nil
 }
 
