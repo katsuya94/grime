@@ -1,219 +1,19 @@
 package lex
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"strings"
-	"unicode"
 )
 
-type Lexeme interface{}
-
-type Identifier string
-type Boolean bool
-type Number string
-type Character rune
-type String string
-type LeftParenthesis struct{}
-type RightParenthesis struct{}
-type LeftBracket struct{}
-type RightBracket struct{}
-type Quote struct{}
-type QuasiQuote struct{}
-type Unquote struct{}
-type UnquoteSplicing struct{}
-type Dot struct{}
-
 type LexemeReader struct {
-	reader     *bufio.Reader
-	buffer     []rune
-	offset     int
-	eof        bool
+	reader     *CheckpointedRuneReader
 	nextLexeme Lexeme
 	unread     bool
 }
 
-func (l *LexemeReader) next() (rune, error) {
-	var (
-		r   rune
-		err error
-	)
-	if l.offset < len(l.buffer) {
-		r = l.buffer[l.offset]
-	} else if l.eof {
-		err = io.EOF
-	} else {
-		r, _, err = l.reader.ReadRune()
-		if err == io.EOF {
-			l.eof = true
-		} else {
-			l.buffer = append(l.buffer, r)
-		}
-	}
-	l.offset += 1
-	return r, err
-}
-
-func (l *LexemeReader) delimit() {
-	l.buffer = l.buffer[l.offset-1:]
-	l.offset = 0
-}
-
-func (l *LexemeReader) restore() {
-	l.offset = 0
-}
-
-func letter(r rune) bool {
-	return ('a' <= r && r <= 'z') ||
-		('A' <= r && r <= 'Z')
-}
-
-func constituent(r rune) bool {
-	return letter(r) || (r > 127 &&
-		unicode.In(r,
-			unicode.Lu,
-			unicode.Ll,
-			unicode.Lt,
-			unicode.Lm,
-			unicode.Lo,
-			unicode.Mn,
-			unicode.Nl,
-			unicode.No,
-			unicode.Pd,
-			unicode.Pc,
-			unicode.Po,
-			unicode.Sc,
-			unicode.Sm,
-			unicode.Sk,
-			unicode.So,
-			unicode.Co))
-}
-
-func specialInitial(r rune) bool {
-	switch r {
-	case '!':
-		return true
-	case '$':
-		return true
-	case '%':
-		return true
-	case '&':
-		return true
-	case '*':
-		return true
-	case '/':
-		return true
-	case ':':
-		return true
-	case '<':
-		return true
-	case '=':
-		return true
-	case '>':
-		return true
-	case '?':
-		return true
-	case '^':
-		return true
-	case '_':
-		return true
-	case '~':
-		return true
-	default:
-		return false
-	}
-}
-
-func initial(r rune) bool {
-	return constituent(r) ||
-		specialInitial(r) // TODO inline hex escape
-}
-
-func whitespace(r rune) bool {
-	switch r {
-	case '\x09':
-		return true
-	case '\x0a':
-		return true
-	case '\x0b':
-		return true
-	case '\x0c':
-		return true
-	case '\x0d':
-		return true
-	case '\x85':
-		return true
-	default:
-		return unicode.In(r,
-			unicode.Zs,
-			unicode.Zl,
-			unicode.Zp)
-	}
-}
-
-func delimiter(r rune) bool {
-	switch r {
-	case '(':
-		return true
-	case ')':
-		return true
-	case '[':
-		return true
-	case ']':
-		return true
-	case '"':
-		return true
-	case ';':
-		return true
-	case '#':
-		return true
-	default:
-		return whitespace(r)
-	}
-}
-
-func digit(r rune) bool {
-	return '0' <= r && r <= '9'
-}
-
-func hexDigit(r rune) bool {
-	return digit(r) ||
-		('a' <= r && r <= 'f') ||
-		('A' <= r && r <= 'F')
-}
-
-func specialSubsequent(r rune) bool {
-	switch r {
-	case '+':
-		return true
-	case '-':
-		return true
-	case '.':
-		return true
-	case '@':
-		return true
-	default:
-		return false
-	}
-}
-
-func subsequent(r rune) bool {
-	return initial(r) ||
-		digit(r) ||
-		unicode.In(r,
-			unicode.Nd,
-			unicode.Mc,
-			unicode.Me) ||
-		specialSubsequent(r)
-}
-
-func intralineWhitespace(r rune) bool {
-	return r == '\x09' || unicode.Is(unicode.Zs, r)
-}
-
 func (l *LexemeReader) nextNonDelimiter() (rune, error) {
-	if r, err := l.next(); (delimiter(r) && err == nil) || err == io.EOF {
+	if r, err := l.reader.ReadRune(); (delimiter(r) && err == nil) || err == io.EOF {
 		return 0, io.EOF
 	} else {
 		return r, err
@@ -239,7 +39,7 @@ func (l *LexemeReader) nextExpectingDelimiter() error {
 }
 
 func (l *LexemeReader) nextSatisfying(p func(rune) bool) (rune, error) {
-	if r, err := l.next(); p(r) && err == nil {
+	if r, err := l.reader.ReadRune(); p(r) && err == nil {
 		return r, nil
 	} else if err == nil {
 		return 0, io.EOF
@@ -249,7 +49,7 @@ func (l *LexemeReader) nextSatisfying(p func(rune) bool) (rune, error) {
 }
 
 func (l *LexemeReader) nextExact(e rune) error {
-	if r, err := l.next(); r == e && err == nil {
+	if r, err := l.reader.ReadRune(); r == e && err == nil {
 		return nil
 	} else if err == nil {
 		return io.EOF
@@ -281,7 +81,7 @@ func (l *LexemeReader) nextExactExpectingNonDelimiter(e rune) error {
 }
 
 func (l *LexemeReader) nextExpectingExact(e rune) error {
-	if r, err := l.next(); r == e && err == nil {
+	if r, err := l.reader.ReadRune(); r == e && err == nil {
 		return nil
 	} else if err == nil {
 		return fmt.Errorf("expected %#v; got %#v", string(e), string(r))
@@ -293,7 +93,7 @@ func (l *LexemeReader) nextExpectingExact(e rune) error {
 }
 
 func (l *LexemeReader) nextExpecting(p func(rune) bool) (rune, error) {
-	if r, err := l.next(); p(r) && err == nil {
+	if r, err := l.reader.ReadRune(); p(r) && err == nil {
 		return r, nil
 	} else if err == nil {
 		return 0, fmt.Errorf("unexpected rune: %#v", string(r))
@@ -306,8 +106,8 @@ func (l *LexemeReader) nextExpecting(p func(rune) bool) (rune, error) {
 
 func (l *LexemeReader) readInterlexemeSpace() error {
 	for {
-		if r, err := l.next(); (!whitespace(r) && err == nil) || err == io.EOF {
-			l.delimit()
+		if r, err := l.reader.ReadRune(); (!whitespace(r) && err == nil) || err == io.EOF {
+			l.reader.UnreadRune()
 			return err
 		} else if err != nil {
 			return err
@@ -323,17 +123,17 @@ func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 		switch r {
 		case '+':
 			if _, err := l.nextNonDelimiter(); err == io.EOF {
-				l.delimit()
+				l.reader.UnreadRune()
 				return Identifier("+"), nil
 			} else if err == nil {
-				l.delimit()
+				l.reader.Return()
 				return nil, nil
 			} else {
 				return nil, err
 			}
 		case '-':
 			if r, err := l.nextNonDelimiter(); err == io.EOF {
-				l.delimit()
+				l.reader.UnreadRune()
 				return Identifier("-"), nil
 			} else if r == '>' && err == nil {
 				runes = []rune{'-', '>'}
@@ -341,21 +141,21 @@ func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 					if r, err := l.nextNonDelimiterExpecting(subsequent); err == nil {
 						runes = append(runes, r)
 					} else if err == io.EOF {
-						l.delimit()
+						l.reader.UnreadRune()
 						return Identifier(runes), nil
 					} else {
 						return nil, err
 					}
 				}
 			} else if err == nil {
-				l.delimit()
+				l.reader.Return()
 				return nil, nil
 			} else {
 				return nil, err
 			}
 		case '.':
 			if r, err := l.nextNonDelimiter(); err == io.EOF {
-				l.restore()
+				l.reader.Return()
 				return nil, nil
 			} else if r != '.' && err == nil {
 				return nil, fmt.Errorf("unexpected rune: %#v", string(r))
@@ -366,17 +166,17 @@ func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 				return nil, err
 			}
 			if err := l.nextExpectingDelimiter(); err == nil {
-				l.delimit()
+				l.reader.UnreadRune()
 				return Identifier("..."), nil
 			} else {
 				return nil, err
 			}
 		default:
-			l.delimit()
+			l.reader.Return()
 			return nil, nil
 		}
 	} else if err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else {
 		return nil, err
@@ -385,7 +185,7 @@ func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 		if r, err := l.nextNonDelimiterExpecting(subsequent); err == nil {
 			runes = append(runes, r)
 		} else if err == io.EOF {
-			l.delimit()
+			l.reader.UnreadRune()
 			return Identifier(runes), nil
 		} else {
 			return nil, err
@@ -395,7 +195,7 @@ func (l *LexemeReader) readIdentifier() (Lexeme, error) {
 
 func (l *LexemeReader) readBoolean() (Lexeme, error) {
 	if err := l.nextExact('#'); err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -415,11 +215,11 @@ func (l *LexemeReader) readBoolean() (Lexeme, error) {
 	case 'T':
 		boolean = Boolean(true)
 	default:
-		l.restore()
+		l.reader.Return()
 		return nil, nil
 	}
 	if err := l.nextExpectingDelimiter(); err == nil {
-		l.delimit()
+		l.reader.UnreadRune()
 		return boolean, nil
 	} else {
 		return nil, err
@@ -431,7 +231,7 @@ func (l *LexemeReader) readNumber() (Lexeme, error) {
 	if r, err := l.nextSatisfying(digit); err == nil {
 		runes = append(runes, r)
 	} else if err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else {
 		return nil, err
@@ -440,7 +240,7 @@ func (l *LexemeReader) readNumber() (Lexeme, error) {
 		if r, err := l.nextNonDelimiterExpecting(digit); err == nil {
 			runes = append(runes, r)
 		} else if err == io.EOF {
-			l.delimit()
+			l.reader.UnreadRune()
 			return Number(runes), nil
 		} else {
 			return nil, err
@@ -471,7 +271,7 @@ func (l *LexemeReader) readHex() (rune, error) {
 		if r, err := l.nextSatisfying(hexDigit); err == nil {
 			hexDigits = append(hexDigits, r)
 		} else if err == io.EOF {
-			l.delimit()
+			l.reader.UnreadRune()
 			var (
 				i int
 				r rune
@@ -781,10 +581,7 @@ func (l *LexemeReader) UnreadLexeme() error {
 
 func NewLexemeReader(r io.Reader) *LexemeReader {
 	return &LexemeReader{
-		bufio.NewReader(r),
-		nil,
-		0,
-		false,
+		NewCheckpointedRuneReader(r),
 		nil,
 		false,
 	}
