@@ -299,13 +299,13 @@ func (l *LexemeReader) readHex() (rune, error) {
 
 func (l *LexemeReader) readCharacter() (Lexeme, error) {
 	if err := l.nextExact('#'); err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 	if err := l.nextExactExpectingNonDelimiter('\\'); err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -315,10 +315,10 @@ func (l *LexemeReader) readCharacter() (Lexeme, error) {
 		return nil, err
 	}
 	if r, err := l.nextNonDelimiter(); err == io.EOF {
-		l.delimit()
+		l.reader.UnreadRune()
 		return Character(first), nil
 	} else if err == nil && first == 'x' {
-		l.delimit()
+		l.reader.UnreadRune()
 		r, err := l.readHex()
 		if err != nil {
 			return nil, err
@@ -326,13 +326,13 @@ func (l *LexemeReader) readCharacter() (Lexeme, error) {
 		if err := l.nextExpectingDelimiter(); err != nil {
 			return nil, err
 		}
-		l.delimit()
+		l.reader.UnreadRune()
 		return Character(r), err
 	} else if err == nil {
 		runes := []rune{first, r}
 		for {
 			if r, err := l.nextNonDelimiter(); err == io.EOF {
-				l.delimit()
+				l.reader.UnreadRune()
 				switch string(runes) {
 				case "nul":
 					return Character('\x00'), nil
@@ -374,7 +374,7 @@ func (l *LexemeReader) readCharacter() (Lexeme, error) {
 }
 
 func (l *LexemeReader) readLineEnding() (bool, error) {
-	r, err := l.next()
+	r, err := l.reader.ReadRune()
 	if err == io.EOF {
 		return false, fmt.Errorf("unexpected EOF")
 	} else if err != nil {
@@ -384,9 +384,9 @@ func (l *LexemeReader) readLineEnding() (bool, error) {
 	case '\x0a':
 		return true, nil
 	case '\x0d':
-		r, err := l.next()
+		r, err := l.reader.ReadRune()
 		if err == io.EOF {
-			l.delimit()
+			l.reader.UnreadRune()
 			return true, nil
 		} else if err != nil {
 			return false, err
@@ -397,7 +397,7 @@ func (l *LexemeReader) readLineEnding() (bool, error) {
 		case '\x85':
 			return true, nil
 		default:
-			l.delimit()
+			l.reader.UnreadRune()
 			return true, nil
 		}
 	case '\x85':
@@ -411,21 +411,17 @@ func (l *LexemeReader) readLineEnding() (bool, error) {
 
 func (l *LexemeReader) readString() (Lexeme, error) {
 	if err := l.nextExact('"'); err == io.EOF {
-		l.delimit()
+		l.reader.Return()
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 	var runes []rune
 	for {
-		if r, err := l.next(); r == '"' && err == nil {
-			if _, err := l.next(); err != nil && err != io.EOF {
-				return nil, err
-			}
-			l.delimit()
+		if r, err := l.reader.ReadRune(); r == '"' && err == nil {
 			return String(string(runes)), nil
 		} else if r == '\\' && err == nil {
-			r, err := l.next()
+			r, err := l.reader.ReadRune()
 			if err == io.EOF {
 				return nil, fmt.Errorf("unexpected EOF")
 			} else if err != nil {
@@ -477,7 +473,7 @@ func (l *LexemeReader) readString() (Lexeme, error) {
 				runes = append(runes, r)
 			}
 		} else if err == nil {
-			l.delimit()
+			l.reader.UnreadRune()
 			if ok, err := l.readLineEnding(); err != nil {
 				return nil, err
 			} else if ok {
@@ -494,6 +490,7 @@ func (l *LexemeReader) readString() (Lexeme, error) {
 }
 
 func (l *LexemeReader) readLexeme() (Lexeme, error) {
+	l.reader.Checkpoint()
 	if identifier, err := l.readIdentifier(); err != nil && err != io.EOF {
 		return nil, err
 	} else if identifier != nil {
@@ -519,7 +516,7 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 	} else if string != nil {
 		return string, err
 	}
-	r, err := l.next()
+	r, err := l.reader.ReadRune()
 	if err == io.EOF {
 		return nil, fmt.Errorf("unexpected EOF")
 	} else if err != nil {
@@ -542,7 +539,7 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 		if err := l.nextExact('@'); err == nil {
 			return UnquoteSplicing{}, nil
 		} else {
-			l.delimit()
+			l.reader.UnreadRune()
 			return Unquote{}, nil
 		}
 	case '.':
