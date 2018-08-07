@@ -17,7 +17,10 @@ type Pair struct {
 	Rest  Value
 }
 
-type Binding struct{}
+type Binding interface{}
+
+type Keyword struct{}
+type Variable struct{}
 
 type Environment struct{}
 
@@ -25,7 +28,7 @@ func NewEnvironment() *Environment {
 	return &Environment{}
 }
 
-func (e *Environment) Get(s Symbol) *Binding {
+func (e *Environment) Get(s Symbol) Binding {
 	return nil
 }
 
@@ -40,13 +43,21 @@ func (e *Environment) Evaluate(datum read.Datum) (Value, error) {
 	case read.String:
 		return String(v), nil
 	case read.Symbol:
-		if b := e.Get(Symbol(v)); b != nil {
-			return b, nil // TODO
-		} else {
+		switch b := e.Get(Symbol(v)).(type) {
+		case Keyword:
+			return nil, fmt.Errorf("eval: keyword %v not allowed in expression context", v)
+		case Variable:
+			return nil, fmt.Errorf("eval: variable evaluation not implemented")
+		case nil:
 			return nil, fmt.Errorf("eval: unbound identifier %v", v)
+		default:
+			return nil, fmt.Errorf("eval: unhandled binding %#v", b)
 		}
 	case read.Pair:
 		if s, ok := v.First.(read.Symbol); ok {
+			if _, ok := e.Get(Symbol(s)).(Keyword); ok {
+				return nil, fmt.Errorf("eval: macro expansion not implemented")
+			}
 			switch Symbol(s) {
 			case Symbol("define"):
 				return nil, fmt.Errorf("eval: define not implemented")
