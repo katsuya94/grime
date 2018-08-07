@@ -8,6 +8,6 @@ type Character rune
 type String string
 type Symbol string
 type Pair struct {
-	first Datum
-	rest  Datum
+	First Datum
+	Rest  Datum
 }
