@@ -1,9 +1,9 @@
 package lex
 
 import (
-	"io"
 	"bufio"
 	"fmt"
+	"io"
 )
 
 type CheckpointedRuneReader struct {
@@ -19,7 +19,7 @@ func NewCheckpointedRuneReader(r io.Reader) *CheckpointedRuneReader {
 
 func (c *CheckpointedRuneReader) ReadRune() (rune, error) {
 	var (
-		r rune
+		r   rune
 		err error
 	)
 	if c.i < len(c.buf) {
@@ -38,7 +38,7 @@ func (c *CheckpointedRuneReader) ReadRune() (rune, error) {
 	return r, err
 }
 
-func (c *CheckpointedRuneReader) UnreadRune() (error) {
+func (c *CheckpointedRuneReader) UnreadRune() error {
 	if c.i <= 0 {
 		return fmt.Errorf("lex: invalid use of UnreadRune")
 	}
@@ -54,4 +54,3 @@ func (c *CheckpointedRuneReader) Checkpoint() {
 func (c *CheckpointedRuneReader) Return() {
 	c.i = 0
 }
-
