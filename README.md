@@ -2,7 +2,7 @@
 
 ## TODO
 
-* [ ] Refactor reader to use ok, err semantics for backtracking
+* [x] Refactor reader to use ok, err semantics for backtracking
 * [ ] Implement macro expansion
 * [ ] Add syntax lexemes to the lexer/reader
 * [ ] Use shared structs for read/eval

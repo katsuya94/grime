@@ -29,7 +29,7 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 		return nil, err
 	}
 	l.reader.Checkpoint()
-	lexeme, err := l.readLexeme()
+	lexeme, err := l.expectLexeme()
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +48,13 @@ func (l *LexemeReader) readInterlexemeSpace() error {
 	}
 }
 
-func (l *LexemeReader) readLexeme() (Lexeme, error) {
+func (l *LexemeReader) expectLexeme() (Lexeme, error) {
 	readFns := []func()(Lexeme, bool, error){
 		l.readIdentifier,
 		l.readBoolean,
 		l.readNumber,
 		l.readCharacter,
+		l.readString,
 	}
 	for _, readFn := range readFns {
 		if lexeme, ok, err := readFn(); err != nil {
@@ -62,15 +63,8 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 			return lexeme, nil
 		}
 	}
-	if string, err := l.readString(); err != nil && err != io.EOF {
-		return nil, err
-	} else if string != nil {
-		return string, err
-	}
-	r, err := l.reader.ReadRune()
-	if err == io.EOF {
-		return nil, fmt.Errorf("unexpected EOF")
-	} else if err != nil {
+	r, err := l.expectNonEOF()
+	if err != nil {
 		return nil, err
 	}
 	switch r {
@@ -87,7 +81,9 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 	case '`':
 		return QuasiQuote{}, nil
 	case ',':
-		if err := l.nextExact('@'); err == nil {
+		if r, ok, err := l.readNonEOF(); err != nil {
+			return nil, err
+		} else if ok && r == '@' {
 			return UnquoteSplicing{}, nil
 		} else {
 			l.reader.UnreadRune()
@@ -96,7 +92,7 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 	case '.':
 		return Dot{}, nil
 	default:
-		return nil, fmt.Errorf("unexpected rune: %#v", string(r))
+		return nil, fmt.Errorf("unexpected rune")
 	}
 }
 
@@ -240,7 +236,7 @@ func (l *LexemeReader) readCharacter() (Lexeme, bool, error) {
 		l.reader.Return()
 		return nil, false, nil
 	}
-	first, err := l.nextExpectingNonDelimiter()
+	first, err := l.expectNonDelimiter()
 	if err != nil {
 		return nil, false, err
 	}
@@ -300,6 +296,123 @@ func (l *LexemeReader) readCharacter() (Lexeme, bool, error) {
 	}
 }
 
+func (l *LexemeReader) readString() (Lexeme, bool, error) {
+	if r, err := l.expectNonEOF(); err != nil {
+		return nil, false, err
+	} else if r != '"' {
+		l.reader.Return()
+		return nil, false, nil
+	}
+	var runes []rune
+	for {
+		if r, err := l.expectNonEOF(); err != nil {
+			return nil, false, err
+		} else if r == '"' {
+			return String(runes), true, nil
+		} else if r == '\\' {
+			if r, ok, err := l.readStringEscape(); err != nil {
+				return nil, false, err
+			} else if ok {
+				runes = append(runes, r)
+			}
+		} else {
+			l.reader.UnreadRune()
+			if ok, err := l.readLineEnding(); err != nil {
+				return nil, false, err
+			} else if ok {
+				runes = append(runes, '\x0a')
+			} else {
+				runes = append(runes, r)
+			}
+		}
+	}
+}
+
+func (l *LexemeReader) readStringEscape() (rune, bool, error) {
+	r, err := l.expectNonEOF()
+	if err != nil {
+		return 0, false, err
+	}
+	switch r {
+	case 'a':
+		r = '\x07'
+	case 'b':
+		r = '\x08'
+	case 't':
+		r = '\x09'
+	case 'n':
+		r = '\x0a'
+	case 'v':
+		r = '\x0b'
+	case 'f':
+		r = '\x0c'
+	case 'r':
+		r = '\x0d'
+	case '"':
+	case '\\':
+	case 'x':
+		r, err = l.expectHex()
+		if err != nil {
+			return 0, false, err
+		}
+		if r, err := l.expectNonEOF(); err != nil {
+			return 0, false, err
+		} else if r != ';' {
+			return 0, false, fmt.Errorf("unexpected rune")
+		}
+	default:
+		if intralineWhitespace(r) {
+			if ok, err := l.readLineEnding(); err != nil {
+				return 0, false, err
+			} else if !ok {
+				return 0, false, fmt.Errorf("expected line ending")
+			}
+			if r, err := l.expectNonEOF(); err != nil {
+				return 0, false, err
+			} else if !intralineWhitespace(r) {
+				return 0, false, fmt.Errorf("unexpected rune")
+			}
+			return 0, false, nil
+		} else {
+			return 0, false, fmt.Errorf(`unrecognized string escape: \%v`, r)
+		}
+	}
+	return r, true, nil
+}
+
+func (l *LexemeReader) readLineEnding() (bool, error) {
+	r, err := l.expectNonEOF()
+	if err != nil {
+		return false, err
+	}
+	switch r {
+	case '\x0a':
+		return true, nil
+	case '\x0d':
+		r, ok, err := l.readNonEOF()
+		if err != nil {
+			return false, err
+		} else if !ok {
+			return true, nil
+		}
+		switch r {
+		case '\x0a':
+			return true, nil
+		case '\x85':
+			return true, nil
+		default:
+			l.reader.UnreadRune()
+			return true, nil
+		}
+	case '\x85':
+		return true, nil
+	case '\u2028':
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
 func (l *LexemeReader) expectHex() (rune, error) {
 	r, err := l.expectNonDelimiter()
 	if err != nil {
@@ -342,24 +455,23 @@ func hexValue(r rune) rune {
 	}
 }
 
-func (l *LexemeReader) readNonEOF() (rune, bool, error) {
-	if r, err := l.reader.ReadRune(); err == io.EOF {
-		l.reader.UnreadRune()
-		return 0, false, nil
-	} else if err != nil {
-		return 0, false, err
+func (l *LexemeReader) expectDelimiter() error {
+	if _, ok, err := l.readNonDelimiter(); err != nil {
+		return err
+	} else if ok {
+		return fmt.Errorf("expected delimiter")
 	} else {
-		return r, true, nil
+		return nil
 	}
 }
 
-func (l *LexemeReader) expectNonEOF() (rune, error) {
-	if r, ok, err := l.readNonEOF(); err != nil {
+func (l *LexemeReader) expectNonDelimiter() (rune, error) {
+	if r, ok, err := l.readNonDelimiter(); err != nil {
 		return 0, err
 	} else if ok {
 		return r, nil
 	} else {
-		return 0, fmt.Errorf("unexpected EOF")
+		return 0, fmt.Errorf("unexpected delimiter")
 	}
 }
 
@@ -376,227 +488,24 @@ func (l *LexemeReader) readNonDelimiter() (rune, bool, error) {
 	}
 }
 
-func (l *LexemeReader) expectNonDelimiter() (rune, error) {
-	if r, ok, err := l.readNonDelimiter(); err != nil {
+func (l *LexemeReader) expectNonEOF() (rune, error) {
+	if r, ok, err := l.readNonEOF(); err != nil {
 		return 0, err
 	} else if ok {
 		return r, nil
 	} else {
-		return 0, fmt.Errorf("unexpected delimiter")
-	}
-}
-
-func (l *LexemeReader) expectDelimiter() error {
-	if _, ok, err := l.readNonDelimiter(); err != nil {
-		return err
-	} else if ok {
-		return fmt.Errorf("expected delimiter")
-	} else {
-		return nil
-	}
-}
-
-func (l *LexemeReader) nextExpectingNonDelimiter() (rune, error) {
-	if r, ok, err := l.readNonDelimiter(); err != nil {
-		return 0, err
-	} else if ok {
-		return r, nil
-	} else {
-		return 0, fmt.Errorf("unexpected delimiter")
-	}
-}
-
-func (l *LexemeReader) nextExpectingDelimiter() error {
-	if _, ok, err := l.readNonDelimiter(); err != nil {
-		return err
-	} else if ok {
-		return fmt.Errorf("expected delimiter")
-	} else {
-		return nil
-	}
-}
-
-func (l *LexemeReader) nextSatisfying(p func(rune) bool) (rune, error) {
-	if r, err := l.reader.ReadRune(); p(r) && err == nil {
-		return r, nil
-	} else if err == nil {
-		return 0, io.EOF
-	} else {
-		return 0, err
-	}
-}
-
-func (l *LexemeReader) nextExact(e rune) error {
-	if r, err := l.reader.ReadRune(); r == e && err == nil {
-		return nil
-	} else if err == nil {
-		return io.EOF
-	} else {
-		return err
-	}
-}
-
-func (l *LexemeReader) nextNonDelimiterExpecting(p func(rune) bool) (rune, error) {
-	if r, ok, err := l.readNonDelimiter(); err != nil {
-		return 0, err
-	} else if !ok {
-		return 0, io.EOF
-	} else if p(r) {
-		return r, nil
-	} else {
-		return 0, fmt.Errorf("unexpected rune")
-	}
-}
-
-func (l *LexemeReader) nextExactExpectingNonDelimiter(e rune) error {
-	if r, ok, err := l.readNonDelimiter(); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("unexpected delimiter")
-	} else if r == e {
-		return nil
-	} else {
-		return fmt.Errorf("unexpected rune")
-	}
-}
-
-func (l *LexemeReader) nextExpectingExact(e rune) error {
-	if r, err := l.reader.ReadRune(); err == io.EOF {
-		return fmt.Errorf("unexpected EOF")
-	} else if err != nil {
-		return err
-	} else if r == e {
-		return nil
-	} else {
-		return fmt.Errorf("unexpected rune")
-	}
-}
-
-func (l *LexemeReader) nextExpecting(p func(rune) bool) (rune, error) {
-	if r, err := l.reader.ReadRune(); p(r) && err == nil {
-		return r, nil
-	} else if err == nil {
-		return 0, fmt.Errorf("unexpected rune: %#v", string(r))
-	} else if err == io.EOF {
 		return 0, fmt.Errorf("unexpected EOF")
+	}
+}
+
+func (l *LexemeReader) readNonEOF() (rune, bool, error) {
+	if r, err := l.reader.ReadRune(); err == io.EOF {
+		l.reader.UnreadRune()
+		return 0, false, nil
+	} else if err != nil {
+		return 0, false, err
 	} else {
-		return 0, err
-	}
-}
-
-func (l *LexemeReader) readLineEnding() (bool, error) {
-	r, err := l.reader.ReadRune()
-	if err == io.EOF {
-		return false, fmt.Errorf("unexpected EOF")
-	} else if err != nil {
-		return false, err
-	}
-	switch r {
-	case '\x0a':
-		return true, nil
-	case '\x0d':
-		r, err := l.reader.ReadRune()
-		if err == io.EOF {
-			l.reader.UnreadRune()
-			return true, nil
-		} else if err != nil {
-			return false, err
-		}
-		switch r {
-		case '\x0a':
-			return true, nil
-		case '\x85':
-			return true, nil
-		default:
-			l.reader.UnreadRune()
-			return true, nil
-		}
-	case '\x85':
-		return true, nil
-	case '\u2028':
-		return true, nil
-	default:
-		return false, nil
-	}
-}
-
-func (l *LexemeReader) readString() (Lexeme, error) {
-	if err := l.nextExact('"'); err == io.EOF {
-		l.reader.Return()
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	var runes []rune
-	for {
-		if r, err := l.reader.ReadRune(); r == '"' && err == nil {
-			return String(string(runes)), nil
-		} else if r == '\\' && err == nil {
-			r, err := l.reader.ReadRune()
-			if err == io.EOF {
-				return nil, fmt.Errorf("unexpected EOF")
-			} else if err != nil {
-				return nil, err
-			}
-			nothing := false
-			switch r {
-			case 'a':
-				r = '\x07'
-			case 'b':
-				r = '\x08'
-			case 't':
-				r = '\x09'
-			case 'n':
-				r = '\x0a'
-			case 'v':
-				r = '\x0b'
-			case 'f':
-				r = '\x0c'
-			case 'r':
-				r = '\x0d'
-			case '"':
-			case '\\':
-			case 'x':
-				r, err = l.expectHex()
-				if err != nil {
-					return nil, err
-				}
-				if err := l.nextExpectingExact(';'); err != nil {
-					return nil, err
-				}
-			default:
-				if intralineWhitespace(r) {
-					if ok, err := l.readLineEnding(); err != nil {
-						return nil, err
-					} else if !ok {
-						return nil, fmt.Errorf("expected line ending")
-					}
-					if _, err := l.nextExpecting(intralineWhitespace); err == nil {
-						nothing = true
-					} else {
-						return nil, err
-					}
-				} else {
-					return nil, fmt.Errorf(`unrecognized escape pattern: \%v`, r)
-				}
-			}
-			if !nothing {
-				runes = append(runes, r)
-			}
-		} else if err == nil {
-			l.reader.UnreadRune()
-			if ok, err := l.readLineEnding(); err != nil {
-				return nil, err
-			} else if ok {
-				runes = append(runes, '\x0a')
-			} else {
-				runes = append(runes, r)
-			}
-		} else if err == io.EOF {
-			return nil, fmt.Errorf("unexpected EOF")
-		} else {
-			return nil, err
-		}
+		return r, true, nil
 	}
 }
 
