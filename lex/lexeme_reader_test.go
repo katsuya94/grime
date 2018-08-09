@@ -82,7 +82,7 @@ func TestLex(t *testing.T) {
 			"boolean without delimiter",
 			"#fn",
 			nil,
-			"expected delimiter",
+			"lex: expected delimiter",
 		},
 		{
 			"number",
@@ -136,7 +136,7 @@ func TestLex(t *testing.T) {
 			"character unrecognized name",
 			`#\foo`,
 			nil,
-			`unrecognized character: #\foo`,
+			`lex: unrecognized character: #\foo`,
 		},
 		{
 			"string",
@@ -166,13 +166,13 @@ func TestLex(t *testing.T) {
 			"string escape hex unterminated",
 			`"\x6e"`,
 			nil,
-			"unexpected rune",
+			"lex: unexpected rune",
 		},
 		{
 			"string escape hex empty",
 			`"\x;"`,
 			nil,
-			"unexpected delimiter",
+			"lex: unexpected delimiter",
 		},
 		{
 			"string escape hex non hex digit",

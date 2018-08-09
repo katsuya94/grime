@@ -22,8 +22,10 @@ func NewDatumReader(r io.Reader) *DatumReader {
 
 func (d *DatumReader) ReadDatum() (Datum, error) {
 	lexeme, err := d.reader.ReadLexeme()
-	if err != nil {
-		return nil, err
+	if err == io.EOF {
+		return nil, io.EOF
+	} else if err != nil {
+		return nil, fmt.Errorf("read: %v", err)
 	}
 	switch v := lexeme.(type) {
 	case lex.Boolean:
@@ -65,7 +67,7 @@ func (d *DatumReader) ReadDatum() (Datum, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+		return nil, fmt.Errorf("read: unexpected lexeme: %#v", lexeme)
 	}
 }
 

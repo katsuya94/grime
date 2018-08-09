@@ -25,13 +25,15 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 		l.unread = false
 		return l.next, nil
 	}
-	if err := l.readInterlexemeSpace(); err != nil {
-		return nil, err
+	if err := l.readInterlexemeSpace(); err == io.EOF {
+		return nil, io.EOF
+	} else if err != nil {
+		return nil, fmt.Errorf("lex: %v", err)
 	}
 	l.reader.Checkpoint()
 	lexeme, err := l.expectLexeme()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("lex: %v", err)
 	}
 	l.next = lexeme
 	return lexeme, nil
@@ -511,7 +513,7 @@ func (l *LexemeReader) readNonEOF() (rune, bool, error) {
 
 func (l *LexemeReader) UnreadLexeme() error {
 	if l.unread {
-		return fmt.Errorf("invalid usage of UnreadLexeme")
+		return fmt.Errorf("lex: invalid usage of UnreadLexeme")
 	} else {
 		l.unread = true
 		return nil

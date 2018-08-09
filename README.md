@@ -10,4 +10,5 @@
 * [ ] Implement rnrs (6) library
 * [ ] Implement print methods for data
 * [ ] Handle hex literals in ids
-
+* [ ] Improve error messaging
+* [ ] Track error line/col
