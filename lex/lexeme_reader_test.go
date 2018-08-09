@@ -172,7 +172,13 @@ func TestLex(t *testing.T) {
 			"string escape hex empty",
 			`"\x;"`,
 			nil,
-			`unexpected rune: ";"`,
+			"unexpected delimiter",
+		},
+		{
+			"string escape hex non hex digit",
+			`"\xe;"`,
+			nil,
+			"unexpected rune",
 		},
 		{
 			"string line ending",
