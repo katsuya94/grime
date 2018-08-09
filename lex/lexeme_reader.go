@@ -30,9 +30,7 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 	}
 	l.reader.Checkpoint()
 	lexeme, err := l.readLexeme()
-	if err == io.EOF {
-		return nil, fmt.Errorf("unexpected EOF")
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
 	l.next = lexeme
@@ -56,10 +54,10 @@ func (l *LexemeReader) readLexeme() (Lexeme, error) {
 	} else if ok {
 		return lexeme, nil
 	}
-	if boolean, err := l.readBoolean(); err != nil && err != io.EOF {
+	if lexeme, ok, err := l.readBoolean(); err != nil {
 		return nil, err
-	} else if boolean != nil {
-		return boolean, err
+	} else if ok {
+		return lexeme, nil
 	}
 	if number, err := l.readNumber(); err != nil && err != io.EOF {
 		return nil, err
@@ -131,10 +129,8 @@ func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
 	}
 	switch r {
 	case '+':
-		if _, ok, err := l.readNonDelimiter(); err != nil {
+		if err := l.expectDelimiter(); err != nil {
 			return nil, false, err
-		} else if ok {
-			return nil, false, fmt.Errorf("expected delimiter")
 		}
 		return Identifier("+"), true, nil
 	case '-':
@@ -155,17 +151,13 @@ func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
 		} else if r != '.' {
 			return nil, false, fmt.Errorf("expected .")
 		}
-		if r, ok, err := l.readNonDelimiter(); err != nil {
+		if r, err := l.expectNonDelimiter(); err != nil {
 			return nil, false, err
-		} else if !ok {
-			return nil, false, fmt.Errorf("unexpected delimiter")
 		} else if r != '.' {
 			return nil, false, fmt.Errorf("expected .")
 		}
-		if _, ok, err := l.readNonDelimiter(); err != nil {
+		if err := l.expectDelimiter(); err != nil {
 			return nil, false, err
-		} else if ok {
-			return nil, false, fmt.Errorf("expected delimiter")
 		}
 		return Identifier("..."), true, nil
 	default:
@@ -187,17 +179,88 @@ func (l *LexemeReader) readSubsequent(prefix []rune) (Lexeme, bool, error) {
 	}
 }
 
-func (l *LexemeReader) readNonDelimiter() (rune, bool, error) {
+func (l *LexemeReader) readBoolean() (Lexeme, bool, error) {
+	if r, err := l.expectNonEOF(); err != nil {
+		return nil, false, err
+	} else if r != '#' {
+		l.reader.Return()
+		return nil, false, nil
+	}
+	r, err := l.expectNonDelimiter()
+	if err != nil {
+		return nil, false, err
+	}
+	var lexeme Lexeme
+	switch r {
+	case 'f':
+		lexeme = Boolean(false)
+	case 'F':
+		lexeme = Boolean(false)
+	case 't':
+		lexeme = Boolean(true)
+	case 'T':
+		lexeme = Boolean(true)
+	default:
+		l.reader.Return()
+		return nil, false, nil
+	}
+	if err := l.expectDelimiter(); err != nil {
+		return nil, false, err
+	}
+	return lexeme, true, nil
+}
+
+func (l *LexemeReader) readNonEOF() (rune, bool, error) {
 	if r, err := l.reader.ReadRune(); err == io.EOF {
 		l.reader.UnreadRune()
 		return 0, false, nil
 	} else if err != nil {
 		return 0, false, err
+	} else {
+		return r, true, nil
+	}
+}
+
+func (l *LexemeReader) expectNonEOF() (rune, error) {
+	if r, ok, err := l.readNonEOF(); err != nil {
+		return 0, err
+	} else if ok {
+		return r, nil
+	} else {
+		return 0, fmt.Errorf("unexpected EOF")
+	}
+}
+
+func (l *LexemeReader) readNonDelimiter() (rune, bool, error) {
+	if r, ok, err := l.readNonEOF(); err != nil {
+		return 0, false, err
+	} else if !ok {
+		return 0, false, nil
 	} else if delimiter(r) {
 		l.reader.UnreadRune()
 		return 0, false, nil
 	} else {
 		return r, true, nil
+	}
+}
+
+func (l *LexemeReader) expectNonDelimiter() (rune, error) {
+	if r, ok, err := l.readNonDelimiter(); err != nil {
+		return 0, err
+	} else if ok {
+		return r, nil
+	} else {
+		return 0, fmt.Errorf("unexpected delimiter")
+	}
+}
+
+func (l *LexemeReader) expectDelimiter() error {
+	if _, ok, err := l.readNonDelimiter(); err != nil {
+		return err
+	} else if ok {
+		return fmt.Errorf("expected delimiter")
+	} else {
+		return nil
 	}
 }
 
@@ -286,38 +349,6 @@ func (l *LexemeReader) nextExpecting(p func(rune) bool) (rune, error) {
 		return 0, fmt.Errorf("unexpected EOF")
 	} else {
 		return 0, err
-	}
-}
-
-func (l *LexemeReader) readBoolean() (Lexeme, error) {
-	if err := l.nextExact('#'); err == io.EOF {
-		l.reader.Return()
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	r, err := l.nextExpectingNonDelimiter()
-	if err != nil {
-		return nil, err
-	}
-	var boolean Lexeme
-	switch r {
-	case 'f':
-		boolean = Boolean(false)
-	case 'F':
-		boolean = Boolean(false)
-	case 't':
-		boolean = Boolean(true)
-	case 'T':
-		boolean = Boolean(true)
-	default:
-		l.reader.Return()
-		return nil, nil
-	}
-	if err := l.nextExpectingDelimiter(); err == nil {
-		return boolean, nil
-	} else {
-		return nil, err
 	}
 }
 
