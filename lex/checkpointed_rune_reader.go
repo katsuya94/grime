@@ -54,3 +54,7 @@ func (c *CheckpointedRuneReader) Checkpoint() {
 func (c *CheckpointedRuneReader) Return() {
 	c.i = 0
 }
+
+func (c *CheckpointedRuneReader) Consumed() []rune {
+	return c.buf[:c.i]
+}

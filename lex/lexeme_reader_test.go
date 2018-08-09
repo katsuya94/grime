@@ -82,7 +82,7 @@ func TestLex(t *testing.T) {
 			"boolean without delimiter",
 			"#fn",
 			nil,
-			`expected delimiter; got "n"`,
+			"expected delimiter",
 		},
 		{
 			"number",
@@ -166,7 +166,7 @@ func TestLex(t *testing.T) {
 			"string escape hex unterminated",
 			`"\x6e"`,
 			nil,
-			`expected ";"; got "\""`,
+			"unexpected rune",
 		},
 		{
 			"string escape hex empty",
