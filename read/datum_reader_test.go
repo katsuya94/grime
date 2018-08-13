@@ -1,6 +1,7 @@
 package read
 
 import (
+	"github.com/katsuya94/grime/core"
 	"reflect"
 	"testing"
 )
@@ -9,91 +10,91 @@ func TestRead(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
-		data   []Datum
+		data   []core.Datum
 		error  string
 	}{
 		{
 			"boolean",
 			"#f",
-			[]Datum{Boolean(false)},
+			[]core.Datum{core.Boolean(false)},
 			"",
 		},
 		{
 			"number",
 			"123",
-			[]Datum{Number("123")},
+			[]core.Datum{core.Number("123")},
 			"",
 		},
 		{
 			"character",
 			`#\x`,
-			[]Datum{Character('x')},
+			[]core.Datum{core.Character('x')},
 			"",
 		},
 		{
 			"string",
 			`"name"`,
-			[]Datum{String("name")},
+			[]core.Datum{core.String("name")},
 			"",
 		},
 		{
 			"symbol",
 			"id",
-			[]Datum{Symbol("id")},
+			[]core.Datum{core.Symbol("id")},
 			"",
 		},
 		{
 			"two data",
 			"id name",
-			[]Datum{Symbol("id"), Symbol("name")},
+			[]core.Datum{core.Symbol("id"), core.Symbol("name")},
 			"",
 		},
 		{
 			"empty list",
 			"()",
-			[]Datum{nil},
+			[]core.Datum{nil},
 			"",
 		},
 		{
 			"list with one element",
 			"(id)",
-			[]Datum{Pair{Symbol("id"), nil}},
+			[]core.Datum{core.Pair{core.Symbol("id"), nil}},
 			"",
 		},
 		{
 			"list with two elements",
 			"(id name)",
-			[]Datum{Pair{Symbol("id"), Pair{Symbol("name"), nil}}},
+			[]core.Datum{core.Pair{core.Symbol("id"), core.Pair{core.Symbol("name"), nil}}},
 			"",
 		},
 		{
 			"pair",
 			"(id . name)",
-			[]Datum{Pair{Symbol("id"), Symbol("name")}},
+			[]core.Datum{core.Pair{core.Symbol("id"), core.Symbol("name")}},
 			"",
 		},
 		{
 			"quote",
 			"'id",
-			[]Datum{Pair{Symbol("quote"), Pair{Symbol("id"), nil}}},
+			[]core.Datum{core.Pair{core.Symbol("quote"), core.Pair{core.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"quasiquote",
 			"`id",
-			[]Datum{Pair{Symbol("quasiquote"), Pair{Symbol("id"), nil}}},
+			[]core.Datum{core.Pair{core.Symbol("quasiquote"), core.Pair{core.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unquote",
 			",id",
-			[]Datum{Pair{Symbol("unquote"), Pair{Symbol("id"), nil}}},
+			[]core.Datum{core.Pair{core.Symbol("unquote"), core.Pair{core.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unquote splicing",
 			",@id",
-			[]Datum{Pair{Symbol("unquote-splicing"), Pair{Symbol("id"), nil}}},
+			[]core.Datum{core.Pair{core.Symbol("unquote-splicing"), core.Pair{core.Symbol("id"), nil}}},
 			"",
 		},
 	}

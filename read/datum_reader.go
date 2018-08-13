@@ -3,6 +3,7 @@ package read
 import (
 	"fmt"
 	"github.com/katsuya94/grime/lex"
+	"github.com/katsuya94/grime/core"
 	"io"
 	"strings"
 )
@@ -20,7 +21,7 @@ func NewDatumReader(r io.Reader) *DatumReader {
 	return &DatumReader{lex.NewLexemeReader(r)}
 }
 
-func (d *DatumReader) ReadDatum() (Datum, error) {
+func (d *DatumReader) ReadDatum() (core.Datum, error) {
 	lexeme, err := d.reader.ReadLexeme()
 	if err == io.EOF {
 		return nil, io.EOF
@@ -29,40 +30,40 @@ func (d *DatumReader) ReadDatum() (Datum, error) {
 	}
 	switch v := lexeme.(type) {
 	case lex.Boolean:
-		return Boolean(v), nil
+		return core.Boolean(v), nil
 	case lex.Number:
-		return Number(v), nil
+		return core.Number(v), nil
 	case lex.Character:
-		return Character(v), nil
+		return core.Character(v), nil
 	case lex.String:
-		return String(v), nil
+		return core.String(v), nil
 	case lex.Identifier:
-		return Symbol(v), nil
+		return core.Symbol(v), nil
 	case lex.LeftParenthesis:
 		return d.readList(PARENTHESES)
 	case lex.LeftBracket:
 		return d.readList(BRACKETS)
 	case lex.Quote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return Pair{Symbol("quote"), Pair{datum, nil}}, nil
+			return core.Pair{core.Symbol("quote"), core.Pair{datum, nil}}, nil
 		} else {
 			return nil, err
 		}
 	case lex.QuasiQuote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return Pair{Symbol("quasiquote"), Pair{datum, nil}}, nil
+			return core.Pair{core.Symbol("quasiquote"), core.Pair{datum, nil}}, nil
 		} else {
 			return nil, err
 		}
 	case lex.Unquote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return Pair{Symbol("unquote"), Pair{datum, nil}}, nil
+			return core.Pair{core.Symbol("unquote"), core.Pair{datum, nil}}, nil
 		} else {
 			return nil, err
 		}
 	case lex.UnquoteSplicing:
 		if datum, err := d.ReadDatum(); err == nil {
-			return Pair{Symbol("unquote-splicing"), Pair{datum, nil}}, nil
+			return core.Pair{core.Symbol("unquote-splicing"), core.Pair{datum, nil}}, nil
 		} else {
 			return nil, err
 		}
@@ -71,7 +72,7 @@ func (d *DatumReader) ReadDatum() (Datum, error) {
 	}
 }
 
-func (d *DatumReader) expectDatum() (Datum, error) {
+func (d *DatumReader) expectDatum() (core.Datum, error) {
 	if datum, err := d.ReadDatum(); err == io.EOF {
 		return nil, fmt.Errorf("unexpected EOF")
 	} else if err != nil {
@@ -81,7 +82,7 @@ func (d *DatumReader) expectDatum() (Datum, error) {
 	}
 }
 
-func (d *DatumReader) readList(kind int) (Datum, error) {
+func (d *DatumReader) readList(kind int) (core.Datum, error) {
 	for {
 		lexeme, err := d.expectNonEOF()
 		if err != nil {
@@ -132,7 +133,7 @@ func (d *DatumReader) readList(kind int) (Datum, error) {
 			if err != nil {
 				return nil, err
 			}
-			return Pair{first, rest}, nil
+			return core.Pair{first, rest}, nil
 		}
 	}
 }
@@ -147,9 +148,9 @@ func (d *DatumReader) expectNonEOF() (lex.Lexeme, error) {
 	}
 }
 
-func Read(r io.Reader) ([]Datum, error) {
+func Read(r io.Reader) ([]core.Datum, error) {
 	datumReader := NewDatumReader(r)
-	var data []Datum
+	var data []core.Datum
 	for {
 		if datum, err := datumReader.ReadDatum(); err == nil {
 			data = append(data, datum)
@@ -161,6 +162,6 @@ func Read(r io.Reader) ([]Datum, error) {
 	}
 }
 
-func ReadString(s string) ([]Datum, error) {
+func ReadString(s string) ([]core.Datum, error) {
 	return Read(strings.NewReader(s))
 }

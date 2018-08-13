@@ -1,21 +1,9 @@
 package eval
 
 import (
-	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/core"
 	"fmt"
 )
-
-type Value interface{}
-
-type Boolean bool
-type Number string
-type Character rune
-type String string
-type Symbol string
-type Pair struct {
-	First Value
-	Rest  Value
-}
 
 type Binding interface{}
 
@@ -28,22 +16,22 @@ func NewEnvironment() *Environment {
 	return &Environment{}
 }
 
-func (e *Environment) Get(s Symbol) Binding {
+func (e *Environment) Get(s core.Symbol) Binding {
 	return nil
 }
 
-func (e *Environment) Evaluate(datum read.Datum) (Value, error) {
+func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
 	switch v := datum.(type) {
-	case read.Boolean:
-		return Boolean(v), nil
-	case read.Number:
-		return Number(v), nil
-	case read.Character:
-		return Character(v), nil
-	case read.String:
-		return String(v), nil
-	case read.Symbol:
-		switch b := e.Get(Symbol(v)).(type) {
+	case core.Boolean:
+		return v, nil
+	case core.Number:
+		return v, nil
+	case core.Character:
+		return v, nil
+	case core.String:
+		return v, nil
+	case core.Symbol:
+		switch b := e.Get(v).(type) {
 		case Keyword:
 			return nil, fmt.Errorf("eval: keyword %v not allowed in expression context", v)
 		case Variable:
@@ -53,13 +41,13 @@ func (e *Environment) Evaluate(datum read.Datum) (Value, error) {
 		default:
 			return nil, fmt.Errorf("eval: unhandled binding %#v", b)
 		}
-	case read.Pair:
-		if s, ok := v.First.(read.Symbol); ok {
-			if _, ok := e.Get(Symbol(s)).(Keyword); ok {
+	case core.Pair:
+		if s, ok := v.First.(core.Symbol); ok {
+			if _, ok := e.Get(s).(Keyword); ok {
 				return nil, fmt.Errorf("eval: macro expansion not implemented")
 			}
-			switch Symbol(s) {
-			case Symbol("define"):
+			switch s {
+			case core.Symbol("define"):
 				return nil, fmt.Errorf("eval: define not implemented")
 			}
 		}
@@ -69,10 +57,10 @@ func (e *Environment) Evaluate(datum read.Datum) (Value, error) {
 		}
 		var (
 			rest = v.Rest
-			args []Value
+			args []core.Datum
 		)
 		for {
-			if v, ok := rest.(read.Pair); ok {
+			if v, ok := rest.(core.Pair); ok {
 				if arg, err := e.Evaluate(v.First); err == nil {
 					args = append(args, arg)
 					rest = v.Rest
