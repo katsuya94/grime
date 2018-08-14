@@ -1,8 +1,8 @@
 package eval
 
 import (
-	"github.com/katsuya94/grime/core"
 	"fmt"
+	"github.com/katsuya94/grime/core"
 )
 
 type Binding interface{}
@@ -79,4 +79,13 @@ func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
 	default:
 		return nil, fmt.Errorf("eval: unhandled datum %#v", v)
 	}
+}
+
+func (e *Environment) EvaluateTopLevelProgram(topLevelProgram []core.Datum) error {
+	for topLevelForm := range topLevelProgram {
+		if _, err := e.Evaluate(topLevelForm); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -2,8 +2,8 @@ package read
 
 import (
 	"fmt"
-	"github.com/katsuya94/grime/lex"
 	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/lex"
 	"io"
 	"strings"
 )

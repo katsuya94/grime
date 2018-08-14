@@ -51,7 +51,7 @@ func (l *LexemeReader) readInterlexemeSpace() error {
 }
 
 func (l *LexemeReader) expectLexeme() (Lexeme, error) {
-	readFns := []func()(Lexeme, bool, error){
+	readFns := []func() (Lexeme, bool, error){
 		l.readIdentifier,
 		l.readBoolean,
 		l.readNumber,
