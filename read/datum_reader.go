@@ -1,16 +1,16 @@
 package read
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/lex"
 	"io"
 	"strings"
-	"fmt"
-	"bytes"
 )
 
 func Errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("read: " + format, a...)
+	return fmt.Errorf("read: "+format, a...)
 }
 
 var ErrUnexpectedEOF = Errorf("unexpected EOF")
@@ -178,4 +178,3 @@ func ReadString(s string) ([]core.Datum, error) {
 func ReadBytes(b []byte) ([]core.Datum, error) {
 	return Read(bytes.NewReader(b))
 }
-

@@ -1,14 +1,14 @@
 package lex
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
-	"bytes"
 )
 
 func Errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("lex: " + format, a...)
+	return fmt.Errorf("lex: "+format, a...)
 }
 
 var ErrUnexpectedEOF = Errorf("unexpected EOF")

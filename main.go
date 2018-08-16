@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/eval"
@@ -9,8 +11,6 @@ import (
 	"io"
 	"os"
 	"syscall"
-	"bytes"
-	"bufio"
 )
 
 func main() {
