@@ -1,12 +1,19 @@
 package read
 
 import (
-	"fmt"
 	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/lex"
 	"io"
 	"strings"
+	"fmt"
+	"bytes"
 )
+
+func Errorf(format string, a ...interface{}) error {
+	return fmt.Errorf("read: " + format, a...)
+}
+
+var ErrUnexpectedEOF = Errorf("unexpected EOF")
 
 const (
 	PARENTHESES = iota
@@ -23,10 +30,10 @@ func NewDatumReader(r io.Reader) *DatumReader {
 
 func (d *DatumReader) ReadDatum() (core.Datum, error) {
 	lexeme, err := d.reader.ReadLexeme()
-	if err == io.EOF {
-		return nil, io.EOF
+	if err == lex.ErrUnexpectedEOF {
+		return nil, ErrUnexpectedEOF
 	} else if err != nil {
-		return nil, fmt.Errorf("read: %v", err)
+		return nil, err
 	}
 	switch v := lexeme.(type) {
 	case lex.Boolean:
@@ -68,13 +75,13 @@ func (d *DatumReader) ReadDatum() (core.Datum, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("read: unexpected lexeme: %#v", lexeme)
+		return nil, Errorf("unexpected lexeme: %#v", lexeme)
 	}
 }
 
 func (d *DatumReader) expectDatum() (core.Datum, error) {
 	if datum, err := d.ReadDatum(); err == io.EOF {
-		return nil, fmt.Errorf("unexpected EOF")
+		return nil, ErrUnexpectedEOF
 	} else if err != nil {
 		return nil, err
 	} else {
@@ -93,13 +100,13 @@ func (d *DatumReader) readList(kind int) (core.Datum, error) {
 			if kind == PARENTHESES {
 				return nil, nil
 			} else {
-				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+				return nil, Errorf("unexpected lexeme: %#v", lexeme)
 			}
 		case lex.RightBracket:
 			if kind == BRACKETS {
 				return nil, nil
 			} else {
-				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+				return nil, Errorf("unexpected lexeme: %#v", lexeme)
 			}
 		case lex.Dot:
 			datum, err := d.expectDatum()
@@ -113,14 +120,14 @@ func (d *DatumReader) readList(kind int) (core.Datum, error) {
 			switch lexeme.(type) {
 			case lex.RightParenthesis:
 				if kind != PARENTHESES {
-					return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+					return nil, Errorf("unexpected lexeme: %#v", lexeme)
 				}
 			case lex.RightBracket:
 				if kind != BRACKETS {
-					return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+					return nil, Errorf("unexpected lexeme: %#v", lexeme)
 				}
 			default:
-				return nil, fmt.Errorf("unexpected lexeme: %#v", lexeme)
+				return nil, Errorf("unexpected lexeme: %#v", lexeme)
 			}
 			return datum, nil
 		default:
@@ -140,7 +147,9 @@ func (d *DatumReader) readList(kind int) (core.Datum, error) {
 
 func (d *DatumReader) expectNonEOF() (lex.Lexeme, error) {
 	if lexeme, err := d.reader.ReadLexeme(); err == io.EOF {
-		return nil, fmt.Errorf("unexpected EOF")
+		return nil, ErrUnexpectedEOF
+	} else if err == lex.ErrUnexpectedEOF {
+		return nil, ErrUnexpectedEOF
 	} else if err != nil {
 		return nil, err
 	} else {
@@ -165,3 +174,8 @@ func Read(r io.Reader) ([]core.Datum, error) {
 func ReadString(s string) ([]core.Datum, error) {
 	return Read(strings.NewReader(s))
 }
+
+func ReadBytes(b []byte) ([]core.Datum, error) {
+	return Read(bytes.NewReader(b))
+}
+

@@ -4,7 +4,14 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"bytes"
 )
+
+func Errorf(format string, a ...interface{}) error {
+	return fmt.Errorf("lex: " + format, a...)
+}
+
+var ErrUnexpectedEOF = Errorf("unexpected EOF")
 
 type LexemeReader struct {
 	reader *CheckpointedRuneReader
@@ -25,15 +32,13 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 		l.unread = false
 		return l.next, nil
 	}
-	if err := l.readInterlexemeSpace(); err == io.EOF {
-		return nil, io.EOF
-	} else if err != nil {
-		return nil, fmt.Errorf("lex: %v", err)
+	if err := l.readInterlexemeSpace(); err != nil {
+		return nil, err
 	}
 	l.reader.Checkpoint()
 	lexeme, err := l.expectLexeme()
 	if err != nil {
-		return nil, fmt.Errorf("lex: %v", err)
+		return nil, err
 	}
 	l.next = lexeme
 	return lexeme, nil
@@ -94,7 +99,7 @@ func (l *LexemeReader) expectLexeme() (Lexeme, error) {
 	case '.':
 		return Dot{}, nil
 	default:
-		return nil, fmt.Errorf("unexpected rune")
+		return nil, Errorf("unexpected rune")
 	}
 }
 
@@ -130,7 +135,7 @@ func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
 		} else if !ok {
 			return Identifier("-"), true, nil
 		} else if r != '>' {
-			return nil, false, fmt.Errorf("expected delimiter or >")
+			return nil, false, Errorf("expected delimiter or >")
 		}
 		return l.readSubsequent([]rune{'-', '>'})
 	case '.':
@@ -140,12 +145,12 @@ func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
 			l.reader.Return()
 			return nil, false, nil
 		} else if r != '.' {
-			return nil, false, fmt.Errorf("expected .")
+			return nil, false, Errorf("expected .")
 		}
 		if r, err := l.expectNonDelimiter(); err != nil {
 			return nil, false, err
 		} else if r != '.' {
-			return nil, false, fmt.Errorf("expected .")
+			return nil, false, Errorf("expected .")
 		}
 		if err := l.expectDelimiter(); err != nil {
 			return nil, false, err
@@ -218,7 +223,7 @@ func (l *LexemeReader) readNumber() (Lexeme, bool, error) {
 		} else if !ok {
 			return Number(runes), true, nil
 		} else if !digit(r) {
-			return nil, false, fmt.Errorf("unexpected rune")
+			return nil, false, Errorf("unexpected rune")
 		} else {
 			runes = append(runes, r)
 		}
@@ -293,7 +298,7 @@ func (l *LexemeReader) readCharacter() (Lexeme, bool, error) {
 		case "delete":
 			return Character('\x7f'), true, nil
 		default:
-			return nil, false, fmt.Errorf(`unrecognized character: #\%v`, string(runes))
+			return nil, false, Errorf(`unrecognized character: #\%v`, string(runes))
 		}
 	}
 }
@@ -360,23 +365,23 @@ func (l *LexemeReader) readStringEscape() (rune, bool, error) {
 		if r, err := l.expectNonEOF(); err != nil {
 			return 0, false, err
 		} else if r != ';' {
-			return 0, false, fmt.Errorf("unexpected rune")
+			return 0, false, Errorf("unexpected rune")
 		}
 	default:
 		if intralineWhitespace(r) {
 			if ok, err := l.readLineEnding(); err != nil {
 				return 0, false, err
 			} else if !ok {
-				return 0, false, fmt.Errorf("expected line ending")
+				return 0, false, Errorf("expected line ending")
 			}
 			if r, err := l.expectNonEOF(); err != nil {
 				return 0, false, err
 			} else if !intralineWhitespace(r) {
-				return 0, false, fmt.Errorf("unexpected rune")
+				return 0, false, Errorf("unexpected rune")
 			}
 			return 0, false, nil
 		} else {
-			return 0, false, fmt.Errorf(`unrecognized string escape: \%v`, r)
+			return 0, false, Errorf(`unrecognized string escape: \%v`, r)
 		}
 	}
 	return r, true, nil
@@ -420,7 +425,7 @@ func (l *LexemeReader) expectHex() (rune, error) {
 	if err != nil {
 		return 0, err
 	} else if !hexDigit(r) {
-		return 0, fmt.Errorf("unexpected rune")
+		return 0, Errorf("unexpected rune")
 	}
 	hexDigits := []rune{r}
 	for {
@@ -440,7 +445,7 @@ func (l *LexemeReader) expectHex() (rune, error) {
 		r += hexValue(hexDigit)
 	}
 	if r > 0x10ffff || (0xd800 <= r && r <= 0xdfff) {
-		return 0, fmt.Errorf("invalid hex scalar value: %v", string(hexDigits))
+		return 0, Errorf("invalid hex scalar value: %v", string(hexDigits))
 	}
 	return r, nil
 }
@@ -461,7 +466,7 @@ func (l *LexemeReader) expectDelimiter() error {
 	if _, ok, err := l.readNonDelimiter(); err != nil {
 		return err
 	} else if ok {
-		return fmt.Errorf("expected delimiter")
+		return Errorf("expected delimiter")
 	} else {
 		return nil
 	}
@@ -473,7 +478,7 @@ func (l *LexemeReader) expectNonDelimiter() (rune, error) {
 	} else if ok {
 		return r, nil
 	} else {
-		return 0, fmt.Errorf("unexpected delimiter")
+		return 0, Errorf("unexpected delimiter")
 	}
 }
 
@@ -496,7 +501,7 @@ func (l *LexemeReader) expectNonEOF() (rune, error) {
 	} else if ok {
 		return r, nil
 	} else {
-		return 0, fmt.Errorf("unexpected EOF")
+		return 0, Errorf("unexpected EOF")
 	}
 }
 
@@ -513,7 +518,7 @@ func (l *LexemeReader) readNonEOF() (rune, bool, error) {
 
 func (l *LexemeReader) UnreadLexeme() error {
 	if l.unread {
-		return fmt.Errorf("lex: invalid usage of UnreadLexeme")
+		return Errorf("invalid usage of UnreadLexeme")
 	} else {
 		l.unread = true
 		return nil
@@ -536,4 +541,8 @@ func Lex(r io.Reader) ([]Lexeme, error) {
 
 func LexString(s string) ([]Lexeme, error) {
 	return Lex(strings.NewReader(s))
+}
+
+func LexBytes(b []byte) ([]Lexeme, error) {
+	return Lex(bytes.NewReader(b))
 }
