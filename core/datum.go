@@ -13,6 +13,7 @@ type Pair struct {
 	First Datum
 	Rest  Datum
 }
+type Procedure struct {}
 
 func Display(d Datum) string {
 	switch v := d.(type) {

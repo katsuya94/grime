@@ -105,7 +105,7 @@ func TestRead(t *testing.T) {
 				t.Fatal(err)
 			} else if test.error != "" && (err == nil || err.Error() != test.error) {
 				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
-			} else if !((data == nil && test.data == nil) || reflect.DeepEqual(data, test.data)) {
+			} else if !reflect.DeepEqual(data, test.data) {
 				t.Fatalf("\nexpected: %#v\n     got: %#v", test.data, data)
 			}
 		})

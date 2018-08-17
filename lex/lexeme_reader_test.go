@@ -260,7 +260,7 @@ func TestLex(t *testing.T) {
 				t.Fatal(err)
 			} else if test.error != "" && (err == nil || err.Error() != test.error) {
 				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
-			} else if !((lexemes == nil && test.lexemes == nil) || reflect.DeepEqual(lexemes, test.lexemes)) {
+			} else if !reflect.DeepEqual(lexemes, test.lexemes) {
 				t.Fatalf("\nexpected: %#v\n     got: %#v", test.lexemes, lexemes)
 			}
 		})
