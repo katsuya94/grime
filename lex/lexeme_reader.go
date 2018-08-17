@@ -444,7 +444,8 @@ func (l *LexemeReader) expectHex() (rune, error) {
 		r <<= 4
 		r += hexValue(hexDigit)
 	}
-	if r > 0x10ffff || (0xd800 <= r && r <= 0xdfff) {
+	fmt.Printf("%#v\n", r)
+	if r < 0 || (0xd800 <= r && r <= 0xdfff) || 0x10ffff < r {
 		return 0, Errorf("invalid hex scalar value: %v", string(hexDigits))
 	}
 	return r, nil

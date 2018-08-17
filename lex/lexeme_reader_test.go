@@ -124,7 +124,7 @@ func TestLex(t *testing.T) {
 			"character hex out of range",
 			`#\x123456789abcdef`,
 			nil,
-			`character out of range: \#x123456789abcdef`,
+			`lex: invalid hex scalar value: 123456789abcdef`,
 		},
 		{
 			"character named",
@@ -176,9 +176,9 @@ func TestLex(t *testing.T) {
 		},
 		{
 			"string escape hex non hex digit",
-			`"\xe;"`,
+			`"\xg;"`,
 			nil,
-			"unexpected rune",
+			"lex: unexpected rune",
 		},
 		{
 			"string line ending",
@@ -258,11 +258,10 @@ func TestLex(t *testing.T) {
 			lexemes, err := LexString(test.source)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
-			} else if test.error != "" && err != nil && err.Error() != test.error {
-				t.Errorf("\nexpected error: %v\n     got error: %v\n", test.error, err.Error())
-			}
-			if test.lexemes != nil && !reflect.DeepEqual(lexemes, test.lexemes) {
-				t.Errorf("\nexpected: %#v\n     got: %#v", test.lexemes, lexemes)
+			} else if test.error != "" && (err == nil || err.Error() != test.error) {
+				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+			} else if !((lexemes == nil && test.lexemes == nil) || reflect.DeepEqual(lexemes, test.lexemes)) {
+				t.Fatalf("\nexpected: %#v\n     got: %#v", test.lexemes, lexemes)
 			}
 		})
 	}

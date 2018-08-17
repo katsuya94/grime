@@ -77,7 +77,7 @@ func TestQuote(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if actual := Display(test.datum); actual != test.expected {
-				t.Errorf("\nexpected: %v\n     got: %v", test.expected, actual)
+				t.Fatalf("\nexpected: %v\n     got: %v", test.expected, actual)
 			}
 		})
 	}

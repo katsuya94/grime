@@ -25,16 +25,19 @@ func main() {
 }
 
 func repl() {
+	env := eval.NewEnvironment()
 	for {
 		fmt.Print("grime> ")
-		if data, err := readReplData(); err == io.EOF {
+		body, err := readReplData()
+		if err == io.EOF {
 			break
 		} else if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v", err)
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		}
+		if val, err := env.EvaluateBody(body); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		} else {
-			for _, datum := range data {
-				fmt.Println(core.Display(datum))
-			}
+			fmt.Println(core.Display(val))
 		}
 	}
 }

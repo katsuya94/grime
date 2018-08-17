@@ -1,9 +1,12 @@
 package eval
 
 import (
-	"fmt"
 	"github.com/katsuya94/grime/core"
 )
+
+func Errorf(format string, a ...interface{}) error {
+	return Errorf("eval: "+format, a...)
+}
 
 type Binding interface{}
 
@@ -20,8 +23,8 @@ func (e *Environment) Get(s core.Symbol) Binding {
 	return nil
 }
 
-func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
-	switch v := datum.(type) {
+func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, error) {
+	switch v := expression.(type) {
 	case core.Boolean:
 		return v, nil
 	case core.Number:
@@ -33,25 +36,22 @@ func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
 	case core.Symbol:
 		switch b := e.Get(v).(type) {
 		case Keyword:
-			return nil, fmt.Errorf("eval: keyword %v not allowed in expression context", v)
+			return nil, Errorf("eval: keyword %v not allowed in expression context", v)
 		case Variable:
-			return nil, fmt.Errorf("eval: variable evaluation not implemented")
+			return nil, Errorf("eval: variable evaluation not implemented")
 		case nil:
-			return nil, fmt.Errorf("eval: unbound identifier %v", v)
+			return nil, Errorf("eval: unbound identifier %v", v)
 		default:
-			return nil, fmt.Errorf("eval: unhandled binding %#v", b)
+			return nil, Errorf("eval: unhandled binding %#v", b)
 		}
 	case core.Pair:
 		if s, ok := v.First.(core.Symbol); ok {
-			if _, ok := e.Get(s).(Keyword); ok {
-				return nil, fmt.Errorf("eval: macro expansion not implemented")
-			}
 			switch s {
-			case core.Symbol("define"):
-				return nil, fmt.Errorf("eval: define not implemented")
+			case core.Symbol("quote"):
+				return quote(v.Rest)
 			}
 		}
-		proc, err := e.Evaluate(v.First)
+		proc, err := e.EvaluateExpression(v.First)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
 		)
 		for {
 			if v, ok := rest.(core.Pair); ok {
-				if arg, err := e.Evaluate(v.First); err == nil {
+				if arg, err := e.EvaluateExpression(v.First); err == nil {
 					args = append(args, arg)
 					rest = v.Rest
 				} else {
@@ -70,22 +70,43 @@ func (e *Environment) Evaluate(datum core.Datum) (core.Datum, error) {
 			} else if rest == nil {
 				break
 			} else {
-				return nil, fmt.Errorf("eval: malformed application")
+				return nil, Errorf("eval: malformed application")
 			}
 		}
 		return proc, nil // TODO
 	case nil:
-		return nil, fmt.Errorf("eval: empty application")
+		return nil, Errorf("eval: empty application")
 	default:
-		return nil, fmt.Errorf("eval: unhandled datum %#v", v)
+		return nil, Errorf("eval: unhandled expression %#v", v)
+	}
+}
+
+func quote(rest core.Datum) (core.Datum, error) {
+	if p, ok := rest.(core.Pair); !ok || p.Rest != nil {
+		return nil, Errorf("quote: malformed")
+	} else {
+		return p.First, nil
+	}
+}
+
+func (e *Environment) EvaluateBody(body []core.Datum) (core.Datum, error) {
+	expressions := body
+	if len(expressions) < 1 {
+		return nil, Errorf("empty body")
+	}
+	for expression := range expressions[:len(body)-1] {
+		if _, err := e.EvaluateExpression(expression); err != nil {
+			return nil, err
+		}
+	}
+	if val, err := e.EvaluateExpression(expressions[len(body)-1]); err != nil {
+		return nil, err
+	} else {
+		return val, nil
 	}
 }
 
 func (e *Environment) EvaluateTopLevelProgram(topLevelProgram []core.Datum) error {
-	for topLevelForm := range topLevelProgram {
-		if _, err := e.Evaluate(topLevelForm); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := e.EvaluateBody(topLevelProgram)
+	return err
 }
