@@ -13,6 +13,10 @@ type Pair struct {
 	First Datum
 	Rest  Datum
 }
+type WrappedSyntax struct{
+	Form Datum
+	// TODO add marks and substitutions
+}
 type Procedure struct {}
 
 func Display(d Datum) string {
@@ -31,6 +35,8 @@ func Display(d Datum) string {
 		return fmt.Sprintf(`"%v"`, string(v))
 	case Symbol, Pair, nil:
 		return fmt.Sprintf("'%v", fmtQuoted(v))
+	case WrappedSyntax:
+		return fmt.Sprintf(`#<syntax %v>`, Display(v.Form))
 	default:
 		panic("unhandled datum")
 	}

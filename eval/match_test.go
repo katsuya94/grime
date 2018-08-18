@@ -45,10 +45,7 @@ func TestMatch(t *testing.T) {
 			} else if len(data) != 1 {
 				t.Fatalf("encountered %v data in pattern", len(data))
 			}
-			pattern := Pattern{
-				test.literals,
-				data[0],
-			}
+			pattern := data[0]
 			expected := make(map[core.Symbol]interface{})
 			for name, a := range test.result {
 				switch s := a.(type) {
@@ -75,7 +72,7 @@ func TestMatch(t *testing.T) {
 					t.Fatalf("encountered malformed expected result RHS")
 				}
 			}
-			result, ok, err := Match(input, pattern)
+			result, ok, err := Match(input, pattern, test.literals)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
 			} else if test.error != "" && (err == nil || err.Error() != test.error) {

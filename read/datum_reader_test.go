@@ -97,6 +97,30 @@ func TestRead(t *testing.T) {
 			[]core.Datum{core.Pair{core.Symbol("unquote-splicing"), core.Pair{core.Symbol("id"), nil}}},
 			"",
 		},
+		{
+			"syntax",
+			"#'id",
+			[]core.Datum{core.Pair{core.Symbol("syntax"), core.Pair{core.Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"quasisyntax",
+			"#`id",
+			[]core.Datum{core.Pair{core.Symbol("quasisyntax"), core.Pair{core.Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"unsyntax",
+			"#,id",
+			[]core.Datum{core.Pair{core.Symbol("unsyntax"), core.Pair{core.Symbol("id"), nil}}},
+			"",
+		},
+		{
+			"unsyntax splicing",
+			"#,@id",
+			[]core.Datum{core.Pair{core.Symbol("unsyntax-splicing"), core.Pair{core.Symbol("id"), nil}}},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

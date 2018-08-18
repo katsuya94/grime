@@ -205,15 +205,39 @@ func TestLex(t *testing.T) {
 			"",
 		},
 		{
+			"quote",
+			"'a",
+			[]Lexeme{Quote{}, Identifier("a")},
+			"",
+		},
+		{
 			"unquote",
 			"`(,a)",
-			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, Unquote{}, Identifier("a"), RightParenthesis{}},
+			[]Lexeme{Quasiquote{}, LeftParenthesis{}, Unquote{}, Identifier("a"), RightParenthesis{}},
 			"",
 		},
 		{
 			"unquote splicing",
 			"`(,@a)",
-			[]Lexeme{QuasiQuote{}, LeftParenthesis{}, UnquoteSplicing{}, Identifier("a"), RightParenthesis{}},
+			[]Lexeme{Quasiquote{}, LeftParenthesis{}, UnquoteSplicing{}, Identifier("a"), RightParenthesis{}},
+			"",
+		},
+		{
+			"syntax",
+			"#'a",
+			[]Lexeme{Syntax{}, Identifier("a")},
+			"",
+		},
+		{
+			"unsyntax",
+			"#`(#,a)",
+			[]Lexeme{Quasisyntax{}, LeftParenthesis{}, Unsyntax{}, Identifier("a"), RightParenthesis{}},
+			"",
+		},
+		{
+			"unsyntax splicing",
+			"#`(#,@a)",
+			[]Lexeme{Quasisyntax{}, LeftParenthesis{}, UnsyntaxSplicing{}, Identifier("a"), RightParenthesis{}},
 			"",
 		},
 		{

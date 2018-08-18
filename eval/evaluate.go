@@ -26,8 +26,8 @@ func (e *Environment) Get(s core.Symbol) Binding {
 	return nil
 }
 
-func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, error) {
-	switch v := expression.(type) {
+func (e *Environment) EvaluateCoreForm(coreForm core.Datum) (core.Datum, error) {
+	switch v := coreForm.(type) {
 	case core.Boolean:
 		return v, nil
 	case core.Number:
@@ -48,24 +48,12 @@ func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, err
 			return nil, Errorf("unhandled binding %#v", b)
 		}
 	case core.Pair:
-		if s, ok := v.First.(core.Symbol); ok {
-			switch s {
-			case core.Symbol("quote"):
-				return quote(v.Rest)
-			case core.Symbol("let"):
-				return e.let(v.Rest)
-			}
-		}
-		_, err := e.EvaluateExpression(v.First)
-		if err != nil {
-			return nil, err
-		}
-		var args []core.Datum
-		err = each(v.Rest, func(d core.Datum) error {
-			if arg, err := e.EvaluateExpression(v.First); err != nil {
+		var subforms []core.Datum
+		err := each(v, func(d core.Datum) error {
+			if arg, err := e.EvaluateCoreForm(v.First); err != nil {
 				return err
 			} else {
-				args = append(args, arg)
+				subforms = append(subforms, arg)
 				return nil
 			}
 		})
@@ -78,7 +66,7 @@ func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, err
 	case nil:
 		return nil, Errorf("empty procedure application")
 	default:
-		return nil, Errorf("unhandled expression %#v", v)
+		return nil, Errorf("unhandled core form %#v", v)
 	}
 }
 
@@ -110,20 +98,30 @@ func each(list core.Datum, fn func(core.Datum) error) error {
 	}
 }
 
-func (e *Environment) EvaluateBody(body []core.Datum) (core.Datum, error) {
-	expressions := body
+func (e *Environment) EvaluateBody(bodyForms []core.Datum) (core.Datum, error) {
+	expressions := bodyForms
 	if len(expressions) < 1 {
 		return nil, Errorf("empty body")
 	}
-	for expression := range expressions[:len(body)-1] {
-		if _, err := e.EvaluateExpression(expression); err != nil {
+	for expression := range expressions[:len(bodyForms)-1] {
+		if _, err := e.EvaluateCoreForm(expression); err != nil {
 			return nil, err
 		}
 	}
-	if val, err := e.EvaluateExpression(expressions[len(body)-1]); err != nil {
+	if val, err := e.EvaluateCoreForm(expressions[len(bodyForms)-1]); err != nil {
 		return nil, err
 	} else {
 		return val, nil
+	}
+}
+
+func (e *Environment) Expand(syntaxes []core.Datum) ([]core.Datum, error) {
+	var definitions []core.Datum
+	for _, syntax := range(syntaxes) {
+		switch v := syntax.(type) {
+		case core.Boolean:
+
+		}
 	}
 }
 

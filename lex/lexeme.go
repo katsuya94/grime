@@ -12,7 +12,11 @@ type RightParenthesis struct{}
 type LeftBracket struct{}
 type RightBracket struct{}
 type Quote struct{}
-type QuasiQuote struct{}
+type Quasiquote struct{}
 type Unquote struct{}
 type UnquoteSplicing struct{}
+type Syntax struct{}
+type Quasisyntax struct{}
+type Unsyntax struct{}
+type UnsyntaxSplicing struct{}
 type Dot struct{}

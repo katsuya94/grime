@@ -86,7 +86,7 @@ func (l *LexemeReader) expectLexeme() (Lexeme, error) {
 	case '\'':
 		return Quote{}, nil
 	case '`':
-		return QuasiQuote{}, nil
+		return Quasiquote{}, nil
 	case ',':
 		if r, ok, err := l.readNonEOF(); err != nil {
 			return nil, err
@@ -95,6 +95,28 @@ func (l *LexemeReader) expectLexeme() (Lexeme, error) {
 		} else {
 			l.reader.UnreadRune()
 			return Unquote{}, nil
+		}
+	case '#':
+		r, err := l.expectNonEOF()
+		if err != nil {
+			return nil, err
+		}
+		switch r {
+		case '\'':
+			return Syntax{}, nil
+		case '`':
+			return Quasisyntax{}, nil
+		case ',':
+			if r, ok, err := l.readNonEOF(); err != nil {
+				return nil, err
+			} else if ok && r == '@' {
+				return UnsyntaxSplicing{}, nil
+			} else {
+				l.reader.UnreadRune()
+				return Unsyntax{}, nil
+			}
+		default:
+			return nil, Errorf("unexpected rune")
 		}
 	case '.':
 		return Dot{}, nil

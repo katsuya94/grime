@@ -56,7 +56,7 @@ func (d *DatumReader) ReadDatum() (core.Datum, error) {
 		} else {
 			return nil, err
 		}
-	case lex.QuasiQuote:
+	case lex.Quasiquote:
 		if datum, err := d.ReadDatum(); err == nil {
 			return core.Pair{core.Symbol("quasiquote"), core.Pair{datum, nil}}, nil
 		} else {
@@ -71,6 +71,30 @@ func (d *DatumReader) ReadDatum() (core.Datum, error) {
 	case lex.UnquoteSplicing:
 		if datum, err := d.ReadDatum(); err == nil {
 			return core.Pair{core.Symbol("unquote-splicing"), core.Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.Syntax:
+		if datum, err := d.ReadDatum(); err == nil {
+			return core.Pair{core.Symbol("syntax"), core.Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.Quasisyntax:
+		if datum, err := d.ReadDatum(); err == nil {
+			return core.Pair{core.Symbol("quasisyntax"), core.Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.Unsyntax:
+		if datum, err := d.ReadDatum(); err == nil {
+			return core.Pair{core.Symbol("unsyntax"), core.Pair{datum, nil}}, nil
+		} else {
+			return nil, err
+		}
+	case lex.UnsyntaxSplicing:
+		if datum, err := d.ReadDatum(); err == nil {
+			return core.Pair{core.Symbol("unsyntax-splicing"), core.Pair{datum, nil}}, nil
 		} else {
 			return nil, err
 		}

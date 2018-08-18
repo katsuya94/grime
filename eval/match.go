@@ -5,12 +5,7 @@ import (
 	"fmt"
 )
 
-type Pattern struct {
-	literals map[core.Symbol]Binding
-	pattern  core.Datum
-}
-
-func Match(in core.Datum, p Pattern) (map[core.Symbol]interface{}, bool, error) {
+func Match(input core.Datum, pattern core.Datum, literals map[core.Symbol]Binding) (map[core.Symbol]interface{}, bool, error) {
 	switch v := p.pattern.(type) {
 	case core.Symbol:
 		if binding, ok := p.literals[v]; ok {
