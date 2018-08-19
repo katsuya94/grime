@@ -199,6 +199,14 @@ func ReadString(s string) ([]core.Datum, error) {
 	return Read(strings.NewReader(s))
 }
 
+func MustReadString(s string) []core.Datum {
+	data, err := ReadString(s)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
 func ReadBytes(b []byte) ([]core.Datum, error) {
 	return Read(bytes.NewReader(b))
 }

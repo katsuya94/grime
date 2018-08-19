@@ -13,11 +13,27 @@ type Pair struct {
 	First Datum
 	Rest  Datum
 }
-type WrappedSyntax struct{
+type WrappedSyntax struct {
 	Form Datum
 	// TODO add marks and substitutions
 }
-type Procedure struct {}
+type Procedure struct{}
+type Application struct {
+	Procedure Datum
+	Arguments []Datum
+}
+type SyntaxDefinition struct {
+	Name Symbol
+	Form Datum
+}
+type Definition struct {
+	Name Symbol
+	Form Datum
+}
+type Begin struct {
+	Forms []Datum
+}
+type LetSyntax struct{}
 
 func Display(d Datum) string {
 	switch v := d.(type) {

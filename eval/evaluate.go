@@ -3,6 +3,7 @@ package eval
 import (
 	"github.com/katsuya94/grime/core"
 	"fmt"
+	"github.com/katsuya94/grime/read"
 )
 
 func Errorf(format string, a ...interface{}) error {
@@ -13,8 +14,12 @@ var ErrImproperList = Errorf("improper list")
 
 type Binding interface{}
 
-type Keyword struct{}
-type Variable struct{}
+type Keyword struct {
+	transformer core.Datum
+}
+type Variable struct {
+	value core.Datum
+}
 
 type Environment struct{}
 
@@ -26,8 +31,8 @@ func (e *Environment) Get(s core.Symbol) Binding {
 	return nil
 }
 
-func (e *Environment) EvaluateCoreForm(coreForm core.Datum) (core.Datum, error) {
-	switch v := coreForm.(type) {
+func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, error) {
+	switch v := expression.(type) {
 	case core.Boolean:
 		return v, nil
 	case core.Number:
@@ -37,36 +42,18 @@ func (e *Environment) EvaluateCoreForm(coreForm core.Datum) (core.Datum, error) 
 	case core.String:
 		return v, nil
 	case core.Symbol:
-		switch b := e.Get(v).(type) {
-		case Keyword:
-			return nil, Errorf("keyword %v not allowed in expression context", v)
-		case Variable:
-			return nil, Errorf("variable evaluation not implemented")
-		case nil:
+		if binding := e.Get(v); binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
-		default:
-			return nil, Errorf("unhandled binding %#v", b)
+		} else {
+			_ := binding.(Variable) // No keywords should appear in an expanded expression
+			return nil, Errorf("variable evaluation not implemented")
 		}
 	case core.Pair:
-		var subforms []core.Datum
-		err := each(v, func(d core.Datum) error {
-			if arg, err := e.EvaluateCoreForm(v.First); err != nil {
-				return err
-			} else {
-				subforms = append(subforms, arg)
-				return nil
-			}
-		})
-		if err == ErrImproperList {
-			return nil, Errorf("malformed procedure application")
-		} else if err != nil {
-			return nil, err
-		}
-		return nil, Errorf("procedure application not implemented")
+		return v, nil
 	case nil:
 		return nil, Errorf("empty procedure application")
 	default:
-		return nil, Errorf("unhandled core form %#v", v)
+		return nil, Errorf("unhandled expression %#v", v)
 	}
 }
 
@@ -98,31 +85,137 @@ func each(list core.Datum, fn func(core.Datum) error) error {
 	}
 }
 
-func (e *Environment) EvaluateBody(bodyForms []core.Datum) (core.Datum, error) {
-	expressions := bodyForms
-	if len(expressions) < 1 {
-		return nil, Errorf("empty body")
-	}
-	for expression := range expressions[:len(bodyForms)-1] {
-		if _, err := e.EvaluateCoreForm(expression); err != nil {
+func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
+	var definitions []core.Definition
+	var (
+		i    int
+		form core.Datum
+	)
+	// Expand and handle definitions, deferring expansion of variable definitions
+	for i, form = range forms {
+		form, err := e.ExpandMacro(form)
+		if err != nil {
 			return nil, err
 		}
+		switch v := form.(type) {
+		case core.SyntaxDefinition:
+			if _, err := e.EvaluateExpression(v.Form); err != nil {
+				return nil, err
+			} else {
+				return nil, Errorf("define-syntax not implemented")
+			}
+		case core.Definition:
+			definitions = append(definitions, v)
+		case core.Begin:
+			forms = append(forms[0:i], append(v.Forms, forms[i+1:]...)...)
+			i -= 1
+		case core.LetSyntax:
+			return nil, Errorf("let-syntax not implemented")
+		}
+		break
 	}
-	if val, err := e.EvaluateCoreForm(expressions[len(bodyForms)-1]); err != nil {
+	// Expand variable definitions
+	definitionMap := make(map[core.Symbol]core.Datum)
+	for _, definition := range definitions {
+		form, err := e.ExpandMacro(definition.Form)
+		if err != nil {
+			return nil, err
+		}
+		definitionMap[definition.Name] = form
+	}
+	// Expand expressions
+	var expressions []core.Datum
+	for _, form = range forms[i:] {
+		form, err := e.ExpandMacro(form)
+		if err != nil {
+			return nil, err
+		}
+		expressions = append(expressions, form)
+	}
+	// TODO Not sure if this NewLetRecStar should expand the body instead.
+	return e.EvaluateExpression(NewLetrecStar(definitionMap, expressions))
+}
+
+var (
+	PatternMacroUseList = read.MustReadString("(keyword _ ...)")
+	PatternMacroUseImproperList = read.MustReadString("(keyword _ ... . _)")
+	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")
+	PatternMacroUseSet = read.MustReadString("(set! keyword _)")
+	PatternApplication = read.MustReadString("(procedure arguments ...)") // TODO use literals to ensure that set! would point at the procedure in base
+)
+
+func (e *Environment) ExpandMacro(syntax core.Datum) (core.Datum, error) {
+	// TODO identifiers are actually wrapped
+	if result, ok, err := Match(syntax, PatternMacroUseList, nil); err != nil {
 		return nil, err
-	} else {
-		return val, nil
+	} else if ok {
+		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
+			return e.expandMacro(symbol, syntax)
+		}
+	}
+	if result, ok, err := Match(syntax, PatternMacroUseImproperList, nil); err != nil {
+		return nil, err
+	} else if ok {
+		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
+			return e.expandMacro(symbol, syntax)
+		}
+	}
+	if result, ok, err := Match(syntax, PatternMacroUseSingletonIdentifier, nil); err != nil {
+		return nil, err
+	} else if ok {
+		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
+			return e.expandMacro(symbol, syntax)
+		}
+	}
+	// TODO use literals to ensure that set! would point at the procedure in base
+	if result, ok, err := Match(syntax, PatternMacroUseSet, nil); err != nil {
+		return nil, err
+	} else if ok {
+		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
+			return e.expandMacro(symbol, syntax)
+		}
+	}
+	if result, ok, err := Match(syntax, PatternApplication, nil); err != nil {
+		return nil, err
+	} else if ok {
+		var application core.Application
+		if procedure, err := e.ExpandMacro(result[core.Symbol("procedure")]); err != nil {
+			return nil, err
+		} else {
+			application.Procedure = procedure
+		}
+		err = each(result[core.Symbol("arguments")], func(d core.Datum) error {
+			if arg, err := e.ExpandMacro(result[core.Symbol("procedure")]); err != nil {
+				return err
+			} else {
+				application.Arguments = append(application.Arguments, arg)
+				return nil
+			}
+		})
+		if err != nil {
+			return nil, err
+		}
+		return application, nil
+	}
+	// TODO handle malformed applications. Note that the Racket implementation does not appear to consider () invalid
+	return e.Unwrap(syntax)
+}
+
+func (e *Environment) expandMacro(name core.Symbol, syntax core.Datum) (core.Datum, error) {
+	if binding := e.Get(name); binding == nil {
+		return e.Unwrap(syntax)
+	} else if keyword, ok := binding.(Keyword); ok {
+		if output, err := e.EvaluateExpression(core.Application{keyword.transformer, []core.Datum{syntax}}); err != nil {
+			return nil, err
+		} else {
+			return e.ExpandMacro(output)
+		}
 	}
 }
 
-func (e *Environment) Expand(syntaxes []core.Datum) ([]core.Datum, error) {
-	var definitions []core.Datum
-	for _, syntax := range(syntaxes) {
-		switch v := syntax.(type) {
-		case core.Boolean:
-
-		}
-	}
+func (e *Environment) Unwrap(syntax core.Datum) (core.Datum, error) {
+	// TODO unwrap, handling hygiene
+	return syntax, nil
 }
 
 func (e *Environment) EvaluateTopLevelProgram(topLevelProgram []core.Datum) error {
