@@ -34,11 +34,15 @@ func repl() {
 		} else if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		if val, err := env.EvaluateBody(body); err != nil {
+		expression, err := eval.ExpandBody(env, body)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			fmt.Println(core.Display(val))
 		}
+		value, err := eval.EvaluateExpression(env, expression)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		}
+		fmt.Println(core.Display(value))
 	}
 }
 
@@ -96,5 +100,5 @@ func run() error {
 			topLevelProgram = append(topLevelProgram, datum)
 		}
 	}
-	return env.EvaluateTopLevelProgram(topLevelProgram)
+	return eval.EvaluateTopLevelProgram(env, topLevelProgram)
 }

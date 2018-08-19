@@ -282,8 +282,10 @@ func TestLex(t *testing.T) {
 			lexemes, err := LexString(test.source)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
-			} else if test.error != "" && (err == nil || err.Error() != test.error) {
-				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+			} else if test.error != "" {
+				if err == nil || err.Error() != test.error {
+					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+				}
 			} else if !reflect.DeepEqual(lexemes, test.lexemes) {
 				t.Fatalf("\nexpected: %#v\n     got: %#v", test.lexemes, lexemes)
 			}

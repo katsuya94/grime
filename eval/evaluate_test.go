@@ -7,7 +7,50 @@ import (
 	"testing"
 )
 
-func TestEvaluate(t *testing.T) {
+func TestExpandBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   string
+		expected string
+		error    string
+	}{
+		{
+			"malformed quote",
+			"(quote)",
+			"",
+			"quote: bad syntax",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			env := NewEnvironment()
+			expectedBody, err := read.ReadString(test.expected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected, err := ExpandBody(env, expectedBody)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sourceBody, err := read.ReadString(test.source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			actual, err := ExpandBody(env, sourceBody)
+			if test.error != "" {
+				if err == nil || err.Error() != test.error {
+					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			} else if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("\nexpected: %#v\n     got: %#v", expected, actual)
+			}
+		})
+	}
+}
+
+func TestEvaluateExpression(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
@@ -51,12 +94,6 @@ func TestEvaluate(t *testing.T) {
 			"",
 		},
 		{
-			"malformed quote",
-			"(quote)",
-			"",
-			"eval: quote: bad syntax",
-		},
-		{
 			"if then",
 			"(if #t 'foo 'bar)",
 			"foo",
@@ -91,12 +128,21 @@ func TestEvaluate(t *testing.T) {
 			}
 			expected := data[0]
 			body, err := read.ReadString(test.source)
-			env := NewEnvironment()
-			actual, err := env.EvaluateBody(body)
-			if test.error == "" && err != nil {
+			if err != nil {
 				t.Fatal(err)
-			} else if test.error != "" && (err == nil || err.Error() != test.error) {
-				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+			}
+			env := NewEnvironment()
+			expression, err := ExpandBody(env, body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			actual, err := EvaluateExpression(env, expression)
+			if test.error != "" {
+				if err == nil || err.Error() != test.error {
+					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
 			} else if !reflect.DeepEqual(actual, expected) {
 				t.Fatalf("\nexpected: %#v\n     got: %#v", expected, actual)
 			}

@@ -2,7 +2,7 @@ package core
 
 import "testing"
 
-func TestQuote(t *testing.T) {
+func TestDisplay(t *testing.T) {
 	tests := []struct {
 		name     string
 		datum    Datum

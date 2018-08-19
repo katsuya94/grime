@@ -1,4 +1,4 @@
-package eval
+package match
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ func readMatchResult(shorthand interface{}) (interface{}, error) {
 func TestMatch(t *testing.T) {
 	tests := []struct {
 		name     string
-		literals map[core.Symbol]Binding
+		literals map[core.Symbol]core.Binding
 		pattern  string
 		input    string
 		ok       bool
@@ -45,7 +45,7 @@ func TestMatch(t *testing.T) {
 	}{
 		{
 			"underscore",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"_",
 			"foo",
 			true,
@@ -54,7 +54,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"pattern variable matching symbol",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"id",
 			"foo",
 			true,
@@ -65,7 +65,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"pattern variable matching list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"id",
 			"(foo)",
 			true,
@@ -76,7 +76,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"proper list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id name)",
 			"(foo bar)",
 			true,
@@ -88,7 +88,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"improper list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id . name)",
 			"(foo . bar)",
 			true,
@@ -100,7 +100,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"improper list matches list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id . name)",
 			"(foo bar)",
 			true,
@@ -112,7 +112,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"nested list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id (name))",
 			"(foo (bar))",
 			true,
@@ -124,7 +124,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"list ellipsis",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id ...)",
 			"(foo bar)",
 			true,
@@ -135,7 +135,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"improper list ellipsis",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id ... . name)",
 			"(foo bar . baz)",
 			true,
@@ -147,7 +147,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"list ellipsis with trailing",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id ... name)",
 			"(foo bar baz)",
 			true,
@@ -159,7 +159,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"improper list ellipsis with trailing",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id ... name . key)",
 			"(foo bar baz . qux)",
 			true,
@@ -172,7 +172,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"list ellipsis with leading",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id name ...)",
 			"(foo bar baz)",
 			true,
@@ -184,7 +184,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"improper list ellipsis with trailing",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"(id name ... . key)",
 			"(foo bar baz . qux)",
 			true,
@@ -197,7 +197,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"nested list ellipsis",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"((id ...) ...)",
 			"((foo) (bar baz))",
 			true,
@@ -208,7 +208,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"list of tuples",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"((id name) ...)",
 			"((foo bar) (baz qux))",
 			true,
@@ -220,7 +220,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"boolean",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"#f",
 			"#f",
 			true,
@@ -229,7 +229,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"number",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"123",
 			"123",
 			true,
@@ -238,7 +238,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"character",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			`#\x`,
 			`#\x`,
 			true,
@@ -247,7 +247,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"string",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			`"name"`,
 			`"name"`,
 			true,
@@ -256,7 +256,7 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			"empty list",
-			map[core.Symbol]Binding{},
+			map[core.Symbol]core.Binding{},
 			"()",
 			"()",
 			true,
@@ -291,8 +291,10 @@ func TestMatch(t *testing.T) {
 			result, ok, err := Match(input, pattern, test.literals)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
-			} else if test.error != "" && (err == nil || err.Error() != test.error) {
-				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+			} else if test.error != "" {
+				if err == nil || err.Error() != test.error {
+					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+				}
 			} else if ok != test.ok {
 				t.Fatalf("\nexpected ok: %v\n     got ok: %v\n", test.ok, ok)
 			} else if !reflect.DeepEqual(result, expected) {

@@ -125,10 +125,12 @@ func TestRead(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			data, err := ReadString(test.source)
-			if test.error == "" && err != nil {
+			if test.error != "" {
+				if err == nil || err.Error() != test.error {
+					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
+				}
+			} else if err != nil {
 				t.Fatal(err)
-			} else if test.error != "" && (err == nil || err.Error() != test.error) {
-				t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
 			} else if !reflect.DeepEqual(data, test.data) {
 				t.Fatalf("\nexpected: %#v\n     got: %#v", test.data, data)
 			}
