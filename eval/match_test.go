@@ -5,7 +5,33 @@ import (
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/core"
 	"reflect"
+	"fmt"
 )
+
+func readMatchResult(shorthand interface{}) (interface{}, error) {
+	switch v := shorthand.(type) {
+	case []interface{}:
+		var subresults []interface{}
+		for _, subshorthand := range v {
+			if subresult, err := readMatchResult(subshorthand); err != nil {
+				return nil, err
+			} else {
+				subresults = append(subresults, subresult)
+			}
+		}
+		return subresults, nil
+	case string:
+		if data, err := read.ReadString(v); err != nil {
+			return nil, err
+		} else if len(data) != 1 {
+			return nil, fmt.Errorf("encountered %v data in expected result shorthand", len(data))
+		} else {
+			return data[0], nil
+		}
+	default:
+		return nil, fmt.Errorf("unhandled shorthand: %#v", v)
+	}
+}
 
 func TestMatch(t *testing.T) {
 	tests := []struct {
@@ -18,8 +44,17 @@ func TestMatch(t *testing.T) {
 		error    string
 	}{
 		{
-			"pattern variable",
-			nil,
+			"underscore",
+			map[core.Symbol]Binding{},
+			"_",
+			"foo",
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"pattern variable matching symbol",
+			map[core.Symbol]Binding{},
 			"id",
 			"foo",
 			true,
@@ -27,7 +62,158 @@ func TestMatch(t *testing.T) {
 				"id": "foo",
 			},
 			"",
-
+		},
+		{
+			"pattern variable matching list",
+			map[core.Symbol]Binding{},
+			"id",
+			"(foo)",
+			true,
+			map[string]interface{}{
+				"id": "(foo)",
+			},
+			"",
+		},
+		{
+			"proper list",
+			map[core.Symbol]Binding{},
+			"(id name)",
+			"(foo bar)",
+			true,
+			map[string]interface{}{
+				"id": "foo",
+				"name": "bar",
+			},
+			"",
+		},
+		{
+			"improper list",
+			map[core.Symbol]Binding{},
+			"(id . name)",
+			"(foo . bar)",
+			true,
+			map[string]interface{}{
+				"id": "foo",
+				"name": "bar",
+			},
+			"",
+		},
+		{
+			"improper list matches list",
+			map[core.Symbol]Binding{},
+			"(id . name)",
+			"(foo bar)",
+			true,
+			map[string]interface{}{
+				"id": "foo",
+				"name": "(bar)",
+			},
+			"",
+		},
+		{
+			"nested list",
+			map[core.Symbol]Binding{},
+			"(id (name))",
+			"(foo (bar))",
+			true,
+			map[string]interface{}{
+				"id": "foo",
+				"name": "bar",
+			},
+			"",
+		},
+		{
+			"list ellipsis",
+			map[core.Symbol]Binding{},
+			"(id ...)",
+			"(foo bar)",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{"foo", "bar"},
+			},
+			"",
+		},
+		{
+			"improper list ellipsis",
+			map[core.Symbol]Binding{},
+			"(id ... . name)",
+			"(foo bar . baz)",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{"foo", "bar"},
+				"name": "baz",
+			},
+			"",
+		},
+		{
+			"list ellipsis with trailing",
+			map[core.Symbol]Binding{},
+			"(id ... name)",
+			"(foo bar baz)",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{"foo", "bar"},
+				"name": "baz",
+			},
+			"",
+		},
+		{
+			"improper list ellipsis with trailing",
+			map[core.Symbol]Binding{},
+			"(id ... name . key)",
+			"(foo bar baz . qux)",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{"foo", "bar"},
+				"name": "baz",
+				"key": "qux",
+			},
+			"",
+		},
+		{
+			"boolean",
+			map[core.Symbol]Binding{},
+			"#f",
+			"#f",
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"number",
+			map[core.Symbol]Binding{},
+			"123",
+			"123",
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"character",
+			map[core.Symbol]Binding{},
+			`#\x`,
+			`#\x`,
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"string",
+			map[core.Symbol]Binding{},
+			`"name"`,
+			`"name"`,
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"empty list",
+			map[core.Symbol]Binding{},
+			"()",
+			"()",
+			true,
+			map[string]interface{}{},
+			"",
 		},
 	}
 	for _, test := range tests {
@@ -47,29 +233,11 @@ func TestMatch(t *testing.T) {
 			}
 			pattern := data[0]
 			expected := make(map[core.Symbol]interface{})
-			for name, a := range test.result {
-				switch s := a.(type) {
-				case []string:
-					expected[core.Symbol(name)] = []core.Datum{}
-					for _, source := range(s) {
-						data, err := read.ReadString(source)
-						if err != nil {
-							t.Fatal(err)
-						} else if len(data) != 1 {
-							t.Fatalf("encountered %v data in expected result RHS source", len(data))
-						}
-						expected[core.Symbol(name)] = append(expected[core.Symbol(name)].([]core.Datum), data[0])
-					}
-				case string:
-					data, err := read.ReadString(s)
-					if err != nil {
-						t.Fatal(err)
-					} else if len(data) != 1 {
-						t.Fatalf("encountered %v data in expected result RHS source", len(data))
-					}
-					expected[core.Symbol(name)] = data[0]
-				default:
-					t.Fatalf("encountered malformed expected result RHS")
+			for name, shorthand := range test.result {
+				if result, err := readMatchResult(shorthand); err != nil {
+					t.Fatal(err)
+				} else {
+					expected[core.Symbol(name)] = result
 				}
 			}
 			result, ok, err := Match(input, pattern, test.literals)

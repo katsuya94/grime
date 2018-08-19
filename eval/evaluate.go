@@ -33,39 +33,19 @@ func (e *Environment) Get(s core.Symbol) Binding {
 
 func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, error) {
 	switch v := expression.(type) {
-	case core.Boolean:
-		return v, nil
-	case core.Number:
-		return v, nil
-	case core.Character:
-		return v, nil
-	case core.String:
+	case core.Boolean, core.Number, core.Character, core.String, core.Pair, nil:
 		return v, nil
 	case core.Symbol:
 		if binding := e.Get(v); binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
 		} else {
-			_ := binding.(Variable) // No keywords should appear in an expanded expression
+			_ = binding.(Variable) // No keywords should appear in an expanded expression
 			return nil, Errorf("variable evaluation not implemented")
 		}
-	case core.Pair:
-		return v, nil
-	case nil:
-		return nil, Errorf("empty procedure application")
+	case core.Application:
+		return nil, Errorf("procedure application not implemented")
 	default:
 		return nil, Errorf("unhandled expression %#v", v)
-	}
-}
-
-func (e *Environment) let(rest core.Datum) (core.Datum, error) {
-	return nil, Errorf("let: not implemented")
-}
-
-func quote(rest core.Datum) (core.Datum, error) {
-	if p, ok := rest.(core.Pair); !ok || p.Rest != nil {
-		return nil, Errorf("quote: malformed")
-	} else {
-		return p.First, nil
 	}
 }
 
@@ -136,12 +116,16 @@ func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
 	return e.EvaluateExpression(NewLetrecStar(definitionMap, expressions))
 }
 
+func NewLetrecStar(map[core.Symbol]core.Datum, []core.Datum) core.Datum {
+	return nil
+}
+
 var (
 	PatternMacroUseList = read.MustReadString("(keyword _ ...)")
 	PatternMacroUseImproperList = read.MustReadString("(keyword _ ... . _)")
 	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")
 	PatternMacroUseSet = read.MustReadString("(set! keyword _)")
-	PatternApplication = read.MustReadString("(procedure arguments ...)") // TODO use literals to ensure that set! would point at the procedure in base
+	PatternApplication = read.MustReadString("(procedure arguments ...)")
 )
 
 func (e *Environment) ExpandMacro(syntax core.Datum) (core.Datum, error) {
@@ -202,14 +186,19 @@ func (e *Environment) ExpandMacro(syntax core.Datum) (core.Datum, error) {
 }
 
 func (e *Environment) expandMacro(name core.Symbol, syntax core.Datum) (core.Datum, error) {
-	if binding := e.Get(name); binding == nil {
+	binding := e.Get(name)
+	if binding == nil {
 		return e.Unwrap(syntax)
-	} else if keyword, ok := binding.(Keyword); ok {
-		if output, err := e.EvaluateExpression(core.Application{keyword.transformer, []core.Datum{syntax}}); err != nil {
-			return nil, err
-		} else {
-			return e.ExpandMacro(output)
-		}
+	}
+	keyword, ok := binding.(Keyword)
+	if !ok {
+		return e.Unwrap(syntax)
+	}
+	application := core.Application{keyword.transformer, []core.Datum{syntax}}
+	if output, err := e.EvaluateExpression(application); err != nil {
+		return nil, err
+	} else {
+		return e.ExpandMacro(output)
 	}
 }
 
