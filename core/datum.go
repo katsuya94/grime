@@ -17,10 +17,18 @@ type WrappedSyntax struct {
 	Form Datum
 	// TODO add marks and substitutions
 }
-type Procedure struct{}
+type Procedure func(...Datum) (Datum, error)
 type Application struct {
 	Procedure Datum
 	Arguments []Datum
+}
+type Quote struct {
+	Datum Datum
+}
+type If struct {
+	Condition Datum
+	Then Datum
+	Else Datum
 }
 type SyntaxDefinition struct {
 	Name Symbol

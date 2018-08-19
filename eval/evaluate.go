@@ -14,26 +14,56 @@ var ErrImproperList = Errorf("improper list")
 
 type Binding interface{}
 
-type Keyword struct {
-	transformer core.Datum
-}
-type Variable struct {
-	value core.Datum
-}
+type Keyword core.Datum
+type Variable core.Datum
 
-type Environment struct{}
+type Environment struct {
+	bindings map[core.Symbol]Binding
+}
 
 func NewEnvironment() *Environment {
-	return &Environment{}
+	return &Environment{map[core.Symbol]Binding{
+		core.Symbol("quote"): Keyword(core.Procedure(Quote)),
+		core.Symbol("if"): Keyword(core.Procedure(If)),
+	}}
+}
+
+var PatternQuote = read.MustReadString("(quote datum)")[0]
+
+func Quote(syntax... core.Datum) (core.Datum, error) {
+	if result, ok, err := Match(syntax[0], PatternQuote, nil); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, Errorf("quote: bad syntax")
+	} else {
+		return core.Quote{result[core.Symbol("datum")]}, nil
+	}
+}
+
+var PatternIf = read.MustReadString("(if condition then else)")[0]
+
+func If(syntax... core.Datum) (core.Datum, error) {
+	if result, ok, err := Match(syntax[0], PatternIf, nil); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, Errorf("if: bad syntax")
+	} else {
+		return core.If{
+			result[core.Symbol("condition")],
+			result[core.Symbol("then")],
+			result[core.Symbol("else")],
+		}, nil
+	}
 }
 
 func (e *Environment) Get(s core.Symbol) Binding {
-	return nil
+	binding, _ := e.bindings[s]
+	return binding
 }
 
 func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, error) {
 	switch v := expression.(type) {
-	case core.Boolean, core.Number, core.Character, core.String, core.Pair, nil:
+	case core.Boolean, core.Number, core.Character, core.String:
 		return v, nil
 	case core.Symbol:
 		if binding := e.Get(v); binding == nil {
@@ -44,9 +74,57 @@ func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, err
 			return nil, Errorf("variable evaluation not implemented")
 		}
 	case core.Application:
-		return nil, Errorf("procedure application not implemented")
+		procedure, err := e.EvaluateExpression(v.Procedure)
+		if err != nil {
+			return nil, err
+		}
+		var args []core.Datum
+		for _, subexpression := range v.Arguments {
+			if arg, err := e.EvaluateExpression(subexpression); err != nil {
+				return nil, err
+			} else {
+				args = append(args, arg)
+			}
+		}
+		return e.Apply(procedure, args...)
+	case core.Quote:
+		return v.Datum, nil
+	case core.If:
+		if condition, err := e.EvaluateExpression(v.Condition); err != nil {
+			return nil, err
+		} else if condition == core.Boolean(false) {
+			return e.EvaluateExpression(v.Else)
+		} else {
+			return e.EvaluateExpression(v.Then)
+		}
+	case core.Begin:
+		if len(v.Forms) < 1 {
+			return nil, Errorf("begin: empty in expression context")
+		}
+		for _, subexpression := range v.Forms[:len(v.Forms)-1] {
+			if _, err := e.EvaluateExpression(subexpression); err != nil {
+				return nil, err
+			}
+		}
+		if value, err := e.EvaluateExpression(v.Forms[len(v.Forms)-1]); err != nil {
+			return nil, err
+		} else {
+			return value, nil
+		}
 	default:
 		return nil, Errorf("unhandled expression %#v", v)
+	}
+}
+
+func (e *Environment) Apply(procedure core.Datum, args... core.Datum) (core.Datum, error) {
+	if p, ok := procedure.(core.Procedure); ok {
+		if value, err := p(args...); err != nil {
+			return nil, err
+		} else {
+			return value, nil
+		}
+	} else {
+		return nil, Errorf("application: non-procedure in procedure position")
 	}
 }
 
@@ -66,7 +144,7 @@ func each(list core.Datum, fn func(core.Datum) error) error {
 	}
 }
 
-func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
+func (e *Environment) ExpandBody(forms []core.Datum) (core.Datum, error) {
 	var definitions []core.Definition
 	var (
 		i    int
@@ -114,19 +192,27 @@ func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
 		expressions = append(expressions, form)
 	}
 	// TODO Not sure if this NewLetRecStar should expand the body instead.
-	return e.EvaluateExpression(NewLetrecStar(definitionMap, expressions))
+	return NewLetrecStar(definitionMap, expressions), nil
 }
 
-func NewLetrecStar(map[core.Symbol]core.Datum, []core.Datum) core.Datum {
-	return nil
+func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
+	if expanded, err := e.ExpandBody(forms); err != nil {
+		return nil, err
+	} else {
+		return e.EvaluateExpression(expanded)
+	}
+}
+
+func NewLetrecStar(definitionMap map[core.Symbol]core.Datum, forms []core.Datum) core.Datum {
+	return core.Begin{forms}
 }
 
 var (
-	PatternMacroUseList                = read.MustReadString("(keyword _ ...)")
-	PatternMacroUseImproperList        = read.MustReadString("(keyword _ ... . _)")
-	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")
-	PatternMacroUseSet                 = read.MustReadString("(set! keyword _)")
-	PatternApplication                 = read.MustReadString("(procedure arguments ...)")
+	PatternMacroUseList                = read.MustReadString("(keyword _ ...)")[0]
+	PatternMacroUseImproperList        = read.MustReadString("(keyword _ ... . _)")[0]
+	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")[0]
+	PatternMacroUseSet                 = read.MustReadString("(set! keyword _)")[0]
+	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
 func (e *Environment) ExpandMacro(syntax core.Datum) (core.Datum, error) {
@@ -195,8 +281,7 @@ func (e *Environment) expandMacro(name core.Symbol, syntax core.Datum) (core.Dat
 	if !ok {
 		return e.Unwrap(syntax)
 	}
-	application := core.Application{keyword.transformer, []core.Datum{syntax}}
-	if output, err := e.EvaluateExpression(application); err != nil {
+	if output, err := e.Apply(keyword, syntax); err != nil {
 		return nil, err
 	} else {
 		return e.ExpandMacro(output)

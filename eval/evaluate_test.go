@@ -54,7 +54,19 @@ func TestEvaluate(t *testing.T) {
 			"malformed quote",
 			"(quote)",
 			"",
-			"eval: quote: malformed",
+			"eval: quote: bad syntax",
+		},
+		{
+			"if then",
+			"(if #t 'foo 'bar)",
+			"foo",
+			"",
+		},
+		{
+			"if else",
+			"(if #f 'foo 'bar)",
+			"bar",
+			"",
 		},
 		{
 			"let",
