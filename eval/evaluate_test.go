@@ -1,10 +1,10 @@
 package eval
 
 import (
+	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
-	"github.com/katsuya94/grime/core"
 )
 
 func TestEvaluate(t *testing.T) {

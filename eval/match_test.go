@@ -1,11 +1,11 @@
 package eval
 
 import (
-	"testing"
-	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/core"
-	"reflect"
 	"fmt"
+	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/read"
+	"reflect"
+	"testing"
 )
 
 func readMatchResult(shorthand interface{}) (interface{}, error) {
@@ -81,7 +81,7 @@ func TestMatch(t *testing.T) {
 			"(foo bar)",
 			true,
 			map[string]interface{}{
-				"id": "foo",
+				"id":   "foo",
 				"name": "bar",
 			},
 			"",
@@ -93,7 +93,7 @@ func TestMatch(t *testing.T) {
 			"(foo . bar)",
 			true,
 			map[string]interface{}{
-				"id": "foo",
+				"id":   "foo",
 				"name": "bar",
 			},
 			"",
@@ -105,7 +105,7 @@ func TestMatch(t *testing.T) {
 			"(foo bar)",
 			true,
 			map[string]interface{}{
-				"id": "foo",
+				"id":   "foo",
 				"name": "(bar)",
 			},
 			"",
@@ -117,7 +117,7 @@ func TestMatch(t *testing.T) {
 			"(foo (bar))",
 			true,
 			map[string]interface{}{
-				"id": "foo",
+				"id":   "foo",
 				"name": "bar",
 			},
 			"",
@@ -140,7 +140,7 @@ func TestMatch(t *testing.T) {
 			"(foo bar . baz)",
 			true,
 			map[string]interface{}{
-				"id": []interface{}{"foo", "bar"},
+				"id":   []interface{}{"foo", "bar"},
 				"name": "baz",
 			},
 			"",
@@ -152,7 +152,7 @@ func TestMatch(t *testing.T) {
 			"(foo bar baz)",
 			true,
 			map[string]interface{}{
-				"id": []interface{}{"foo", "bar"},
+				"id":   []interface{}{"foo", "bar"},
 				"name": "baz",
 			},
 			"",
@@ -164,9 +164,57 @@ func TestMatch(t *testing.T) {
 			"(foo bar baz . qux)",
 			true,
 			map[string]interface{}{
-				"id": []interface{}{"foo", "bar"},
+				"id":   []interface{}{"foo", "bar"},
 				"name": "baz",
-				"key": "qux",
+				"key":  "qux",
+			},
+			"",
+		},
+		{
+			"list ellipsis with leading",
+			map[core.Symbol]Binding{},
+			"(id name ...)",
+			"(foo bar baz)",
+			true,
+			map[string]interface{}{
+				"id":   "foo",
+				"name": []interface{}{"bar", "baz"},
+			},
+			"",
+		},
+		{
+			"improper list ellipsis with trailing",
+			map[core.Symbol]Binding{},
+			"(id name ... . key)",
+			"(foo bar baz . qux)",
+			true,
+			map[string]interface{}{
+				"id":   "foo",
+				"name": []interface{}{"bar", "baz"},
+				"key":  "qux",
+			},
+			"",
+		},
+		{
+			"nested list ellipsis",
+			map[core.Symbol]Binding{},
+			"((id ...) ...)",
+			"((foo) (bar baz))",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{[]interface{}{"foo"}, []interface{}{"bar", "baz"}},
+			},
+			"",
+		},
+		{
+			"list of tuples",
+			map[core.Symbol]Binding{},
+			"((id name) ...)",
+			"((foo bar) (baz qux))",
+			true,
+			map[string]interface{}{
+				"id":   []interface{}{"foo", "baz"},
+				"name": []interface{}{"bar", "qux"},
 			},
 			"",
 		},
@@ -253,4 +301,3 @@ func TestMatch(t *testing.T) {
 		})
 	}
 }
-

@@ -1,8 +1,8 @@
 package eval
 
 import (
-	"github.com/katsuya94/grime/core"
 	"fmt"
+	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/read"
 )
 
@@ -39,7 +39,8 @@ func (e *Environment) EvaluateExpression(expression core.Datum) (core.Datum, err
 		if binding := e.Get(v); binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
 		} else {
-			_ = binding.(Variable) // No keywords should appear in an expanded expression
+			// No keywords should appear in an expanded expression.
+			_ = binding.(Variable)
 			return nil, Errorf("variable evaluation not implemented")
 		}
 	case core.Application:
@@ -71,7 +72,7 @@ func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
 		i    int
 		form core.Datum
 	)
-	// Expand and handle definitions, deferring expansion of variable definitions
+	// Expand and handle definitions, deferring expansion of variable definitions.
 	for i, form = range forms {
 		form, err := e.ExpandMacro(form)
 		if err != nil {
@@ -94,7 +95,7 @@ func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
 		}
 		break
 	}
-	// Expand variable definitions
+	// Expand variable definitions.
 	definitionMap := make(map[core.Symbol]core.Datum)
 	for _, definition := range definitions {
 		form, err := e.ExpandMacro(definition.Form)
@@ -103,7 +104,7 @@ func (e *Environment) EvaluateBody(forms []core.Datum) (core.Datum, error) {
 		}
 		definitionMap[definition.Name] = form
 	}
-	// Expand expressions
+	// Expand expressions.
 	var expressions []core.Datum
 	for _, form = range forms[i:] {
 		form, err := e.ExpandMacro(form)
@@ -121,11 +122,11 @@ func NewLetrecStar(map[core.Symbol]core.Datum, []core.Datum) core.Datum {
 }
 
 var (
-	PatternMacroUseList = read.MustReadString("(keyword _ ...)")
-	PatternMacroUseImproperList = read.MustReadString("(keyword _ ... . _)")
+	PatternMacroUseList                = read.MustReadString("(keyword _ ...)")
+	PatternMacroUseImproperList        = read.MustReadString("(keyword _ ... . _)")
 	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")
-	PatternMacroUseSet = read.MustReadString("(set! keyword _)")
-	PatternApplication = read.MustReadString("(procedure arguments ...)")
+	PatternMacroUseSet                 = read.MustReadString("(set! keyword _)")
+	PatternApplication                 = read.MustReadString("(procedure arguments ...)")
 )
 
 func (e *Environment) ExpandMacro(syntax core.Datum) (core.Datum, error) {

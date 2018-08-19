@@ -2,7 +2,6 @@ package eval
 
 import (
 	"github.com/katsuya94/grime/core"
-	"fmt"
 )
 
 type matcher struct {
@@ -73,44 +72,53 @@ func (m *matcher) matchEllipsis(input core.Datum, subpattern core.Datum, restpat
 		subresults []map[core.Symbol]interface{}
 	)
 	for {
-		fmt.Printf("HERE %#v\n", input)
-		fmt.Printf("BEAR %#v\n", subpattern)
 		switch i := input.(type) {
 		case core.Boolean, core.Number, core.Character, core.String, core.Symbol, nil:
-			return m.match(i, restpattern, false)
+			restResult, ok, err := m.match(i, restpattern, false)
+			if err != nil {
+				return nil, false, err
+			} else if !ok {
+				return nil, false, nil
+			}
+			// If the input is not a pair and it matches restpattern, we are done.
+			result = restResult
 		case core.Pair:
 			if subresult, ok, err := Match(i.First, subpattern, m.literals); err != nil {
 				return nil, false, err
 			} else if !ok {
-				restResult, match, err := m.match(i, restpattern, false)
+				restResult, ok, err := m.match(i, restpattern, false)
 				if err != nil {
 					return nil, false, err
-				} else if !match {
+				} else if !ok {
 					return nil, false, nil
 				}
+				// If the first does not match subpattern, but the pair matches restpattern, we are done.
 				result = restResult
 			} else {
 				subresults = append(subresults, subresult)
 				restResult, ok, err := m.match(i.Rest, restpattern, false)
 				if err != nil {
 					return nil, false, nil
-				} else if !ok{
+				} else if !ok {
+					// If the rest does not yet match restpattern, continue.
 					input = i.Rest
 					continue
-				} else if rest, ok := i.Rest.(core.Pair); ok {
-					if _, ok, err := m.match(rest, restpattern, false); err != nil {
-						return nil, false, err
-					} else if ok {
-						input = i.Rest
-						continue
-					}
+				} else if _, ok, err := m.matchEllipsis(i.Rest, subpattern, restpattern); err != nil {
+					return nil, false, err
+				} else if ok {
+					// If the rest still matches subpattern and restpattern, continue.
+					input = i.Rest
+					continue
 				}
+				// If the rest does not match subpattern and restpattern, we are done.
 				result = restResult
 			}
+		default:
+			return nil, false, Errorf("match: unhandled input %#v", i)
 		}
 		break
 	}
-	if len(subresults) > 0  {
+	if len(subresults) > 0 {
 		for k, _ := range subresults[0] {
 			result[k] = []interface{}{}
 		}
