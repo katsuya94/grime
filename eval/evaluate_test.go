@@ -5,6 +5,7 @@ import (
 	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
+	"fmt"
 )
 
 func TestExpandBody(t *testing.T) {
@@ -18,6 +19,12 @@ func TestExpandBody(t *testing.T) {
 			"malformed quote",
 			"(quote)",
 			"",
+			"quote: bad syntax",
+		},
+		{
+			"let* is effectively nested",
+			"(let* ((x 'foo) (y 'bar)) x)",
+			"(let* ((x 'foo)) (let* ((y 'bar)) x))",
 			"quote: bad syntax",
 		},
 	}
@@ -106,14 +113,20 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 		},
 		{
-			"let",
-			"(let ((x 'id)) x)",
+			"if non-boolean",
+			"(if 'id 'foo 'bar)",
+			"foo",
+			"",
+		},
+		{
+			"let*",
+			"(let* ((x 'id)) x)",
 			"id",
 			"",
 		},
 		{
-			"let multiple",
-			"(let ((x 'id) (y 'name)) (list x y))",
+			"let* multiple",
+			"(let* ((x 'id) (y 'name)) (list x y))",
 			"(id name)",
 			"",
 		},
@@ -136,6 +149,7 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			fmt.Printf("%#v\n", expression)
 			actual, err := EvaluateExpression(env, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {

@@ -28,6 +28,11 @@ type If struct {
 	Then      Datum
 	Else      Datum
 }
+type Let struct {
+	Name  Symbol
+	Value Datum
+	Body  Datum
+}
 type SyntaxDefinition struct {
 	Name Symbol
 	Form Datum

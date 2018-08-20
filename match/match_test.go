@@ -11,7 +11,7 @@ import (
 func readMatchResult(shorthand interface{}) (interface{}, error) {
 	switch v := shorthand.(type) {
 	case []interface{}:
-		var subresults []interface{}
+		subresults := []interface{}{}
 		for _, subshorthand := range v {
 			if subresult, err := readMatchResult(subshorthand); err != nil {
 				return nil, err
@@ -203,6 +203,17 @@ func TestMatch(t *testing.T) {
 			true,
 			map[string]interface{}{
 				"id": []interface{}{[]interface{}{"foo"}, []interface{}{"bar", "baz"}},
+			},
+			"",
+		},
+		{
+			"empty list ellipsis",
+			map[core.Symbol]core.Binding{},
+			"(id ...)",
+			"()",
+			true,
+			map[string]interface{}{
+				"id": []interface{}{},
 			},
 			"",
 		},

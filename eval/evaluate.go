@@ -116,9 +116,11 @@ func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
 			return expandMacro(env, symbol, syntax)
 		}
 	}
+	fmt.Printf("THERE %#v\n", syntax)
 	if result, ok, err := match.Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
+		fmt.Println("HERE")
 		var application core.Application
 		if procedure, err := ExpandMacro(env, result[core.Symbol("procedure")]); err != nil {
 			return nil, err
@@ -151,7 +153,7 @@ func expandMacro(env *core.Environment, name core.Symbol, syntax core.Datum) (co
 	if !ok {
 		return Unwrap(env, syntax)
 	}
-	if output, err := Apply(env, keyword, syntax); err != nil {
+	if output, err := Apply(env, keyword.Transformer, syntax); err != nil {
 		return nil, err
 	} else {
 		return ExpandMacro(env, output)
@@ -172,8 +174,7 @@ func EvaluateExpression(env *core.Environment, expression core.Datum) (core.Datu
 			return nil, Errorf("unbound identifier %v", v)
 		} else {
 			// No keywords should appear in an expanded expression.
-			_ = binding.(core.Variable)
-			return nil, Errorf("variable evaluation not implemented")
+			return binding.(core.Variable).Value, nil
 		}
 	case core.Application:
 		procedure, err := EvaluateExpression(env, v.Procedure)
@@ -199,6 +200,12 @@ func EvaluateExpression(env *core.Environment, expression core.Datum) (core.Datu
 		} else {
 			return EvaluateExpression(env, v.Then)
 		}
+	case core.Let:
+		value, err := EvaluateExpression(env, v.Value)
+		if err != nil {
+			return nil, err
+		}
+		return EvaluateExpression(env.Set(v.Name, core.Variable{value}), v.Body)
 	case core.Begin:
 		if len(v.Forms) < 1 {
 			return nil, Errorf("begin: empty in expression context")

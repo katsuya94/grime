@@ -119,9 +119,11 @@ func (m *matcher) matchEllipsis(input core.Datum, subpattern core.Datum, restpat
 			}
 		}
 	}
-	if len(subresults) > 0 {
-		for k, _ := range subresults[0] {
-			result[k] = []interface{}{}
+	if patternVariables, err := m.patternVariables(subpattern); err != nil {
+		return nil, false, err
+	} else {
+		for _, patternVariable := range patternVariables {
+			result[patternVariable] = []interface{}{}
 		}
 	}
 	for _, subresult := range subresults {
@@ -130,6 +132,33 @@ func (m *matcher) matchEllipsis(input core.Datum, subpattern core.Datum, restpat
 		}
 	}
 	return result, true, nil
+}
+
+func (m *matcher) patternVariables(pattern core.Datum) ([]core.Symbol, error) {
+	switch p := pattern.(type) {
+	case core.Boolean, core.Number, core.Character, core.String, nil:
+		return nil, nil
+	case core.Symbol:
+		if _, ok := m.literals[p]; ok {
+			return nil, nil
+		} else if p == core.Symbol("_") || p == core.Symbol("...") {
+			return nil, nil
+		} else {
+			return []core.Symbol{p}, nil
+		}
+	case core.Pair:
+		firstPatternVariables, err := m.patternVariables(p.First)
+		if err != nil {
+			return nil, err
+		}
+		restPatternVariables, err := m.patternVariables(p.Rest)
+		if err != nil {
+			return nil, err
+		}
+		return append(firstPatternVariables, restPatternVariables...), nil
+	default:
+		return nil, fmt.Errorf("match: unhandled pattern %#v", p)
+	}
 }
 
 func Match(input core.Datum, pattern core.Datum, literals map[core.Symbol]core.Binding) (map[core.Symbol]interface{}, bool, error) {
