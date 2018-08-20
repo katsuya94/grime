@@ -86,57 +86,42 @@ var (
 )
 
 func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
-	// TODO identifiers are actually wrapped
-	if result, ok, err := match.Match(syntax, PatternMacroUseList, nil); err != nil {
+	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
 		return nil, err
 	} else if ok {
-		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
-			return expandMacro(env, symbol, syntax)
-		}
+		return expression, nil
 	}
-	if result, ok, err := match.Match(syntax, PatternMacroUseImproperList, nil); err != nil {
+	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); err != nil {
 		return nil, err
 	} else if ok {
-		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
-			return expandMacro(env, symbol, syntax)
-		}
+		return expression, nil
 	}
-	if result, ok, err := match.Match(syntax, PatternMacroUseSingletonIdentifier, nil); err != nil {
+	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); err != nil {
 		return nil, err
 	} else if ok {
-		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
-			return expandMacro(env, symbol, syntax)
-		}
+		return expression, nil
 	}
 	// TODO use literals to ensure that set! would point at the procedure in base
-	if result, ok, err := match.Match(syntax, PatternMacroUseSet, nil); err != nil {
+	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
 		return nil, err
 	} else if ok {
-		if symbol, ok := result[core.Symbol("keyword")].(core.Symbol); ok {
-			return expandMacro(env, symbol, syntax)
-		}
+		return expression, nil
 	}
-	fmt.Printf("THERE %#v\n", syntax)
 	if result, ok, err := match.Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
-		fmt.Println("HERE")
 		var application core.Application
-		if procedure, err := ExpandMacro(env, result[core.Symbol("procedure")]); err != nil {
+		if expression, err := ExpandMacro(env, result[core.Symbol("procedure")].(core.Datum)); err != nil {
 			return nil, err
 		} else {
-			application.Procedure = procedure
+			application.Procedure = expression
 		}
-		err = Each(result[core.Symbol("arguments")], func(d core.Datum) error {
-			if arg, err := ExpandMacro(env, result[core.Symbol("procedure")]); err != nil {
-				return err
+		for _, argument := range result[core.Symbol("arguments")].([]interface{}) {
+			if expression, err := ExpandMacro(env, argument.(core.Datum)); err != nil {
+				return nil, err
 			} else {
-				application.Arguments = append(application.Arguments, arg)
-				return nil
+				application.Arguments = append(application.Arguments, expression)
 			}
-		})
-		if err != nil {
-			return nil, err
 		}
 		return application, nil
 	}
@@ -144,20 +129,36 @@ func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
 	return Unwrap(env, syntax)
 }
 
-func expandMacro(env *core.Environment, name core.Symbol, syntax core.Datum) (core.Datum, error) {
+
+func expandMacroMatching(env *core.Environment, syntax core.Datum, pattern core.Datum) (core.Datum, bool, error) {
+	// TODO identifiers are actually wrapped
+	result, ok, err := match.Match(syntax, pattern, nil)
+	if err != nil {
+		return nil, false, err
+	} else if !ok {
+		return nil, false, nil
+	}
+	name, ok := result[core.Symbol("keyword")].(core.Symbol)
+	if !ok {
+		return nil, false, nil
+	}
 	binding := env.Get(name)
 	if binding == nil {
-		return Unwrap(env, syntax)
+		return nil, false, nil
 	}
 	keyword, ok := binding.(core.Keyword)
 	if !ok {
-		return Unwrap(env, syntax)
+		return nil, false, nil
 	}
-	if output, err := Apply(env, keyword.Transformer, syntax); err != nil {
-		return nil, err
-	} else {
-		return ExpandMacro(env, output)
+	output, err := Apply(env, keyword.Transformer, syntax)
+	if err != nil {
+		return nil, false, err
 	}
+	expression, err := ExpandMacro(env, output)
+	if err != nil {
+		return nil, false, err
+	}
+	return expression, true, nil
 }
 
 func Unwrap(env *core.Environment, syntax core.Datum) (core.Datum, error) {

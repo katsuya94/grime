@@ -12,6 +12,7 @@ func NewEnvironment() *core.Environment {
 		core.Symbol("quote"): core.Keyword{core.Procedure(transformQuote)},
 		core.Symbol("if"):    core.Keyword{core.Procedure(transformIf)},
 		core.Symbol("let*"):  core.Keyword{core.Procedure(transformLetStar)},
+		core.Symbol("cons"):  core.Variable{core.Procedure(cons)},
 	}}
 }
 
@@ -88,4 +89,11 @@ func transformLetStar(env *core.Environment, syntax ...core.Datum) (core.Datum, 
 		}
 		return expression, nil
 	}
+}
+
+func cons(env *core.Environment, args ...core.Datum) (core.Datum, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("cons: wrong arity")
+	}
+	return core.Pair{args[0], args[1]}, nil
 }
