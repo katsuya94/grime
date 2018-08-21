@@ -1,11 +1,11 @@
 package eval
 
 import (
+	"fmt"
 	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
-	"fmt"
 )
 
 func TestExpandBody(t *testing.T) {
@@ -24,20 +24,23 @@ func TestExpandBody(t *testing.T) {
 		{
 			"let* is effectively nested",
 			"(let* ((x 'foo) (y 'bar)) x)",
-			"(let* ((x 'foo)) (let* ((y 'bar)) x))",
-			"quote: bad syntax",
+			"(let* ((x 'foo)) (begin (let* ((y 'bar)) x)))",
+			"",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env := NewEnvironment()
-			expectedBody, err := read.ReadString(test.expected)
-			if err != nil {
-				t.Fatal(err)
-			}
-			expected, err := ExpandBody(env, expectedBody)
-			if err != nil {
-				t.Fatal(err)
+			var expected core.Datum
+			if test.expected != "" {
+				expectedBody, err := read.ReadString(test.expected)
+				if err != nil {
+					t.Fatal(err)
+				}
+				expected, err = ExpandBody(env, expectedBody)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			sourceBody, err := read.ReadString(test.source)
 			if err != nil {
@@ -128,6 +131,18 @@ func TestEvaluateExpression(t *testing.T) {
 			"let* multiple",
 			"(let* ((x 'id) (y 'name)) (cons x y))",
 			"(id . name)",
+			"",
+		},
+		{
+			"let* multiple",
+			"(let* ((x 'id) (y 'name)) (cons x y))",
+			"(id . name)",
+			"",
+		},
+		{
+			"define",
+			"(define x 'foo) x",
+			"foo",
 			"",
 		},
 	}

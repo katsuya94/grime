@@ -23,58 +23,58 @@ func EvaluateTopLevelProgram(env *core.Environment, topLevelProgram []core.Datum
 }
 
 func ExpandBody(env *core.Environment, forms []core.Datum) (core.Datum, error) {
-	var definitions []core.Definition
 	var (
 		i    int
-		form core.Datum
+		definitions []core.Define
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
-	for i, form = range forms {
-		form, err := ExpandMacro(env, form)
+	env = env.GetDefinitionContext()
+	for i = 0; i < len(forms); i++ {
+		form, err := ExpandMacro(env, forms[i])
 		if err != nil {
 			return nil, err
 		}
 		switch v := form.(type) {
-		case core.SyntaxDefinition:
-			if _, err := EvaluateExpression(env, v.Form); err != nil {
+		case core.DefineSyntax:
+			if _, err := EvaluateExpression(env, v.Expression); err != nil {
 				return nil, err
 			} else {
 				return nil, Errorf("define-syntax not implemented")
 			}
-		case core.Definition:
+		case core.Define:
 			definitions = append(definitions, v)
+			continue
 		case core.Begin:
 			forms = append(forms[0:i], append(v.Forms, forms[i+1:]...)...)
 			i -= 1
+			continue
 		case core.LetSyntax:
 			return nil, Errorf("let-syntax not implemented")
 		}
 		break
 	}
 	// Expand variable definitions.
-	definitionMap := make(map[core.Symbol]core.Datum)
+	env = env.GetExpressionContext()
+	var definitionNames []core.Symbol
+	var definitionExpressions []core.Datum
 	for _, definition := range definitions {
-		form, err := ExpandMacro(env, definition.Form)
+		expression, err := ExpandMacro(env, definition.Syntax)
 		if err != nil {
 			return nil, err
 		}
-		definitionMap[definition.Name] = form
+		definitionNames = append(definitionNames, definition.Name)
+		definitionExpressions = append(definitionExpressions, expression)
 	}
-	// Expand expressions.
-	var expressions []core.Datum
-	for _, form = range forms[i:] {
-		form, err := ExpandMacro(env, form)
-		if err != nil {
-			return nil, err
-		}
-		expressions = append(expressions, form)
+	// Expand a begin with the remaining expressions.
+	expression, err := ExpandMacro(env, core.Pair{core.Symbol("begin"), list(forms[i:]...)})
+	if err != nil {
+		return nil, err
 	}
-	// TODO Not sure if this NewLetRecStar should expand the body instead.
-	return NewLetrecStar(definitionMap, expressions), nil
-}
-
-func NewLetrecStar(definitionMap map[core.Symbol]core.Datum, forms []core.Datum) core.Datum {
-	return core.Begin{forms}
+	// Wrap it in a letrec* with the definitions.
+	for i := len(definitions) - 1; i >= 0; i-- {
+		expression = core.Let{definitionNames[i], definitionExpressions[i], expression}
+	}
+	return expression, nil
 }
 
 var (
@@ -128,7 +128,6 @@ func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
 	// TODO handle malformed applications. Note that the Racket implementation does not appear to consider () invalid
 	return Unwrap(env, syntax)
 }
-
 
 func expandMacroMatching(env *core.Environment, syntax core.Datum, pattern core.Datum) (core.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
@@ -238,7 +237,7 @@ func Apply(env *core.Environment, procedure core.Datum, args ...core.Datum) (cor
 	}
 }
 
-func Each(list core.Datum, fn func(core.Datum) error) error {
+func each(list core.Datum, fn func(core.Datum) error) error {
 	for {
 		if p, ok := list.(core.Pair); ok {
 			if err := fn(p.First); err != nil {
@@ -251,5 +250,13 @@ func Each(list core.Datum, fn func(core.Datum) error) error {
 		} else {
 			return ErrImproperList
 		}
+	}
+}
+
+func list(data... core.Datum) core.Datum {
+	if len(data) == 0 {
+		return nil
+	} else {
+		return core.Pair{data[0], list(data[1:]...)}
 	}
 }

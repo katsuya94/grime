@@ -11,6 +11,7 @@ type Variable struct {
 
 type Environment struct {
 	Bindings map[Symbol]Binding
+	ExpressionContext bool
 }
 
 func (e *Environment) Get(name Symbol) Binding {
@@ -21,4 +22,12 @@ func (e *Environment) Get(name Symbol) Binding {
 func (e *Environment) Set(name Symbol, binding Binding) *Environment {
 	e.Bindings[name] = binding
 	return e
+}
+
+func (e *Environment) GetExpressionContext() *Environment {
+	return &Environment{e.Bindings, true}
+}
+
+func (e *Environment) GetDefinitionContext() *Environment {
+	return &Environment{e.Bindings, false}
 }

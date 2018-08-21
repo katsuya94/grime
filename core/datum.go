@@ -33,13 +33,13 @@ type Let struct {
 	Value Datum
 	Body  Datum
 }
-type SyntaxDefinition struct {
-	Name Symbol
-	Form Datum
+type DefineSyntax struct {
+	Name       Symbol
+	Expression Datum
 }
-type Definition struct {
-	Name Symbol
-	Form Datum
+type Define struct {
+	Name   Symbol
+	Syntax Datum
 }
 type Begin struct {
 	Forms []Datum
