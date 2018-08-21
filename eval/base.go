@@ -106,8 +106,12 @@ func transformBegin(env *core.Environment, syntax ...core.Datum) (core.Datum, er
 		return nil, fmt.Errorf("begin: bad syntax")
 	}
 	if env.ExpressionContext {
+		forms := result[core.Symbol("body")].([]interface{})
+		if len(forms) == 0 {
+			return nil, fmt.Errorf("begin: bad syntax")
+		}
 		var expressions []core.Datum
-		for _, form := range result[core.Symbol("body")].([]interface{}) {
+		for _, form := range forms {
 			if expression, err := ExpandMacro(env, form); err != nil {
 				return nil, err
 			} else {

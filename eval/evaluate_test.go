@@ -20,6 +20,18 @@ func TestExpandBody(t *testing.T) {
 			"",
 			"quote: bad syntax",
 		},
+		{
+			"empty begin in expression context",
+			"(begin)",
+			"",
+			"begin: bad syntax",
+		},
+		{
+			"empty begin in definition context",
+			"(begin) 'foo",
+			"'foo",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -136,6 +148,18 @@ func TestEvaluateExpression(t *testing.T) {
 			"define",
 			"(define x 'foo) x",
 			"foo",
+			"",
+		},
+		{
+			"begin in splicing context",
+			"(begin 'foo 'bar)",
+			"bar",
+			"",
+		},
+		{
+			"begin in expression context",
+			"(cons (begin 'foo 'bar) '())",
+			"(bar)",
 			"",
 		},
 	}
