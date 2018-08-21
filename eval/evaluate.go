@@ -24,7 +24,7 @@ func EvaluateTopLevelProgram(env *core.Environment, topLevelProgram []core.Datum
 
 func ExpandBody(env *core.Environment, forms []core.Datum) (core.Datum, error) {
 	var (
-		i    int
+		i           int
 		definitions []core.Define
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
@@ -253,7 +253,7 @@ func each(list core.Datum, fn func(core.Datum) error) error {
 	}
 }
 
-func list(data... core.Datum) core.Datum {
+func list(data ...core.Datum) core.Datum {
 	if len(data) == 0 {
 		return nil
 	} else {

@@ -10,7 +10,7 @@ type Variable struct {
 }
 
 type Environment struct {
-	Bindings map[Symbol]Binding
+	Bindings          map[Symbol]Binding
 	ExpressionContext bool
 }
 

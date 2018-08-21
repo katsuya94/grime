@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"fmt"
 	"github.com/katsuya94/grime/core"
 	"github.com/katsuya94/grime/read"
 	"reflect"
@@ -20,12 +19,6 @@ func TestExpandBody(t *testing.T) {
 			"(quote)",
 			"",
 			"quote: bad syntax",
-		},
-		{
-			"let* is effectively nested",
-			"(let* ((x 'foo) (y 'bar)) x)",
-			"(let* ((x 'foo)) (begin (let* ((y 'bar)) x)))",
-			"",
 		},
 	}
 	for _, test := range tests {
@@ -164,7 +157,6 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fmt.Printf("%#v\n", expression)
 			actual, err := EvaluateExpression(env, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {

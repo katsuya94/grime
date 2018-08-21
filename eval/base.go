@@ -12,7 +12,7 @@ func NewEnvironment() *core.Environment {
 		core.Symbol("quote"):         core.Keyword{core.Procedure(transformQuote)},
 		core.Symbol("if"):            core.Keyword{core.Procedure(transformIf)},
 		core.Symbol("let*"):          core.Keyword{core.Procedure(transformLetStar)},
-		core.Symbol("begin"):          core.Keyword{core.Procedure(transformBegin)},
+		core.Symbol("begin"):         core.Keyword{core.Procedure(transformBegin)},
 		core.Symbol("define"):        core.Keyword{core.Procedure(transformDefine)},
 		core.Symbol("define-syntax"): core.Keyword{core.Procedure(transformDefineSyntax)},
 		core.Symbol("cons"):          core.Variable{core.Procedure(cons)},
@@ -20,13 +20,13 @@ func NewEnvironment() *core.Environment {
 }
 
 var (
-	PatternQuote        = read.MustReadString("(quote datum)")[0]
-	PatternIf           = read.MustReadString("(if condition then else)")[0]
-	PatternLetStar      = read.MustReadString("(let* ((name value) ...) body0 body ...)")[0]
-	PatternBegin = read.MustReadString("(begin body ...)")[0]
-	PatternDefineProcedure       = read.MustReadString("(define (name formals ...) body0 body ...)")[0]
-	PatternDefine       = read.MustReadString("(define name value)")[0]
-	PatternDefineSyntax = read.MustReadString("(define-syntax name value)")[0]
+	PatternQuote           = read.MustReadString("(quote datum)")[0]
+	PatternIf              = read.MustReadString("(if condition then else)")[0]
+	PatternLetStar         = read.MustReadString("(let* ((name value) ...) body ...)")[0]
+	PatternBegin           = read.MustReadString("(begin body ...)")[0]
+	PatternDefineProcedure = read.MustReadString("(define (name formals ...) body0 body ...)")[0]
+	PatternDefine          = read.MustReadString("(define name value)")[0]
+	PatternDefineSyntax    = read.MustReadString("(define-syntax name value)")[0]
 )
 
 func transformQuote(env *core.Environment, syntax ...core.Datum) (core.Datum, error) {
@@ -83,7 +83,7 @@ func transformLetStar(env *core.Environment, syntax ...core.Datum) (core.Datum, 
 				valueExpressions = append(valueExpressions, expression)
 			}
 		}
-		forms := []core.Datum{result[core.Symbol("body0")]}
+		var forms []core.Datum
 		for _, form := range result[core.Symbol("body")].([]interface{}) {
 			forms = append(forms, form)
 		}
@@ -99,10 +99,22 @@ func transformLetStar(env *core.Environment, syntax ...core.Datum) (core.Datum, 
 }
 
 func transformBegin(env *core.Environment, syntax ...core.Datum) (core.Datum, error) {
-	if result, ok, err := match.Match(syntax[0], PatternBegin, nil); err != nil {
+	result, ok, err := match.Match(syntax[0], PatternBegin, nil)
+	if err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("begin: bad syntax")
+	}
+	if env.ExpressionContext {
+		var expressions []core.Datum
+		for _, form := range result[core.Symbol("body")].([]interface{}) {
+			if expression, err := ExpandMacro(env, form); err != nil {
+				return nil, err
+			} else {
+				expressions = append(expressions, expression)
+			}
+		}
+		return core.Begin{expressions}, nil
 	} else {
 		var forms []core.Datum
 		for _, form := range result[core.Symbol("body")].([]interface{}) {
