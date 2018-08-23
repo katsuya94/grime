@@ -1,4 +1,4 @@
-package lex
+package read
 
 type Lexeme interface{}
 

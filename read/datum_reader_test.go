@@ -1,7 +1,7 @@
 package read
 
 import (
-	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/common"
 	"reflect"
 	"testing"
 )
@@ -10,115 +10,115 @@ func TestRead(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
-		data   []core.Datum
+		data   []common.Datum
 		error  string
 	}{
 		{
 			"boolean",
 			"#f",
-			[]core.Datum{core.Boolean(false)},
+			[]common.Datum{common.Boolean(false)},
 			"",
 		},
 		{
 			"number",
 			"123",
-			[]core.Datum{core.Number("123")},
+			[]common.Datum{common.Number("123")},
 			"",
 		},
 		{
 			"character",
 			`#\x`,
-			[]core.Datum{core.Character('x')},
+			[]common.Datum{common.Character('x')},
 			"",
 		},
 		{
 			"string",
 			`"name"`,
-			[]core.Datum{core.String("name")},
+			[]common.Datum{common.String("name")},
 			"",
 		},
 		{
 			"symbol",
 			"id",
-			[]core.Datum{core.Symbol("id")},
+			[]common.Datum{common.Symbol("id")},
 			"",
 		},
 		{
 			"two data",
 			"id name",
-			[]core.Datum{core.Symbol("id"), core.Symbol("name")},
+			[]common.Datum{common.Symbol("id"), common.Symbol("name")},
 			"",
 		},
 		{
 			"empty list",
 			"()",
-			[]core.Datum{nil},
+			[]common.Datum{nil},
 			"",
 		},
 		{
 			"list with one element",
 			"(id)",
-			[]core.Datum{core.Pair{core.Symbol("id"), nil}},
+			[]common.Datum{common.Pair{common.Symbol("id"), nil}},
 			"",
 		},
 		{
 			"list with two elements",
 			"(id name)",
-			[]core.Datum{core.Pair{core.Symbol("id"), core.Pair{core.Symbol("name"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("id"), common.Pair{common.Symbol("name"), nil}}},
 			"",
 		},
 		{
 			"pair",
 			"(id . name)",
-			[]core.Datum{core.Pair{core.Symbol("id"), core.Symbol("name")}},
+			[]common.Datum{common.Pair{common.Symbol("id"), common.Symbol("name")}},
 			"",
 		},
 		{
 			"quote",
 			"'id",
-			[]core.Datum{core.Pair{core.Symbol("quote"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"quasiquote",
 			"`id",
-			[]core.Datum{core.Pair{core.Symbol("quasiquote"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("quasiquote"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unquote",
 			",id",
-			[]core.Datum{core.Pair{core.Symbol("unquote"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("unquote"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unquote splicing",
 			",@id",
-			[]core.Datum{core.Pair{core.Symbol("unquote-splicing"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("unquote-splicing"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"syntax",
 			"#'id",
-			[]core.Datum{core.Pair{core.Symbol("syntax"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("syntax"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"quasisyntax",
 			"#`id",
-			[]core.Datum{core.Pair{core.Symbol("quasisyntax"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("quasisyntax"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unsyntax",
 			"#,id",
-			[]core.Datum{core.Pair{core.Symbol("unsyntax"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("unsyntax"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
 			"unsyntax splicing",
 			"#,@id",
-			[]core.Datum{core.Pair{core.Symbol("unsyntax-splicing"), core.Pair{core.Symbol("id"), nil}}},
+			[]common.Datum{common.Pair{common.Symbol("unsyntax-splicing"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 	}

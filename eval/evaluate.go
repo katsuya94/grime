@@ -2,8 +2,7 @@ package eval
 
 import (
 	"fmt"
-	"github.com/katsuya94/grime/core"
-	"github.com/katsuya94/grime/match"
+	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 )
 
@@ -13,7 +12,7 @@ func Errorf(format string, a ...interface{}) error {
 
 var ErrImproperList = Errorf("improper list")
 
-func EvaluateTopLevelProgram(env *core.Environment, topLevelProgram []core.Datum) error {
+func EvaluateTopLevelProgram(env *common.Environment, topLevelProgram []common.Datum) error {
 	expression, err := ExpandBody(env, topLevelProgram)
 	if err != nil {
 		return err
@@ -22,10 +21,10 @@ func EvaluateTopLevelProgram(env *core.Environment, topLevelProgram []core.Datum
 	return err
 }
 
-func ExpandBody(env *core.Environment, forms []core.Datum) (core.Datum, error) {
+func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, error) {
 	var (
 		i           int
-		definitions []core.Define
+		definitions []common.Define
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
 	env = env.GetDefinitionContext()
@@ -35,28 +34,28 @@ func ExpandBody(env *core.Environment, forms []core.Datum) (core.Datum, error) {
 			return nil, err
 		}
 		switch v := form.(type) {
-		case core.DefineSyntax:
+		case common.DefineSyntax:
 			if _, err := EvaluateExpression(env, v.Expression); err != nil {
 				return nil, err
 			} else {
 				return nil, Errorf("define-syntax not implemented")
 			}
-		case core.Define:
+		case common.Define:
 			definitions = append(definitions, v)
 			continue
-		case core.Begin:
+		case common.Begin:
 			forms = append(forms[0:i], append(v.Forms, forms[i+1:]...)...)
 			i -= 1
 			continue
-		case core.LetSyntax:
+		case common.LetSyntax:
 			return nil, Errorf("let-syntax not implemented")
 		}
 		break
 	}
 	// Expand variable definitions.
 	env = env.GetExpressionContext()
-	var definitionNames []core.Symbol
-	var definitionExpressions []core.Datum
+	var definitionNames []common.Symbol
+	var definitionExpressions []common.Datum
 	for _, definition := range definitions {
 		expression, err := ExpandMacro(env, definition.Syntax)
 		if err != nil {
@@ -66,13 +65,13 @@ func ExpandBody(env *core.Environment, forms []core.Datum) (core.Datum, error) {
 		definitionExpressions = append(definitionExpressions, expression)
 	}
 	// Expand a begin with the remaining expressions.
-	expression, err := ExpandMacro(env, core.Pair{core.Symbol("begin"), list(forms[i:]...)})
+	expression, err := ExpandMacro(env, common.Pair{common.Symbol("begin"), list(forms[i:]...)})
 	if err != nil {
 		return nil, err
 	}
 	// Wrap it in a letrec* with the definitions.
 	for i := len(definitions) - 1; i >= 0; i-- {
-		expression = core.Let{definitionNames[i], definitionExpressions[i], expression}
+		expression = common.Let{definitionNames[i], definitionExpressions[i], expression}
 	}
 	return expression, nil
 }
@@ -85,7 +84,7 @@ var (
 	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
-func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
+func ExpandMacro(env *common.Environment, syntax common.Datum) (common.Datum, error) {
 	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
 		return nil, err
 	} else if ok {
@@ -107,17 +106,17 @@ func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
 	} else if ok {
 		return expression, nil
 	}
-	if result, ok, err := match.Match(syntax, PatternApplication, nil); err != nil {
+	if result, ok, err := Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
-		var application core.Application
-		if expression, err := ExpandMacro(env, result[core.Symbol("procedure")].(core.Datum)); err != nil {
+		var application common.Application
+		if expression, err := ExpandMacro(env, result[common.Symbol("procedure")].(common.Datum)); err != nil {
 			return nil, err
 		} else {
 			application.Procedure = expression
 		}
-		for _, argument := range result[core.Symbol("arguments")].([]interface{}) {
-			if expression, err := ExpandMacro(env, argument.(core.Datum)); err != nil {
+		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
+			if expression, err := ExpandMacro(env, argument.(common.Datum)); err != nil {
 				return nil, err
 			} else {
 				application.Arguments = append(application.Arguments, expression)
@@ -129,15 +128,15 @@ func ExpandMacro(env *core.Environment, syntax core.Datum) (core.Datum, error) {
 	return Unwrap(env, syntax)
 }
 
-func expandMacroMatching(env *core.Environment, syntax core.Datum, pattern core.Datum) (core.Datum, bool, error) {
+func expandMacroMatching(env *common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := match.Match(syntax, pattern, nil)
+	result, ok, err := Match(syntax, pattern, nil)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
 		return nil, false, nil
 	}
-	name, ok := result[core.Symbol("keyword")].(core.Symbol)
+	name, ok := result[common.Symbol("keyword")].(common.Symbol)
 	if !ok {
 		return nil, false, nil
 	}
@@ -145,7 +144,7 @@ func expandMacroMatching(env *core.Environment, syntax core.Datum, pattern core.
 	if binding == nil {
 		return nil, false, nil
 	}
-	keyword, ok := binding.(core.Keyword)
+	keyword, ok := binding.(common.Keyword)
 	if !ok {
 		return nil, false, nil
 	}
@@ -160,28 +159,28 @@ func expandMacroMatching(env *core.Environment, syntax core.Datum, pattern core.
 	return expression, true, nil
 }
 
-func Unwrap(env *core.Environment, syntax core.Datum) (core.Datum, error) {
+func Unwrap(env *common.Environment, syntax common.Datum) (common.Datum, error) {
 	// TODO unwrap, handling hygiene
 	return syntax, nil
 }
 
-func EvaluateExpression(env *core.Environment, expression core.Datum) (core.Datum, error) {
+func EvaluateExpression(env *common.Environment, expression common.Datum) (common.Datum, error) {
 	switch v := expression.(type) {
-	case core.Boolean, core.Number, core.Character, core.String:
+	case common.Boolean, common.Number, common.Character, common.String:
 		return v, nil
-	case core.Symbol:
+	case common.Symbol:
 		if binding := env.Get(v); binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
 		} else {
 			// No keywords should appear in an expanded expression.
-			return binding.(core.Variable).Value, nil
+			return binding.(common.Variable).Value, nil
 		}
-	case core.Application:
+	case common.Application:
 		procedure, err := EvaluateExpression(env, v.Procedure)
 		if err != nil {
 			return nil, err
 		}
-		var args []core.Datum
+		var args []common.Datum
 		for _, subexpression := range v.Arguments {
 			if arg, err := EvaluateExpression(env, subexpression); err != nil {
 				return nil, err
@@ -190,23 +189,23 @@ func EvaluateExpression(env *core.Environment, expression core.Datum) (core.Datu
 			}
 		}
 		return Apply(env, procedure, args...)
-	case core.Quote:
+	case common.Quote:
 		return v.Datum, nil
-	case core.If:
+	case common.If:
 		if condition, err := EvaluateExpression(env, v.Condition); err != nil {
 			return nil, err
-		} else if condition == core.Boolean(false) {
+		} else if condition == common.Boolean(false) {
 			return EvaluateExpression(env, v.Else)
 		} else {
 			return EvaluateExpression(env, v.Then)
 		}
-	case core.Let:
+	case common.Let:
 		value, err := EvaluateExpression(env, v.Value)
 		if err != nil {
 			return nil, err
 		}
-		return EvaluateExpression(env.Set(v.Name, core.Variable{value}), v.Body)
-	case core.Begin:
+		return EvaluateExpression(env.Set(v.Name, common.Variable{value}), v.Body)
+	case common.Begin:
 		if len(v.Forms) < 1 {
 			return nil, Errorf("begin: empty in expression context")
 		}
@@ -225,8 +224,8 @@ func EvaluateExpression(env *core.Environment, expression core.Datum) (core.Datu
 	}
 }
 
-func Apply(env *core.Environment, procedure core.Datum, args ...core.Datum) (core.Datum, error) {
-	if p, ok := procedure.(core.Procedure); ok {
+func Apply(env *common.Environment, procedure common.Datum, args ...common.Datum) (common.Datum, error) {
+	if p, ok := procedure.(common.Procedure); ok {
 		if value, err := p(env, args...); err != nil {
 			return nil, err
 		} else {
@@ -237,9 +236,9 @@ func Apply(env *core.Environment, procedure core.Datum, args ...core.Datum) (cor
 	}
 }
 
-func each(list core.Datum, fn func(core.Datum) error) error {
+func each(list common.Datum, fn func(common.Datum) error) error {
 	for {
-		if p, ok := list.(core.Pair); ok {
+		if p, ok := list.(common.Pair); ok {
 			if err := fn(p.First); err != nil {
 				return err
 			} else {
@@ -253,10 +252,10 @@ func each(list core.Datum, fn func(core.Datum) error) error {
 	}
 }
 
-func list(data ...core.Datum) core.Datum {
+func list(data ...common.Datum) common.Datum {
 	if len(data) == 0 {
 		return nil
 	} else {
-		return core.Pair{data[0], list(data[1:]...)}
+		return common.Pair{data[0], list(data[1:]...)}
 	}
 }

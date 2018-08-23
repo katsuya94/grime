@@ -1,4 +1,4 @@
-package lex
+package read
 
 import (
 	"reflect"
@@ -82,7 +82,7 @@ func TestLex(t *testing.T) {
 			"boolean without delimiter",
 			"#fn",
 			nil,
-			"lex: expected delimiter",
+			"read: expected delimiter",
 		},
 		{
 			"number",
@@ -124,7 +124,7 @@ func TestLex(t *testing.T) {
 			"character hex out of range",
 			`#\x123456789abcdef`,
 			nil,
-			`lex: invalid hex scalar value: 123456789abcdef`,
+			`read: invalid hex scalar value: 123456789abcdef`,
 		},
 		{
 			"character named",
@@ -136,7 +136,7 @@ func TestLex(t *testing.T) {
 			"character unrecognized name",
 			`#\foo`,
 			nil,
-			`lex: unrecognized character: #\foo`,
+			`read: unrecognized character: #\foo`,
 		},
 		{
 			"string",
@@ -166,19 +166,19 @@ func TestLex(t *testing.T) {
 			"string escape hex unterminated",
 			`"\x6e"`,
 			nil,
-			"lex: unexpected rune",
+			"read: unexpected rune",
 		},
 		{
 			"string escape hex empty",
 			`"\x;"`,
 			nil,
-			"lex: unexpected delimiter",
+			"read: unexpected delimiter",
 		},
 		{
 			"string escape hex non hex digit",
 			`"\xg;"`,
 			nil,
-			"lex: unexpected rune",
+			"read: unexpected rune",
 		},
 		{
 			"string line ending",

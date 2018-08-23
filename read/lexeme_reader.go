@@ -1,4 +1,4 @@
-package lex
+package read
 
 import (
 	"bytes"
@@ -6,12 +6,6 @@ import (
 	"io"
 	"strings"
 )
-
-func Errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("lex: "+format, a...)
-}
-
-var ErrUnexpectedEOF = Errorf("unexpected EOF")
 
 type LexemeReader struct {
 	reader *CheckpointedRuneReader

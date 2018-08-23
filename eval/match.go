@@ -1,44 +1,44 @@
-package match
+package eval
 
 import (
 	"fmt"
-	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/common"
 )
 
 type matcher struct {
-	literals map[core.Symbol]core.Binding
+	literals map[common.Symbol]common.Binding
 }
 
-func newMatcher(literals map[core.Symbol]core.Binding) *matcher {
+func newMatcher(literals map[common.Symbol]common.Binding) *matcher {
 	return &matcher{literals}
 }
 
-func (m *matcher) match(input core.Datum, pattern core.Datum, ellipsis bool) (map[core.Symbol]interface{}, bool, error) {
+func (m *matcher) match(input common.Datum, pattern common.Datum, ellipsis bool) (map[common.Symbol]interface{}, bool, error) {
 	switch p := pattern.(type) {
-	case core.Boolean, core.Number, core.Character, core.String, nil:
+	case common.Boolean, common.Number, common.Character, common.String, nil:
 		if input == p {
-			return map[core.Symbol]interface{}{}, true, nil
+			return map[common.Symbol]interface{}{}, true, nil
 		} else {
 			return nil, false, nil
 		}
-	case core.Symbol:
+	case common.Symbol:
 		if _, ok := m.literals[p]; ok {
 			return nil, false, fmt.Errorf("match: matching literals not implemented")
-		} else if p == core.Symbol("...") { // TODO does this need to check lexical scope?
+		} else if p == common.Symbol("...") { // TODO does this need to check lexical scope?
 			return nil, false, fmt.Errorf("match: unexpected ellipsis")
-		} else if p == core.Symbol("_") { // TODO does this need to check lexical scope?
-			return map[core.Symbol]interface{}{}, true, nil
+		} else if p == common.Symbol("_") { // TODO does this need to check lexical scope?
+			return map[common.Symbol]interface{}{}, true, nil
 		} else {
-			return map[core.Symbol]interface{}{p: input}, true, nil
+			return map[common.Symbol]interface{}{p: input}, true, nil
 		}
-	case core.Pair:
-		if rest, ok := p.Rest.(core.Pair); ok {
+	case common.Pair:
+		if rest, ok := p.Rest.(common.Pair); ok {
 			// TODO does this need to check lexical scope?
-			if symbol, ok := rest.First.(core.Symbol); ok && symbol == core.Symbol("...") && ellipsis {
+			if symbol, ok := rest.First.(common.Symbol); ok && symbol == common.Symbol("...") && ellipsis {
 				return m.matchEllipsis(input, p.First, rest.Rest)
 			}
 		}
-		if i, ok := input.(core.Pair); ok {
+		if i, ok := input.(common.Pair); ok {
 			firstResult, match, err := m.match(i.First, p.First, true)
 			if err != nil {
 				return nil, false, err
@@ -51,7 +51,7 @@ func (m *matcher) match(input core.Datum, pattern core.Datum, ellipsis bool) (ma
 			} else if !match {
 				return nil, false, nil
 			}
-			result := map[core.Symbol]interface{}{}
+			result := map[common.Symbol]interface{}{}
 			for k, v := range firstResult {
 				result[k] = v
 			}
@@ -67,13 +67,13 @@ func (m *matcher) match(input core.Datum, pattern core.Datum, ellipsis bool) (ma
 	}
 }
 
-func (m *matcher) matchEllipsis(input core.Datum, subpattern core.Datum, restpattern core.Datum) (map[core.Symbol]interface{}, bool, error) {
+func (m *matcher) matchEllipsis(input common.Datum, subpattern common.Datum, restpattern common.Datum) (map[common.Symbol]interface{}, bool, error) {
 	var (
-		result     map[core.Symbol]interface{}
-		subresults []map[core.Symbol]interface{}
+		result     map[common.Symbol]interface{}
+		subresults []map[common.Symbol]interface{}
 	)
 	for {
-		if i, ok := input.(core.Pair); ok {
+		if i, ok := input.(common.Pair); ok {
 			if subresult, ok, err := m.match(i.First, subpattern, true); err != nil {
 				return nil, false, err
 			} else if !ok {
@@ -134,19 +134,19 @@ func (m *matcher) matchEllipsis(input core.Datum, subpattern core.Datum, restpat
 	return result, true, nil
 }
 
-func (m *matcher) patternVariables(pattern core.Datum) ([]core.Symbol, error) {
+func (m *matcher) patternVariables(pattern common.Datum) ([]common.Symbol, error) {
 	switch p := pattern.(type) {
-	case core.Boolean, core.Number, core.Character, core.String, nil:
+	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return nil, nil
-	case core.Symbol:
+	case common.Symbol:
 		if _, ok := m.literals[p]; ok {
 			return nil, nil
-		} else if p == core.Symbol("_") || p == core.Symbol("...") {
+		} else if p == common.Symbol("_") || p == common.Symbol("...") {
 			return nil, nil
 		} else {
-			return []core.Symbol{p}, nil
+			return []common.Symbol{p}, nil
 		}
-	case core.Pair:
+	case common.Pair:
 		firstPatternVariables, err := m.patternVariables(p.First)
 		if err != nil {
 			return nil, err
@@ -161,6 +161,6 @@ func (m *matcher) patternVariables(pattern core.Datum) ([]core.Symbol, error) {
 	}
 }
 
-func Match(input core.Datum, pattern core.Datum, literals map[core.Symbol]core.Binding) (map[core.Symbol]interface{}, bool, error) {
+func Match(input common.Datum, pattern common.Datum, literals map[common.Symbol]common.Binding) (map[common.Symbol]interface{}, bool, error) {
 	return newMatcher(literals).match(input, pattern, true)
 }

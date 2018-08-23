@@ -1,7 +1,8 @@
-package eval
+package core
 
 import (
-	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
@@ -36,13 +37,13 @@ func TestExpandBody(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env := NewEnvironment()
-			var expected core.Datum
+			var expected common.Datum
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)
 				if err != nil {
 					t.Fatal(err)
 				}
-				expected, err = ExpandBody(env, expectedBody)
+				expected, err = eval.ExpandBody(env, expectedBody)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -51,7 +52,7 @@ func TestExpandBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := ExpandBody(env, sourceBody)
+			actual, err := eval.ExpandBody(env, sourceBody)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -169,7 +170,7 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			} else if len(data) == 0 {
-				data = []core.Datum{nil}
+				data = []common.Datum{nil}
 			}
 			expected := data[0]
 			body, err := read.ReadString(test.source)
@@ -177,11 +178,11 @@ func TestEvaluateExpression(t *testing.T) {
 				t.Fatal(err)
 			}
 			env := NewEnvironment()
-			expression, err := ExpandBody(env, body)
+			expression, err := eval.ExpandBody(env, body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := EvaluateExpression(env, expression)
+			actual, err := eval.EvaluateExpression(env, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

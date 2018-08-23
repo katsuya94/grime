@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/katsuya94/grime/core"
+	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/eval"
+	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
@@ -25,7 +26,7 @@ func main() {
 }
 
 func repl() {
-	env := eval.NewEnvironment()
+	env := core.NewEnvironment()
 	for {
 		fmt.Print("grime> ")
 		body, err := readReplData()
@@ -42,11 +43,11 @@ func repl() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		fmt.Println(core.Display(value))
+		fmt.Println(common.Display(value))
 	}
 }
 
-func readReplData() ([]core.Datum, error) {
+func readReplData() ([]common.Datum, error) {
 	var source []byte
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(splitReplLines)
@@ -87,9 +88,9 @@ func splitReplLines(data []byte, atEOF bool) (int, []byte, error) {
 
 func run() error {
 	var (
-		topLevelProgram []core.Datum
+		topLevelProgram []common.Datum
 		reader          = read.NewDatumReader(os.Stdin)
-		env             = eval.NewEnvironment()
+		env             = core.NewEnvironment()
 	)
 	for {
 		if datum, err := reader.ReadDatum(); err == io.EOF {
