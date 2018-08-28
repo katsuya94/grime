@@ -195,3 +195,16 @@ func TestEvaluateExpression(t *testing.T) {
 		})
 	}
 }
+
+// TODO move these tests to somewhere more appropriate
+
+func TestImplementation(t *testing.T) {
+	implementation := common.NewImplementation()
+	implementation.Load(Core)
+	data, err := read.ReadString(`
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	implementation.RunTopLevelProgram(data)
+}
