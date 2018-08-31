@@ -10,8 +10,8 @@ type Library struct {
 	body        []common.Datum
 }
 
-func NewLibrary(source common.Datum) {
-
+func NewLibrary(source common.Datum) (*Library, error) {
+	return &Library{}, nil
 }
 
 type importSpec struct{}
