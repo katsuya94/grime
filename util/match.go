@@ -24,17 +24,24 @@ func (m *matcher) match(input common.Datum, pattern common.Datum, ellipsis bool)
 		}
 	case common.Symbol:
 		if _, ok := m.literals[p]; ok {
-			return nil, false, fmt.Errorf("match: matching literals not implemented")
-		} else if p == common.Symbol("...") { // TODO does this need to check lexical scope?
+			// TODO implement lexical literal matching
+			if s, ok := input.(common.Symbol); !ok {
+				return nil, false, nil
+			} else if s == p {
+				return map[common.Symbol]interface{}{}, true, nil
+			} else {
+				return nil, false, nil
+			}
+		} else if p == common.Symbol("...") { // TODO check lexical scope
 			return nil, false, fmt.Errorf("match: unexpected ellipsis")
-		} else if p == common.Symbol("_") { // TODO does this need to check lexical scope?
+		} else if p == common.Symbol("_") { // TODO check lexical scope
 			return map[common.Symbol]interface{}{}, true, nil
 		} else {
 			return map[common.Symbol]interface{}{p: input}, true, nil
 		}
 	case common.Pair:
 		if rest, ok := p.Rest.(common.Pair); ok {
-			// TODO does this need to check lexical scope?
+			// TODO check lexical scope
 			if symbol, ok := rest.First.(common.Symbol); ok && symbol == common.Symbol("...") && ellipsis {
 				return m.matchEllipsis(input, p.First, rest.Rest)
 			}

@@ -276,6 +276,24 @@ func TestMatch(t *testing.T) {
 			map[string]interface{}{},
 			"",
 		},
+		{
+			"matching literal",
+			map[common.Symbol]common.Binding{common.Symbol("id"): nil},
+			"id",
+			"id",
+			true,
+			map[string]interface{}{},
+			"",
+		},
+		{
+			"non-matching literal",
+			map[common.Symbol]common.Binding{common.Symbol("id"): nil},
+			"id",
+			"name",
+			false,
+			nil,
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -293,12 +311,15 @@ func TestMatch(t *testing.T) {
 				t.Fatalf("encountered %v data in pattern", len(data))
 			}
 			pattern := data[0]
-			expected := make(map[common.Symbol]interface{})
-			for name, shorthand := range test.result {
-				if result, err := readMatchResult(shorthand); err != nil {
-					t.Fatal(err)
-				} else {
-					expected[common.Symbol(name)] = result
+			var expected map[common.Symbol]interface{}
+			if test.result != nil {
+				expected = map[common.Symbol]interface{}{}
+				for name, shorthand := range test.result {
+					if result, err := readMatchResult(shorthand); err != nil {
+						t.Fatal(err)
+					} else {
+						expected[common.Symbol(name)] = result
+					}
 				}
 			}
 			result, ok, err := Match(input, pattern, test.literals)
