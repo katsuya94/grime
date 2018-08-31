@@ -66,6 +66,42 @@ func TestNewLibrary(t *testing.T) {
 			},
 			"",
 		},
+		{
+			"empty library with direct export",
+			"(library (name) (export id) (import))",
+			&Library{
+				name:        []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("id")}},
+			},
+			"",
+		},
+		{
+			"empty library with renamed export",
+			"(library (name) (export (rename (id name))) (import))",
+			&Library{
+				name:        []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}},
+			},
+			"",
+		},
+		{
+			"empty library with multiple renamed exports",
+			"(library (name) (export (rename (id name) (foo bar))) (import))",
+			&Library{
+				name:        []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}, {common.Symbol("foo"), common.Symbol("bar")}},
+			},
+			"",
+		},
+		{
+			"empty library with renamed export and direct export",
+			"(library (name) (export (rename (id name)) foo) (import))",
+			&Library{
+				name:        []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}, {common.Symbol("foo"), common.Symbol("foo")}},
+			},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

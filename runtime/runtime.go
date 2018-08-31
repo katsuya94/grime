@@ -13,6 +13,6 @@ func (i *Runtime) Bind(*Library) {
 }
 
 type libraryBinding struct {
-	library        *Library
-	implementation *LibraryInstance
+	library  *Library
+	instance *LibraryInstance
 }
