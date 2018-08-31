@@ -2,6 +2,9 @@ package eval
 
 import (
 	"fmt"
+
+	"github.com/katsuya94/grime/util"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 )
@@ -106,7 +109,7 @@ func ExpandMacro(env *common.Environment, syntax common.Datum) (common.Datum, er
 	} else if ok {
 		return expression, nil
 	}
-	if result, ok, err := Match(syntax, PatternApplication, nil); err != nil {
+	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
 		var application common.Application
@@ -130,7 +133,7 @@ func ExpandMacro(env *common.Environment, syntax common.Datum) (common.Datum, er
 
 func expandMacroMatching(env *common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := Match(syntax, pattern, nil)
+	result, ok, err := util.Match(syntax, pattern, nil)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {

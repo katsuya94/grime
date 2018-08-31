@@ -2,9 +2,11 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 )
 
 func NewEnvironment() *common.Environment {
@@ -30,7 +32,7 @@ var (
 )
 
 func transformQuote(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	if result, ok, err := eval.Match(syntax[0], PatternQuote, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternQuote, nil); err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("quote: bad syntax")
@@ -40,7 +42,7 @@ func transformQuote(env *common.Environment, syntax ...common.Datum) (common.Dat
 }
 
 func transformIf(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	if result, ok, err := eval.Match(syntax[0], PatternIf, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternIf, nil); err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("if: bad syntax")
@@ -62,7 +64,7 @@ func transformIf(env *common.Environment, syntax ...common.Datum) (common.Datum,
 }
 
 func transformLetStar(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	if result, ok, err := eval.Match(syntax[0], PatternLetStar, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternLetStar, nil); err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("let: bad syntax")
@@ -99,7 +101,7 @@ func transformLetStar(env *common.Environment, syntax ...common.Datum) (common.D
 }
 
 func transformBegin(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	result, ok, err := eval.Match(syntax[0], PatternBegin, nil)
+	result, ok, err := util.Match(syntax[0], PatternBegin, nil)
 	if err != nil {
 		return nil, err
 	} else if !ok {
@@ -129,13 +131,13 @@ func transformBegin(env *common.Environment, syntax ...common.Datum) (common.Dat
 }
 
 func transformDefine(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	if _, ok, err := eval.Match(syntax[0], PatternDefineProcedure, nil); err != nil {
+	if _, ok, err := util.Match(syntax[0], PatternDefineProcedure, nil); err != nil {
 		return nil, err
 	} else if ok {
 		return nil, fmt.Errorf("define: define procedure not implemented")
 	}
 	// TODO implement other define forms
-	if result, ok, err := eval.Match(syntax[0], PatternDefine, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternDefine, nil); err != nil {
 		return nil, err
 	} else if ok {
 		name, ok := result[common.Symbol("name")].(common.Symbol)
@@ -148,7 +150,7 @@ func transformDefine(env *common.Environment, syntax ...common.Datum) (common.Da
 }
 
 func transformDefineSyntax(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
-	if result, ok, err := eval.Match(syntax[0], PatternDefineSyntax, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternDefineSyntax, nil); err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("define-syntax: bad syntax")

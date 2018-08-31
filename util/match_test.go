@@ -1,11 +1,13 @@
-package eval
+package util_test
 
 import (
 	"fmt"
-	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
+
+	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/read"
+	. "github.com/katsuya94/grime/util"
 )
 
 func readMatchResult(shorthand interface{}) (interface{}, error) {

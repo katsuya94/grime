@@ -1,6 +1,10 @@
-package common
+package common_test
 
-import "testing"
+import (
+	"testing"
+
+	. "github.com/katsuya94/grime/common"
+)
 
 func TestDisplay(t *testing.T) {
 	tests := []struct {

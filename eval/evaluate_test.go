@@ -1,11 +1,13 @@
-package core
+package eval_test
 
 import (
-	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/eval"
-	"github.com/katsuya94/grime/read"
 	"reflect"
 	"testing"
+
+	"github.com/katsuya94/grime/common"
+	. "github.com/katsuya94/grime/eval"
+	"github.com/katsuya94/grime/lib/core"
+	"github.com/katsuya94/grime/read"
 )
 
 func TestExpandBody(t *testing.T) {
@@ -36,14 +38,14 @@ func TestExpandBody(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			env := NewEnvironment()
+			env := core.NewEnvironment()
 			var expected common.Datum
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)
 				if err != nil {
 					t.Fatal(err)
 				}
-				expected, err = eval.ExpandBody(env, expectedBody)
+				expected, err = ExpandBody(env, expectedBody)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -52,7 +54,7 @@ func TestExpandBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := eval.ExpandBody(env, sourceBody)
+			actual, err := ExpandBody(env, sourceBody)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -177,12 +179,12 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			env := NewEnvironment()
-			expression, err := eval.ExpandBody(env, body)
+			env := core.NewEnvironment()
+			expression, err := ExpandBody(env, body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := eval.EvaluateExpression(env, expression)
+			actual, err := EvaluateExpression(env, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -194,17 +196,4 @@ func TestEvaluateExpression(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TODO move these tests to somewhere more appropriate
-
-func TestImplementation(t *testing.T) {
-	implementation := common.NewImplementation()
-	implementation.Load(Core)
-	data, err := read.ReadString(`
-`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	implementation.RunTopLevelProgram(data)
 }

@@ -1,7 +1,8 @@
-package eval
+package util
 
 import (
 	"fmt"
+
 	"github.com/katsuya94/grime/common"
 )
 
