@@ -34,8 +34,8 @@ var (
 type Library struct {
 	name        []common.Symbol
 	version     []subVersion
-	importSpecs []*importSpec
-	exportSpecs []*identifierBinding
+	importSpecs []importSpec
+	exportSpecs []identifierBinding
 	body        []common.Datum
 }
 
@@ -100,7 +100,7 @@ func NewLibrary(source common.Datum) (*Library, error) {
 	return &library, nil
 }
 
-func newExportSpecs(d common.Datum) ([]*identifierBinding, error) {
+func newExportSpecs(d common.Datum) ([]identifierBinding, error) {
 	if result, ok, err := util.Match(d, PatternExportRename, map[common.Symbol]common.Binding{
 		common.Symbol("rename"): nil,
 	}); err != nil {
@@ -122,16 +122,16 @@ func newExportSpecs(d common.Datum) ([]*identifierBinding, error) {
 				return nil, fmt.Errorf("runtime: malformed export spec")
 			}
 		}
-		var exportSpecs []*identifierBinding
+		var exportSpecs []identifierBinding
 		for i := range internalIdentifiers {
-			exportSpecs = append(exportSpecs, &identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
+			exportSpecs = append(exportSpecs, identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
 		}
 		return exportSpecs, nil
-	} else if symbol, ok := d.(common.Symbol); ok {
-		return []*identifierBinding{{symbol, symbol}}, nil
-	} else {
-		return nil, fmt.Errorf("runtime: malformed export spec")
 	}
+	if symbol, ok := d.(common.Symbol); ok {
+		return []identifierBinding{{symbol, symbol}}, nil
+	}
+	return nil, fmt.Errorf("runtime: malformed export spec")
 }
 
 type importSpec struct {
@@ -139,8 +139,13 @@ type importSpec struct {
 	levels    []int
 }
 
-func newImportSpec(common.Datum) (*importSpec, error) {
-	return nil, nil
+func newImportSpec(d common.Datum) (importSpec, error) {
+	// TODO handle for specs
+	iSet, err := newImportSet(d)
+	if err != nil {
+		return importSpec{}, err
+	}
+	return importSpec{iSet, []int{0}}, nil
 }
 
 type importSet interface {
@@ -233,9 +238,9 @@ func newImportSet(d common.Datum) (importSet, error) {
 				return nil, fmt.Errorf("runtime: malformed import set")
 			}
 		}
-		var identifierBindings []*identifierBinding
+		var identifierBindings []identifierBinding
 		for i := range internalIdentifiers {
-			identifierBindings = append(identifierBindings, &identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
+			identifierBindings = append(identifierBindings, identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
 		}
 		return importSetRename{iSet, identifierBindings}, nil
 	}
@@ -256,7 +261,7 @@ type importSetPrefix struct {
 }
 type importSetRename struct {
 	importSet          importSet
-	identifierBindings []*identifierBinding
+	identifierBindings []identifierBinding
 }
 
 type importSetLibraryReference struct {
@@ -264,17 +269,17 @@ type importSetLibraryReference struct {
 	versionReference versionReference
 }
 
-func newLibraryReference(d common.Datum) (*importSetLibraryReference, error) {
+func newLibraryReference(d common.Datum) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
 	result, ok, err := util.Match(d, PatternLibraryReference, map[common.Symbol]common.Binding{})
 	if err != nil {
-		return nil, err
+		return importSetLibraryReference{}, err
 	} else if !ok {
-		return nil, fmt.Errorf("runtime: malformed library reference")
+		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
 	libraryName := result[common.Symbol("library-name")].([]interface{})
 	if len(libraryName) == 0 {
-		return nil, fmt.Errorf("runtime: malformed library reference")
+		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
 	i := 0
 	for ; i < len(libraryName); i++ {
@@ -284,17 +289,18 @@ func newLibraryReference(d common.Datum) (*importSetLibraryReference, error) {
 			break
 		}
 	}
+	ref.versionReference = versionReferenceSubVersionReferences{}
 	if i == len(libraryName)-1 {
 		vRef, err := newVersionReference(libraryName[i])
 		if err != nil {
-			return nil, err
+			return importSetLibraryReference{}, err
 		} else {
 			ref.versionReference = vRef
 		}
 	} else if i < len(libraryName)-1 {
-		return nil, fmt.Errorf("runtime: malformed library reference")
+		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
-	return &ref, nil
+	return ref, nil
 }
 
 type versionReference interface {
@@ -399,7 +405,9 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceLte{subV}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Binding{}); err != nil {
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Binding{
+		common.Symbol("and"): nil,
+	}); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
@@ -412,7 +420,9 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceAnd{subVRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Binding{}); err != nil {
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Binding{
+		common.Symbol("or"): nil,
+	}); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
@@ -425,7 +435,9 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceOr{subVRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Binding{}); err != nil {
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Binding{
+		common.Symbol("not"): nil,
+	}); err != nil {
 		return nil, err
 	} else if ok {
 		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")])

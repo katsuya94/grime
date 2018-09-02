@@ -71,7 +71,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export id) (import))",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{
+				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("id")},
 				},
 			},
@@ -82,7 +82,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export (rename (id name))) (import))",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{
+				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
 				},
 			},
@@ -93,7 +93,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export (rename (id name) (foo bar))) (import))",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{
+				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
 					{common.Symbol("foo"), common.Symbol("bar")},
 				},
@@ -105,7 +105,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export (rename (id name)) foo) (import))",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{
+				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
 					{common.Symbol("foo"), common.Symbol("foo")},
 				},
@@ -114,14 +114,264 @@ func TestNewLibrary(t *testing.T) {
 		},
 		{
 			"empty library with import",
-			"(library (name) (export) (import base))",
+			"(library (name) (export) (import (rnrs)))",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				importSpecs: []*importSpec{
+				importSpecs: []importSpec{
 					{
 						importSetLibraryReference{
-							[]common.Symbol{common.Symbol("base")},
-							versionReferenceSubVersionReferences{[]subVersionReference{}},
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with multi-identifier import",
+			"(library (name) (export) (import (rnrs base)))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs"), common.Symbol("base")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with single-number version import",
+			"(library (name) (export) (import (rnrs (6))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersion(6),
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with multiple-number version import",
+			"(library (name) (export) (import (rnrs (6 0))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersion(6),
+									subVersion(0),
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with and version import",
+			"(library (name) (export) (import (rnrs (and (6) (7)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceAnd{
+								[]versionReference{
+									versionReferenceSubVersionReferences{
+										[]subVersionReference{subVersion(6)},
+									},
+									versionReferenceSubVersionReferences{
+										[]subVersionReference{subVersion(7)},
+									},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with or version import",
+			"(library (name) (export) (import (rnrs (or (6) (7)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceOr{
+								[]versionReference{
+									versionReferenceSubVersionReferences{
+										[]subVersionReference{subVersion(6)},
+									},
+									versionReferenceSubVersionReferences{
+										[]subVersionReference{subVersion(7)},
+									},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with not version import",
+			"(library (name) (export) (import (rnrs (not (6)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceNot{
+								versionReferenceSubVersionReferences{
+									[]subVersionReference{subVersion(6)},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with gte version import",
+			"(library (name) (export) (import (rnrs ((>= 6)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersionReferenceGte{subVersion(6)},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with lte version import",
+			"(library (name) (export) (import (rnrs ((<= 6)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersionReferenceLte{subVersion(6)},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with sub-version and version import",
+			"(library (name) (export) (import (rnrs ((and 6 7)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersionReferenceAnd{
+										[]subVersionReference{
+											subVersion(6),
+											subVersion(7),
+										},
+									},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with sub-version or version import",
+			"(library (name) (export) (import (rnrs ((or 6 7)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersionReferenceOr{
+										[]subVersionReference{
+											subVersion(6),
+											subVersion(7),
+										},
+									},
+								},
+							},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with sub-version not version import",
+			"(library (name) (export) (import (rnrs ((not 6)))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{
+								[]subVersionReference{
+									subVersionReferenceNot{
+										subVersion(6),
+									},
+								},
+							},
 						},
 						[]int{0},
 					},
