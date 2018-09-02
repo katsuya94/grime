@@ -44,7 +44,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name (1)) (export) (import))",
 			&Library{
 				name:    []common.Symbol{common.Symbol("name")},
-				version: []int{1},
+				version: []subVersion{1},
 			},
 			"",
 		},
@@ -53,7 +53,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name (1 0)) (export) (import))",
 			&Library{
 				name:    []common.Symbol{common.Symbol("name")},
-				version: []int{1, 0},
+				version: []subVersion{1, 0},
 			},
 			"",
 		},
@@ -70,8 +70,10 @@ func TestNewLibrary(t *testing.T) {
 			"empty library with direct export",
 			"(library (name) (export id) (import))",
 			&Library{
-				name:        []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("id")}},
+				name: []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{
+					{common.Symbol("id"), common.Symbol("id")},
+				},
 			},
 			"",
 		},
@@ -79,8 +81,10 @@ func TestNewLibrary(t *testing.T) {
 			"empty library with renamed export",
 			"(library (name) (export (rename (id name))) (import))",
 			&Library{
-				name:        []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}},
+				name: []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{
+					{common.Symbol("id"), common.Symbol("name")},
+				},
 			},
 			"",
 		},
@@ -88,8 +92,11 @@ func TestNewLibrary(t *testing.T) {
 			"empty library with multiple renamed exports",
 			"(library (name) (export (rename (id name) (foo bar))) (import))",
 			&Library{
-				name:        []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}, {common.Symbol("foo"), common.Symbol("bar")}},
+				name: []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{
+					{common.Symbol("id"), common.Symbol("name")},
+					{common.Symbol("foo"), common.Symbol("bar")},
+				},
 			},
 			"",
 		},
@@ -97,8 +104,28 @@ func TestNewLibrary(t *testing.T) {
 			"empty library with renamed export and direct export",
 			"(library (name) (export (rename (id name)) foo) (import))",
 			&Library{
-				name:        []common.Symbol{common.Symbol("name")},
-				exportSpecs: []*identifierBinding{{common.Symbol("id"), common.Symbol("name")}, {common.Symbol("foo"), common.Symbol("foo")}},
+				name: []common.Symbol{common.Symbol("name")},
+				exportSpecs: []*identifierBinding{
+					{common.Symbol("id"), common.Symbol("name")},
+					{common.Symbol("foo"), common.Symbol("foo")},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with import",
+			"(library (name) (export) (import base))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []*importSpec{
+					{
+						libraryReference{
+							[]common.Symbol{common.Symbol("base")},
+							versionReferenceSubVersionReferences{[]subVersionReference{}},
+						},
+						[]int{0},
+					},
+				},
 			},
 			"",
 		},

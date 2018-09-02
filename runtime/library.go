@@ -10,16 +10,25 @@ import (
 )
 
 var (
-	PatternLibrary          = read.MustReadString("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)")[0]
-	PatternVersion          = read.MustReadString("(sub-version ...)")[0]
-	PatternExportRename     = read.MustReadString("(rename (internal external) ...)")[0]
-	PatternImportFor        = read.MustReadString("(for import-set import-level ...)")[0]
-	PatternLibraryReference = read.MustReadString("(library-name ...)")[0]
-	PatternImportSetLibrary = read.MustReadString("(library library-reference)")[0]
-	PatternImportSetOnly    = read.MustReadString("(only import-set identifier ...)")[0]
-	PatternImportSetExcept  = read.MustReadString("(except import-set identifier ...)")[0]
-	PatternImportSetPrefix  = read.MustReadString("(prefix import-set identifier)")[0]
-	PatternImportSetRename  = read.MustReadString("(rename import-set (external internal) ...)")[0]
+	PatternLibrary                = read.MustReadString("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)")[0]
+	PatternVersion                = read.MustReadString("(sub-version ...)")[0]
+	PatternExportRename           = read.MustReadString("(rename (internal external) ...)")[0]
+	PatternImportFor              = read.MustReadString("(for import-set import-level ...)")[0]
+	PatternLibraryReference       = read.MustReadString("(library-name ...)")[0]
+	PatternImportSetLibrary       = read.MustReadString("(library library-reference)")[0]
+	PatternImportSetOnly          = read.MustReadString("(only import-set identifier ...)")[0]
+	PatternImportSetExcept        = read.MustReadString("(except import-set identifier ...)")[0]
+	PatternImportSetPrefix        = read.MustReadString("(prefix import-set identifier)")[0]
+	PatternImportSetRename        = read.MustReadString("(rename import-set (external internal) ...)")[0]
+	PatternSubVersionReferences   = read.MustReadString("(sub-version-reference ...)")[0]
+	PatternVersionReferenceAnd    = read.MustReadString("(and version-reference ...)")[0]
+	PatternVersionReferenceOr     = read.MustReadString("(or version-reference ...)")[0]
+	PatternVersionReferenceNot    = read.MustReadString("(not version-reference)")[0]
+	PatternSubVersionReferenceGte = read.MustReadString("(>= sub-version)")[0]
+	PatternSubVersionReferenceLte = read.MustReadString("(<= sub-version)")[0]
+	PatternSubVersionReferenceAnd = read.MustReadString("(and sub-version-reference ...)")[0]
+	PatternSubVersionReferencOr   = read.MustReadString("(or sub-version-reference ...)")[0]
+	PatternSubVersionReferencNot  = read.MustReadString("(not sub-version-reference)")[0]
 )
 
 type Library struct {
@@ -104,17 +113,17 @@ func newExportSpecs(d common.Datum) ([]*identifierBinding, error) {
 		return nil, err
 	} else if ok {
 		var internalIdentifiers []common.Symbol
-		for _, s := range result[common.Symbol("internal")].([]interface{}) {
-			if symbol, ok := s.(common.Symbol); ok {
-				internalIdentifiers = append(internalIdentifiers, symbol)
+		for _, d := range result[common.Symbol("internal")].([]interface{}) {
+			if id, ok := d.(common.Symbol); ok {
+				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed export spec")
 			}
 		}
 		var externalIdentifiers []common.Symbol
-		for _, s := range result[common.Symbol("external")].([]interface{}) {
-			if symbol, ok := s.(common.Symbol); ok {
-				externalIdentifiers = append(externalIdentifiers, symbol)
+		for _, d := range result[common.Symbol("external")].([]interface{}) {
+			if id, ok := d.(common.Symbol); ok {
+				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed export spec")
 			}
@@ -144,6 +153,101 @@ type importSet interface {
 	// TODO implement resolution through an interface method
 }
 
+func newImportSet(d common.Datum) (importSet, error) {
+	if result, ok, err := util.Match(d, PatternImportSetLibrary, map[common.Symbol]common.Binding{
+		common.Symbol("library"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		return newLibraryReference(result[common.Symbol("library-reference")])
+	}
+	if result, ok, err := util.Match(d, PatternImportSetOnly, map[common.Symbol]common.Binding{
+		common.Symbol("only"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		if err != nil {
+			return nil, err
+		}
+		var ids []common.Symbol
+		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
+			id, ok := d.(common.Symbol)
+			if !ok {
+				return nil, fmt.Errorf("runtime: malformed import set")
+			}
+			ids = append(ids, id)
+		}
+		return only{iSet, ids}, nil
+	}
+	if result, ok, err := util.Match(d, PatternImportSetExcept, map[common.Symbol]common.Binding{
+		common.Symbol("except"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		if err != nil {
+			return nil, err
+		}
+		var ids []common.Symbol
+		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
+			id, ok := d.(common.Symbol)
+			if !ok {
+				return nil, fmt.Errorf("runtime: malformed import set")
+			}
+			ids = append(ids, id)
+		}
+		return except{iSet, ids}, nil
+	}
+	if result, ok, err := util.Match(d, PatternImportSetPrefix, map[common.Symbol]common.Binding{
+		common.Symbol("prefix"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		if err != nil {
+			return nil, err
+		}
+		id, ok := result[common.Symbol("identifier")].(common.Symbol)
+		if !ok {
+			return nil, fmt.Errorf("runtime: malformed import set")
+		}
+		return prefix{iSet, id}, nil
+	}
+	if result, ok, err := util.Match(d, PatternImportSetRename, map[common.Symbol]common.Binding{
+		common.Symbol("rename"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		if err != nil {
+			return nil, err
+		}
+		var externalIdentifiers []common.Symbol
+		for _, d := range result[common.Symbol("external")].([]interface{}) {
+			if id, ok := d.(common.Symbol); ok {
+				externalIdentifiers = append(externalIdentifiers, id)
+			} else {
+				return nil, fmt.Errorf("runtime: malformed export spec")
+			}
+		}
+		var internalIdentifiers []common.Symbol
+		for _, d := range result[common.Symbol("internal")].([]interface{}) {
+			if id, ok := d.(common.Symbol); ok {
+				internalIdentifiers = append(internalIdentifiers, id)
+			} else {
+				return nil, fmt.Errorf("runtime: malformed export spec")
+			}
+		}
+		var identifierBindings []*identifierBinding
+		for i := range internalIdentifiers {
+			identifierBindings = append(identifierBindings, &identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
+		}
+		return rename{iSet, identifierBindings}, nil
+	}
+	return newLibraryReference(d)
+}
+
 type only struct {
 	importSet   importSet
 	identifiers []common.Symbol
@@ -159,45 +263,6 @@ type prefix struct {
 type rename struct {
 	importSet          importSet
 	identifierBindings []*identifierBinding
-}
-
-func newImportSet(d common.Datum) (importSet, error) {
-	if result, ok, err := util.Match(d, PatternImportSetLibrary, map[common.Symbol]common.Binding{
-		common.Symbol("library"): nil,
-	}); err != nil {
-		return nil, err
-	} else if ok {
-		return newLibraryReference(result[common.Symbol("library-reference")])
-	}
-	if result, ok, err := util.Match(d, PatternImportSetOnly, map[common.Symbol]common.Binding{
-		common.Symbol("only"): nil,
-	}); err != nil {
-		return nil, err
-	} else if ok {
-		return nil, nil
-	}
-	if result, ok, err := util.Match(d, PatternImportSetExcept, map[common.Symbol]common.Binding{
-		common.Symbol("except"): nil,
-	}); err != nil {
-		return nil, err
-	} else if ok {
-		return nil, nil
-	}
-	if result, ok, err := util.Match(d, PatternImportSetPrefix, map[common.Symbol]common.Binding{
-		common.Symbol("prefix"): nil,
-	}); err != nil {
-		return nil, err
-	} else if ok {
-		return nil, nil
-	}
-	if result, ok, err := util.Match(d, PatternImportSetRename, map[common.Symbol]common.Binding{
-		common.Symbol("rename"): nil,
-	}); err != nil {
-		return nil, err
-	} else if ok {
-		return nil, nil
-	}
-	return newLibraryReference(d)
 }
 
 type libraryReference struct {
@@ -226,33 +291,24 @@ func newLibraryReference(d common.Datum) (*libraryReference, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := util.Match(libraryName[i], PatternVersion, map[common.Symbol]common.Binding{})
+		vRef, err := newVersionReference(libraryName[i])
 		if err != nil {
 			return nil, err
-		} else if !ok {
-			return nil, fmt.Errorf("runtime: malformed library name")
-		}
-		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
-			if number, ok := d.(common.Number); ok {
-				subVersion, err := strconv.ParseInt(string(number), 10, 0)
-				if err != nil {
-					return nil, fmt.Errorf("runtime: malformed library name: %v", err)
-				} else if subVersion < 0 {
-					return nil, fmt.Errorf("runtime: malformed library name")
-				}
-				library.version = append(library.version, int(subVersion))
-			} else {
-				return nil, fmt.Errorf("runtime: malformed library name")
-			}
+		} else {
+			ref.versionReference = vRef
 		}
 	} else if i < len(libraryName)-1 {
-		return nil, fmt.Errorf("runtime: malformed library name")
+		return nil, fmt.Errorf("runtime: malformed library reference")
 	}
 	return &ref, nil
 }
 
 type versionReference interface {
 	// TODO implement resolution through an interface method
+}
+
+func newVersionReference(d common.Datum) (versionReference, error) {
+
 }
 
 type versionReferenceSubVersionReferences struct {
@@ -272,7 +328,6 @@ type subVersionReference interface {
 	// TODO implement resolution through an interface method
 }
 
-type subVersion int
 type subVersionReferenceGte struct {
 	subVersion subVersion
 }
@@ -288,6 +343,8 @@ type subVersionReferenceOr struct {
 type subVersionReferenceNot struct {
 	subVersionReference subVersionReference
 }
+
+type subVersion int
 
 type identifierBinding struct {
 	external common.Symbol
