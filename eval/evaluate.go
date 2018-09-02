@@ -13,8 +13,6 @@ func Errorf(format string, a ...interface{}) error {
 	return fmt.Errorf("eval: "+format, a...)
 }
 
-var ErrImproperList = Errorf("improper list")
-
 func EvaluateTopLevelProgram(env *common.Environment, topLevelProgram []common.Datum) error {
 	expression, err := ExpandBody(env, topLevelProgram)
 	if err != nil {
@@ -68,7 +66,7 @@ func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, er
 		definitionExpressions = append(definitionExpressions, expression)
 	}
 	// Expand a begin with the remaining expressions.
-	expression, err := ExpandMacro(env, common.Pair{common.Symbol("begin"), list(forms[i:]...)})
+	expression, err := ExpandMacro(env, common.Pair{common.Symbol("begin"), util.List(forms[i:]...)})
 	if err != nil {
 		return nil, err
 	}
@@ -236,29 +234,5 @@ func Apply(env *common.Environment, procedure common.Datum, args ...common.Datum
 		}
 	} else {
 		return nil, Errorf("application: non-procedure in procedure position")
-	}
-}
-
-func each(list common.Datum, fn func(common.Datum) error) error {
-	for {
-		if p, ok := list.(common.Pair); ok {
-			if err := fn(p.First); err != nil {
-				return err
-			} else {
-				list = p.Rest
-			}
-		} else if list == nil {
-			return nil
-		} else {
-			return ErrImproperList
-		}
-	}
-}
-
-func list(data ...common.Datum) common.Datum {
-	if len(data) == 0 {
-		return nil
-	} else {
-		return common.Pair{data[0], list(data[1:]...)}
 	}
 }

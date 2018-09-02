@@ -4,14 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
+	"os"
+	"syscall"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 	"golang.org/x/crypto/ssh/terminal"
-	"io"
-	"os"
-	"syscall"
 )
 
 func main() {
@@ -43,7 +45,7 @@ func repl() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		fmt.Println(common.Display(value))
+		fmt.Println(util.Display(value))
 	}
 }
 

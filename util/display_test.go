@@ -1,45 +1,46 @@
-package common_test
+package util_test
 
 import (
 	"testing"
 
-	. "github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/common"
+	. "github.com/katsuya94/grime/util"
 )
 
 func TestDisplay(t *testing.T) {
 	tests := []struct {
 		name     string
-		datum    Datum
+		datum    common.Datum
 		expected string
 	}{
 		{
 			"false",
-			Boolean(false),
+			common.Boolean(false),
 			"#f",
 		},
 		{
 			"true",
-			Boolean(true),
+			common.Boolean(true),
 			"#t",
 		},
 		{
 			"number",
-			Number("123"),
+			common.Number("123"),
 			"123",
 		},
 		{
 			"character",
-			Character('a'),
+			common.Character('a'),
 			`#\a`,
 		},
 		{
 			"string",
-			String("name"),
+			common.String("name"),
 			`"name"`,
 		},
 		{
 			"symbol",
-			Symbol("id"),
+			common.Symbol("id"),
 			"'id",
 		},
 		{
@@ -49,32 +50,32 @@ func TestDisplay(t *testing.T) {
 		},
 		{
 			"list with one symbol",
-			Pair{Symbol("id"), nil},
+			common.Pair{common.Symbol("id"), nil},
 			"'(id)",
 		},
 		{
 			"list with two symbols",
-			Pair{Symbol("id"), Pair{Symbol("name"), nil}},
+			common.Pair{common.Symbol("id"), common.Pair{common.Symbol("name"), nil}},
 			"'(id name)",
 		},
 		{
 			"list with a literal",
-			Pair{Boolean(false), nil},
+			common.Pair{common.Boolean(false), nil},
 			"'(#f)",
 		},
 		{
 			"improper list",
-			Pair{Symbol("id"), Symbol("name")},
+			common.Pair{common.Symbol("id"), common.Symbol("name")},
 			"'(id . name)",
 		},
 		{
 			"empty list in a list",
-			Pair{nil, nil},
+			common.Pair{nil, nil},
 			"'(())",
 		},
 		{
 			"list with one symbol in a list",
-			Pair{Pair{Symbol("id"), nil}, nil},
+			common.Pair{common.Pair{common.Symbol("id"), nil}, nil},
 			"'((id))",
 		},
 	}
