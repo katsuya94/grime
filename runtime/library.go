@@ -27,8 +27,8 @@ var (
 	PatternSubVersionReferenceGte = read.MustReadString("(>= sub-version)")[0]
 	PatternSubVersionReferenceLte = read.MustReadString("(<= sub-version)")[0]
 	PatternSubVersionReferenceAnd = read.MustReadString("(and sub-version-reference ...)")[0]
-	PatternSubVersionReferencOr   = read.MustReadString("(or sub-version-reference ...)")[0]
-	PatternSubVersionReferencNot  = read.MustReadString("(not sub-version-reference)")[0]
+	PatternSubVersionReferenceOr  = read.MustReadString("(or sub-version-reference ...)")[0]
+	PatternSubVersionReferenceNot = read.MustReadString("(not sub-version-reference)")[0]
 )
 
 type Library struct {
@@ -71,17 +71,11 @@ func NewLibrary(source common.Datum) (*Library, error) {
 			return nil, fmt.Errorf("runtime: malformed library name")
 		}
 		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
-			if number, ok := d.(common.Number); ok {
-				n, err := strconv.ParseInt(string(number), 10, 0)
-				if err != nil {
-					return nil, fmt.Errorf("runtime: malformed library name: %v", err)
-				} else if n < 0 {
-					return nil, fmt.Errorf("runtime: malformed library name")
-				}
-				library.version = append(library.version, subVersion(n))
-			} else {
-				return nil, fmt.Errorf("runtime: malformed library name")
+			subV, err := newSubVersion(d)
+			if err != nil {
+				return nil, err
 			}
+			library.version = append(library.version, subV)
 		}
 	} else if i < len(libraryName)-1 {
 		return nil, fmt.Errorf("runtime: malformed library name")
@@ -178,7 +172,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 			}
 			ids = append(ids, id)
 		}
-		return only{iSet, ids}, nil
+		return importSetOnly{iSet, ids}, nil
 	}
 	if result, ok, err := util.Match(d, PatternImportSetExcept, map[common.Symbol]common.Binding{
 		common.Symbol("except"): nil,
@@ -197,7 +191,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 			}
 			ids = append(ids, id)
 		}
-		return except{iSet, ids}, nil
+		return importSetExcept{iSet, ids}, nil
 	}
 	if result, ok, err := util.Match(d, PatternImportSetPrefix, map[common.Symbol]common.Binding{
 		common.Symbol("prefix"): nil,
@@ -212,7 +206,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 		if !ok {
 			return nil, fmt.Errorf("runtime: malformed import set")
 		}
-		return prefix{iSet, id}, nil
+		return importSetPrefix{iSet, id}, nil
 	}
 	if result, ok, err := util.Match(d, PatternImportSetRename, map[common.Symbol]common.Binding{
 		common.Symbol("rename"): nil,
@@ -228,7 +222,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 			if id, ok := d.(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
-				return nil, fmt.Errorf("runtime: malformed export spec")
+				return nil, fmt.Errorf("runtime: malformed import set")
 			}
 		}
 		var internalIdentifiers []common.Symbol
@@ -236,42 +230,42 @@ func newImportSet(d common.Datum) (importSet, error) {
 			if id, ok := d.(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
-				return nil, fmt.Errorf("runtime: malformed export spec")
+				return nil, fmt.Errorf("runtime: malformed import set")
 			}
 		}
 		var identifierBindings []*identifierBinding
 		for i := range internalIdentifiers {
 			identifierBindings = append(identifierBindings, &identifierBinding{internalIdentifiers[i], externalIdentifiers[i]})
 		}
-		return rename{iSet, identifierBindings}, nil
+		return importSetRename{iSet, identifierBindings}, nil
 	}
 	return newLibraryReference(d)
 }
 
-type only struct {
+type importSetOnly struct {
 	importSet   importSet
 	identifiers []common.Symbol
 }
-type except struct {
+type importSetExcept struct {
 	importSet   importSet
 	identifiers []common.Symbol
 }
-type prefix struct {
+type importSetPrefix struct {
 	importSet  importSet
 	identifier common.Symbol
 }
-type rename struct {
+type importSetRename struct {
 	importSet          importSet
 	identifierBindings []*identifierBinding
 }
 
-type libraryReference struct {
+type importSetLibraryReference struct {
 	name             []common.Symbol
 	versionReference versionReference
 }
 
-func newLibraryReference(d common.Datum) (*libraryReference, error) {
-	var ref libraryReference
+func newLibraryReference(d common.Datum) (*importSetLibraryReference, error) {
+	var ref importSetLibraryReference
 	result, ok, err := util.Match(d, PatternLibraryReference, map[common.Symbol]common.Binding{})
 	if err != nil {
 		return nil, err
@@ -308,12 +302,63 @@ type versionReference interface {
 }
 
 func newVersionReference(d common.Datum) (versionReference, error) {
-
+	if result, ok, err := util.Match(d, PatternVersionReferenceAnd, map[common.Symbol]common.Binding{
+		common.Symbol("and"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		var vRefs []versionReference
+		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
+			vRef, err := newVersionReference(d)
+			if err != nil {
+				return nil, err
+			}
+			vRefs = append(vRefs, vRef)
+		}
+		return versionReferenceAnd{vRefs}, nil
+	}
+	if result, ok, err := util.Match(d, PatternVersionReferenceOr, map[common.Symbol]common.Binding{
+		common.Symbol("or"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		var vRefs []versionReference
+		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
+			vRef, err := newVersionReference(d)
+			if err != nil {
+				return nil, err
+			}
+			vRefs = append(vRefs, vRef)
+		}
+		return versionReferenceOr{vRefs}, nil
+	}
+	if result, ok, err := util.Match(d, PatternVersionReferenceNot, map[common.Symbol]common.Binding{
+		common.Symbol("not"): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		vRef, err := newVersionReference(result[common.Symbol("version-reference")])
+		if err != nil {
+			return nil, err
+		}
+		return versionReferenceNot{vRef}, nil
+	}
+	if result, ok, err := util.Match(d, PatternSubVersionReferences, map[common.Symbol]common.Binding{}); err != nil {
+		return nil, err
+	} else if ok {
+		var subVRefs []subVersionReference
+		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+			subVRef, err := newSubVersionReference(d)
+			if err != nil {
+				return nil, err
+			}
+			subVRefs = append(subVRefs, subVRef)
+		}
+		return versionReferenceSubVersionReferences{subVRefs}, nil
+	}
+	return nil, fmt.Errorf("runtime: malformed version reference")
 }
 
-type versionReferenceSubVersionReferences struct {
-	subVersionReferences []subVersionReference
-}
 type versionReferenceAnd struct {
 	versionReferences []versionReference
 }
@@ -323,9 +368,77 @@ type versionReferenceOr struct {
 type versionReferenceNot struct {
 	versionReference versionReference
 }
+type versionReferenceSubVersionReferences struct {
+	subVersionReferences []subVersionReference
+}
 
 type subVersionReference interface {
 	// TODO implement resolution through an interface method
+}
+
+func newSubVersionReference(d common.Datum) (subVersionReference, error) {
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Binding{
+		common.Symbol(">="): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		subV, err := newSubVersion(result[common.Symbol("sub-version")])
+		if err != nil {
+			return nil, err
+		}
+		return subVersionReferenceGte{subV}, nil
+	}
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Binding{
+		common.Symbol("<="): nil,
+	}); err != nil {
+		return nil, err
+	} else if ok {
+		subV, err := newSubVersion(result[common.Symbol("sub-version")])
+		if err != nil {
+			return nil, err
+		}
+		return subVersionReferenceLte{subV}, nil
+	}
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Binding{}); err != nil {
+		return nil, err
+	} else if ok {
+		var subVRefs []subVersionReference
+		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+			subVRef, err := newSubVersionReference(d)
+			if err != nil {
+				return nil, err
+			}
+			subVRefs = append(subVRefs, subVRef)
+		}
+		return subVersionReferenceAnd{subVRefs}, nil
+	}
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Binding{}); err != nil {
+		return nil, err
+	} else if ok {
+		var subVRefs []subVersionReference
+		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+			subVRef, err := newSubVersionReference(d)
+			if err != nil {
+				return nil, err
+			}
+			subVRefs = append(subVRefs, subVRef)
+		}
+		return subVersionReferenceOr{subVRefs}, nil
+	}
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Binding{}); err != nil {
+		return nil, err
+	} else if ok {
+		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")])
+		if err != nil {
+			return nil, err
+		}
+		return subVersionReferenceNot{subVRef}, nil
+	}
+	subV, err := newSubVersion(d)
+	if err != nil {
+		return nil, err
+	}
+	return subV, nil
 }
 
 type subVersionReferenceGte struct {
@@ -345,6 +458,20 @@ type subVersionReferenceNot struct {
 }
 
 type subVersion int
+
+func newSubVersion(d common.Datum) (subVersion, error) {
+	number, ok := d.(common.Number)
+	if !ok {
+		return 0, fmt.Errorf("runtime: malformed sub-version")
+	}
+	n, err := strconv.ParseInt(string(number), 10, 0)
+	if err != nil {
+		return 0, err
+	} else if n < 0 {
+		return 0, fmt.Errorf("runtime: malformed sub-version")
+	}
+	return subVersion(n), nil
+}
 
 type identifierBinding struct {
 	external common.Symbol

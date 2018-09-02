@@ -119,7 +119,7 @@ func TestNewLibrary(t *testing.T) {
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []*importSpec{
 					{
-						libraryReference{
+						importSetLibraryReference{
 							[]common.Symbol{common.Symbol("base")},
 							versionReferenceSubVersionReferences{[]subVersionReference{}},
 						},
