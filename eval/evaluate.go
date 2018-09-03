@@ -3,10 +3,9 @@ package eval
 import (
 	"fmt"
 
-	"github.com/katsuya94/grime/util"
-
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 )
 
 func Errorf(format string, a ...interface{}) error {
@@ -36,6 +35,7 @@ func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, er
 		}
 		switch v := form.(type) {
 		case common.DefineSyntax:
+			// TODO pull phase n + 1 bindings from runtime via some sort of chain.
 			if _, err := EvaluateExpression(env, v.Expression); err != nil {
 				return nil, err
 			} else {

@@ -3,13 +3,12 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/katsuya94/grime/read"
-
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/util"
 )
 
-var PatternTopLevelProgramImportForm = read.MustReadString("(import import-spec ...)")
+var PatternTopLevelProgramImportForm = read.MustReadString("(import import-spec ...)")[0]
 
 type Runtime struct {
 	libraries []*Library
