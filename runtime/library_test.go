@@ -379,6 +379,74 @@ func TestNewLibrary(t *testing.T) {
 			},
 			"",
 		},
+		{
+			"empty library with meta import",
+			"(library (name) (export) (import (for (rnrs) (meta 3))))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{3},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with run import",
+			"(library (name) (export) (import (for (rnrs) run)))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{0},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with expand import",
+			"(library (name) (export) (import (for (rnrs) expand)))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{1},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"empty library with multiple imports",
+			"(library (name) (export) (import (for (rnrs) run expand)))",
+			&Library{
+				name: []common.Symbol{common.Symbol("name")},
+				importSpecs: []importSpec{
+					{
+						importSetLibraryReference{
+							[]common.Symbol{common.Symbol("rnrs")},
+							versionReferenceSubVersionReferences{},
+						},
+						[]int{0, 1},
+					},
+				},
+			},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -20,6 +20,7 @@ type Library struct {
 	importSpecs []importSpec
 	exportSpecs []identifierBinding
 	body        []common.Datum
+	instance    libraryInstance
 }
 
 func NewLibrary(source common.Datum) (*Library, error) {
@@ -117,4 +118,4 @@ func newExportSpecs(d common.Datum) ([]identifierBinding, error) {
 	return nil, fmt.Errorf("runtime: malformed export spec")
 }
 
-type LibraryInstance struct{}
+type libraryInstance struct{}
