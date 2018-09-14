@@ -118,4 +118,24 @@ func newExportSpecs(d common.Datum) ([]identifierBinding, error) {
 	return nil, fmt.Errorf("runtime: malformed export spec")
 }
 
+func sameName(n1 []common.Symbol, n2 []common.Symbol) bool {
+	if len(n1) != len(n2) {
+		return false
+	}
+	for i := range n1 {
+		if n1[i] != n2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func nameData(name []common.Symbol) []common.Datum {
+	var data []common.Datum
+	for _, symbol := range name {
+		data = append(data, symbol)
+	}
+	return data
+}
+
 type libraryInstance struct{}

@@ -7,7 +7,7 @@ import (
 	. "github.com/katsuya94/grime/util"
 )
 
-func TestDisplay(t *testing.T) {
+func TestWrite(t *testing.T) {
 	tests := []struct {
 		name     string
 		datum    common.Datum
@@ -41,47 +41,52 @@ func TestDisplay(t *testing.T) {
 		{
 			"symbol",
 			common.Symbol("id"),
-			"'id",
+			"id",
 		},
 		{
 			"empty list",
 			nil,
-			"'()",
+			"()",
 		},
 		{
 			"list with one symbol",
 			common.Pair{common.Symbol("id"), nil},
-			"'(id)",
+			"(id)",
 		},
 		{
 			"list with two symbols",
 			common.Pair{common.Symbol("id"), common.Pair{common.Symbol("name"), nil}},
-			"'(id name)",
+			"(id name)",
 		},
 		{
 			"list with a literal",
 			common.Pair{common.Boolean(false), nil},
-			"'(#f)",
+			"(#f)",
 		},
 		{
 			"improper list",
 			common.Pair{common.Symbol("id"), common.Symbol("name")},
-			"'(id . name)",
+			"(id . name)",
 		},
 		{
 			"empty list in a list",
 			common.Pair{nil, nil},
-			"'(())",
+			"(())",
 		},
 		{
 			"list with one symbol in a list",
 			common.Pair{common.Pair{common.Symbol("id"), nil}, nil},
-			"'((id))",
+			"((id))",
+		},
+		{
+			"quote",
+			common.Quote{common.Symbol("id")},
+			"'id",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if actual := Display(test.datum); actual != test.expected {
+			if actual := Write(test.datum); actual != test.expected {
 				t.Fatalf("\nexpected: %v\n     got: %v", test.expected, actual)
 			}
 		})

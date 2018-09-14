@@ -45,7 +45,7 @@ func repl() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		fmt.Println(util.Display(value))
+		fmt.Println(util.Write(value))
 	}
 }
 

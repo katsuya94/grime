@@ -20,8 +20,8 @@ func NewRuntime() *Runtime {
 
 func (r *Runtime) Bind(lib *Library) error {
 	for _, l := range r.libraries {
-		if sameName(lib, l) {
-			return fmt.Errorf("runtime: library %v already bound", util.Display(util.List(l.name)))
+		if sameName(lib.name, l.name) {
+			return fmt.Errorf("runtime: library %v already bound", util.Write(util.List(nameData(l.name)...)))
 		}
 	}
 	r.libraries = append(r.libraries, lib)
@@ -49,19 +49,29 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	return r.Instantiate(&library)
 }
 
-func sameName(l1 *Library, l2 *Library) bool {
-	if len(l1.name) != len(l2.name) {
-		return false
-	}
-	for i := range l1.name {
-		if l1.name[i] != l2.name[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (r *Runtime) Instantiate(l *Library) error {
+	var (
+		libraries   []*Library
+		resolutions []importSpecResolution
+	)
+	for _, importSpec := range l.importSpecs {
+		var (
+			library *Library
+			res     importSpecResolution
+			ok      = false
+		)
+		for _, library = range r.libraries {
+			res, ok = importSpec.resolve(library)
+			if ok {
+				break
+			}
+		}
+		if !ok {
+			return fmt.Errorf("runtime: could not resolve import spec %v", util.Write(util.List(nameData(importSpec.libraryName())...)))
+		}
+		libraries = append(libraries, library)
+		resolutions = append(resolutions, res)
+	}
 	return nil
 }
 

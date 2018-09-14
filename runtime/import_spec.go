@@ -64,6 +64,20 @@ func newImportSpec(d common.Datum) (importSpec, error) {
 	}
 }
 
+type importSpecResolution struct {
+	importSetResolution
+	levels []int
+}
+
+func (spec importSpec) resolve(library *Library) (importSpecResolution, bool) {
+	importSetResolution, ok := spec.importSet.resolve(library)
+	return importSpecResolution{importSetResolution, spec.levels}, ok
+}
+
+func (spec importSpec) libraryName() []common.Symbol {
+	return spec.importSet.libraryName()
+}
+
 func newImportLevel(d common.Datum) (int, error) {
 	if result, ok, err := util.Match(d, PatternImportLevelMeta, map[common.Symbol]common.Binding{
 		common.Symbol("meta"): nil,
@@ -98,7 +112,8 @@ func newImportLevel(d common.Datum) (int, error) {
 }
 
 type importSet interface {
-	// TODO implement resolution through an interface method
+	resolve(*Library) (importSetResolution, bool)
+	libraryName() []common.Symbol
 }
 
 func newImportSet(d common.Datum) (importSet, error) {
@@ -196,21 +211,106 @@ func newImportSet(d common.Datum) (importSet, error) {
 	return newLibraryReference(d)
 }
 
+type importSetResolution struct {
+	identifierResolution identifierResolution
+}
+
+type identifierResolution interface {
+	// TODO implement identifier resolution
+}
+
+type identifierResolutionAll struct{}
+type identifierResolutionOnly struct {
+	identifierResolution identifierResolution
+	identifiers          []common.Symbol
+}
+type identifierResolutionExcept struct {
+	identifierResolution identifierResolution
+	identifiers          []common.Symbol
+}
+type identifierResolutionPrefix struct {
+	identifierResolution identifierResolution
+	identifier           common.Symbol
+}
+type identifierResolutionRename struct {
+	identifierResolution identifierResolution
+	identifierBindings   []identifierBinding
+}
+
 type importSetOnly struct {
 	importSet   importSet
 	identifiers []common.Symbol
 }
+
+func (set importSetOnly) resolve(library *Library) (importSetResolution, bool) {
+	subRes, ok := set.importSet.resolve(library)
+	return importSetResolution{
+		identifierResolutionOnly{
+			subRes.identifierResolution,
+			set.identifiers,
+		},
+	}, ok
+}
+
+func (set importSetOnly) libraryName() []common.Symbol {
+	return set.importSet.libraryName()
+}
+
 type importSetExcept struct {
 	importSet   importSet
 	identifiers []common.Symbol
 }
+
+func (set importSetExcept) resolve(library *Library) (importSetResolution, bool) {
+	subRes, ok := set.importSet.resolve(library)
+	return importSetResolution{
+		identifierResolutionExcept{
+			subRes.identifierResolution,
+			set.identifiers,
+		},
+	}, ok
+}
+
+func (set importSetExcept) libraryName() []common.Symbol {
+	return set.importSet.libraryName()
+}
+
 type importSetPrefix struct {
 	importSet  importSet
 	identifier common.Symbol
 }
+
+func (set importSetPrefix) resolve(library *Library) (importSetResolution, bool) {
+	subRes, ok := set.importSet.resolve(library)
+	return importSetResolution{
+		identifierResolutionPrefix{
+			subRes.identifierResolution,
+			set.identifier,
+		},
+	}, ok
+}
+
+func (set importSetPrefix) libraryName() []common.Symbol {
+	return set.importSet.libraryName()
+}
+
 type importSetRename struct {
 	importSet          importSet
 	identifierBindings []identifierBinding
+}
+
+func (set importSetRename) resolve(library *Library) (importSetResolution, bool) {
+	subRes, ok := set.importSet.resolve(library)
+	return importSetResolution{
+		identifierResolutionRename{
+			subRes.identifierResolution,
+			set.identifierBindings,
+		},
+	}, ok
+}
+
+func (set importSetRename) libraryName() []common.Symbol {
+	return set.importSet.libraryName()
 }
 
 type importSetLibraryReference struct {
@@ -251,8 +351,17 @@ func newLibraryReference(d common.Datum) (importSetLibraryReference, error) {
 	return ref, nil
 }
 
+func (set importSetLibraryReference) resolve(library *Library) (importSetResolution, bool) {
+	ok := sameName(set.name, library.name) && set.versionReference.resolve(library)
+	return importSetResolution{identifierResolutionAll{}}, ok
+}
+
+func (set importSetLibraryReference) libraryName() []common.Symbol {
+	return set.name
+}
+
 type versionReference interface {
-	// TODO implement resolution through an interface method
+	resolve(*Library) bool
 }
 
 func newVersionReference(d common.Datum) (versionReference, error) {
@@ -316,18 +425,55 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 type versionReferenceAnd struct {
 	versionReferences []versionReference
 }
+
+func (ref versionReferenceAnd) resolve(library *Library) bool {
+	for _, subRef := range ref.versionReferences {
+		if !subRef.resolve(library) {
+			return false
+		}
+	}
+	return true
+}
+
 type versionReferenceOr struct {
 	versionReferences []versionReference
 }
+
+func (ref versionReferenceOr) resolve(library *Library) bool {
+	for _, subRef := range ref.versionReferences {
+		if subRef.resolve(library) {
+			return true
+		}
+	}
+	return false
+}
+
 type versionReferenceNot struct {
 	versionReference versionReference
 }
+
+func (ref versionReferenceNot) resolve(library *Library) bool {
+	return !ref.versionReference.resolve(library)
+}
+
 type versionReferenceSubVersionReferences struct {
 	subVersionReferences []subVersionReference
 }
 
+func (ref versionReferenceSubVersionReferences) resolve(library *Library) bool {
+	if len(ref.subVersionReferences) > len(library.version) {
+		return false
+	}
+	for i := range ref.subVersionReferences {
+		if !ref.subVersionReferences[i].resolve(library.version[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type subVersionReference interface {
-	// TODO implement resolution through an interface method
+	resolve(subVersion) bool
 }
 
 func newSubVersionReference(d common.Datum) (subVersionReference, error) {
@@ -404,20 +550,58 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 type subVersionReferenceGte struct {
 	subVersion subVersion
 }
+
+func (ref subVersionReferenceGte) resolve(subV subVersion) bool {
+	return subV >= ref.subVersion
+}
+
 type subVersionReferenceLte struct {
 	subVersion subVersion
 }
+
+func (ref subVersionReferenceLte) resolve(subV subVersion) bool {
+	return subV <= ref.subVersion
+}
+
 type subVersionReferenceAnd struct {
 	subVersionReferences []subVersionReference
 }
+
+func (ref subVersionReferenceAnd) resolve(subV subVersion) bool {
+	for _, subRef := range ref.subVersionReferences {
+		if !subRef.resolve(subV) {
+			return false
+		}
+	}
+	return true
+}
+
 type subVersionReferenceOr struct {
 	subVersionReferences []subVersionReference
 }
+
+func (ref subVersionReferenceOr) resolve(subV subVersion) bool {
+	for _, subRef := range ref.subVersionReferences {
+		if subRef.resolve(subV) {
+			return true
+		}
+	}
+	return false
+}
+
 type subVersionReferenceNot struct {
 	subVersionReference subVersionReference
 }
 
+func (ref subVersionReferenceNot) resolve(subV subVersion) bool {
+	return !ref.subVersionReference.resolve(subV)
+}
+
 type subVersion int
+
+func (ref subVersion) resolve(subV subVersion) bool {
+	return subV == ref
+}
 
 func newSubVersion(d common.Datum) (subVersion, error) {
 	number, ok := d.(common.Number)

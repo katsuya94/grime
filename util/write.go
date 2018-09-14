@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func Display(d common.Datum) string {
+func Write(d common.Datum) string {
 	switch v := d.(type) {
 	case common.Boolean:
 		if v {
@@ -20,35 +20,26 @@ func Display(d common.Datum) string {
 		return fmt.Sprintf(`#\%v`, string(v))
 	case common.String:
 		return fmt.Sprintf(`"%v"`, string(v))
-	case common.Symbol, common.Pair, nil:
-		return fmt.Sprintf("'%v", fmtQuoted(v))
-	case common.WrappedSyntax:
-		return fmt.Sprintf(`#<syntax %v>`, Display(v.Form))
-	default:
-		panic("unhandled datum")
-	}
-}
-
-func fmtQuoted(d common.Datum) string {
-	switch v := d.(type) {
 	case common.Symbol:
 		return string(v)
 	case common.Pair:
-		return fmt.Sprintf("(%v%v", fmtQuoted(v.First), fmtRest(v.Rest))
+		return fmt.Sprintf("(%v%v", Write(v.First), fmtRest(v.Rest))
 	case nil:
 		return "()"
+	case common.Quote:
+		return fmt.Sprintf("'%v", Write(v.Datum))
 	default:
-		return Display(d)
+		panic("unhandled datum")
 	}
 }
 
 func fmtRest(d common.Datum) string {
 	switch v := d.(type) {
 	case common.Pair:
-		return fmt.Sprintf(" %v%v", fmtQuoted(v.First), fmtRest(v.Rest))
+		return fmt.Sprintf(" %v%v", Write(v.First), fmtRest(v.Rest))
 	case nil:
 		return ")"
 	default:
-		return fmt.Sprintf(" . %v)", fmtQuoted(v))
+		return fmt.Sprintf(" . %v)", Write(v))
 	}
 }
