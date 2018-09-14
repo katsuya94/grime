@@ -156,36 +156,36 @@ func Unwrap(env *common.Environment, syntax common.Datum) (common.Datum, error) 
 	return syntax, nil
 }
 
-func EvaluateExpression(env *common.Environment, expression common.Datum) (common.Datum, error) {
+func EvaluateExpression(env *common.Environment, expression common.Datum) (*common.Environment, common.Datum, error) {
 	switch v := expression.(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
-		return v, nil
+		return nil, v, nil
 	case common.Symbol:
 		if binding := env.Get(v); binding == nil {
-			return nil, Errorf("unbound identifier %v", v)
+			return nil, nil, Errorf("unbound identifier %v", v)
 		} else {
 			// No keywords should appear in an expanded expression.
-			return binding.(common.Variable).Value, nil
+			return nil, binding.(common.Variable).Value, nil
 		}
 	case common.Application:
 		procedure, err := EvaluateExpression(env, v.Procedure)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		var args []common.Datum
 		for _, subexpression := range v.Arguments {
 			if arg, err := EvaluateExpression(env, subexpression); err != nil {
-				return nil, err
+				return nil, nil, err
 			} else {
 				args = append(args, arg)
 			}
 		}
 		return Apply(env, procedure, args...)
 	case common.Quote:
-		return v.Datum, nil
+		return nil, v.Datum, nil
 	case common.If:
 		if condition, err := EvaluateExpression(env, v.Condition); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if condition == common.Boolean(false) {
 			return EvaluateExpression(env, v.Else)
 		} else {
@@ -194,25 +194,25 @@ func EvaluateExpression(env *common.Environment, expression common.Datum) (commo
 	case common.Let:
 		value, err := EvaluateExpression(env, v.Value)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		return EvaluateExpression(env.Set(v.Name, common.Variable{value}), v.Body)
 	case common.Begin:
 		if len(v.Forms) < 1 {
-			return nil, Errorf("begin: empty in expression context")
+			return nil, nil, Errorf("begin: empty in expression context")
 		}
 		for _, subexpression := range v.Forms[:len(v.Forms)-1] {
 			if _, err := EvaluateExpression(env, subexpression); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		if value, err := EvaluateExpression(env, v.Forms[len(v.Forms)-1]); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else {
-			return value, nil
+			return nil, value, nil
 		}
 	default:
-		return nil, Errorf("unhandled expression %#v", v)
+		return nil, nil, Errorf("unhandled expression %#v", v)
 	}
 }
 

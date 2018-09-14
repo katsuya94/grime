@@ -87,6 +87,9 @@ func (r *Runtime) instantiate(prov *provision) error {
 	}
 	environment := common.Environment{
 		make(map[common.Symbol]common.Binding),
+		func (env *common.Environment, args ...core.Datum) {
+			
+		}
 		false,
 	}
 	for i := range subProvs {

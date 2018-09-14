@@ -11,6 +11,7 @@ type Variable struct {
 
 type Environment struct {
 	Bindings          map[Symbol]Binding
+	Continuation      Procedure
 	ExpressionContext bool
 }
 
@@ -25,9 +26,9 @@ func (e *Environment) Set(name Symbol, binding Binding) *Environment {
 }
 
 func (e *Environment) GetExpressionContext() *Environment {
-	return &Environment{e.Bindings, true}
+	return &Environment{e.Bindings, e.Continuation, true}
 }
 
 func (e *Environment) GetDefinitionContext() *Environment {
-	return &Environment{e.Bindings, false}
+	return &Environment{e.Bindings, e.Continuation, false}
 }
