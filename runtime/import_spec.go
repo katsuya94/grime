@@ -212,29 +212,69 @@ func newImportSet(d common.Datum) (importSet, error) {
 }
 
 type importSetResolution struct {
-	identifierResolution identifierResolution
+	identifierSpec identifierSpec
 }
 
-type identifierResolution interface {
-	// TODO implement identifier resolution
+type identifierSpec interface {
+	resolve(common.Symbol) (common.Symbol, bool)
 }
 
-type identifierResolutionAll struct{}
-type identifierResolutionOnly struct {
-	identifierResolution identifierResolution
-	identifiers          []common.Symbol
+type identifierSpecAll struct{}
+
+func (identifierSpecAll) resolve(external common.Symbol) (common.Symbol, bool) {
+	return external, true
 }
-type identifierResolutionExcept struct {
-	identifierResolution identifierResolution
-	identifiers          []common.Symbol
+
+type identifierSpecOnly struct {
+	identifierSpec identifierSpec
+	identifiers    []common.Symbol
 }
-type identifierResolutionPrefix struct {
-	identifierResolution identifierResolution
-	identifier           common.Symbol
+
+func (spec identifierSpecOnly) resolve(external common.Symbol) (common.Symbol, bool) {
+	for _, id := range spec.identifiers {
+		if external == id {
+			return external, true
+		}
+	}
+	return external, false
 }
-type identifierResolutionRename struct {
-	identifierResolution identifierResolution
-	identifierBindings   []identifierBinding
+
+type identifierSpecExcept struct {
+	identifierSpec identifierSpec
+	identifiers    []common.Symbol
+}
+
+func (spec identifierSpecExcept) resolve(external common.Symbol) (common.Symbol, bool) {
+	for _, id := range spec.identifiers {
+		if external == id {
+			return external, false
+		}
+	}
+	return external, true
+}
+
+type identifierSpecPrefix struct {
+	identifierSpec identifierSpec
+	identifier     common.Symbol
+}
+
+func (spec identifierSpecPrefix) resolve(external common.Symbol) (common.Symbol, bool) {
+	return common.Symbol(spec.identifier + external), true
+}
+
+type identifierSpecRename struct {
+	identifierSpec     identifierSpec
+	identifierBindings []identifierBinding
+}
+
+func (spec identifierSpecRename) resolve(external common.Symbol) (common.Symbol, bool) {
+	internal := external
+	for _, identifierBinding := range spec.identifierBindings {
+		if identifierBinding.external == external {
+			internal = identifierBinding.internal
+		}
+	}
+	return internal, true
 }
 
 type importSetOnly struct {
@@ -245,8 +285,8 @@ type importSetOnly struct {
 func (set importSetOnly) resolve(library *Library) (importSetResolution, bool) {
 	subRes, ok := set.importSet.resolve(library)
 	return importSetResolution{
-		identifierResolutionOnly{
-			subRes.identifierResolution,
+		identifierSpecOnly{
+			subRes.identifierSpec,
 			set.identifiers,
 		},
 	}, ok
@@ -264,8 +304,8 @@ type importSetExcept struct {
 func (set importSetExcept) resolve(library *Library) (importSetResolution, bool) {
 	subRes, ok := set.importSet.resolve(library)
 	return importSetResolution{
-		identifierResolutionExcept{
-			subRes.identifierResolution,
+		identifierSpecExcept{
+			subRes.identifierSpec,
 			set.identifiers,
 		},
 	}, ok
@@ -283,8 +323,8 @@ type importSetPrefix struct {
 func (set importSetPrefix) resolve(library *Library) (importSetResolution, bool) {
 	subRes, ok := set.importSet.resolve(library)
 	return importSetResolution{
-		identifierResolutionPrefix{
-			subRes.identifierResolution,
+		identifierSpecPrefix{
+			subRes.identifierSpec,
 			set.identifier,
 		},
 	}, ok
@@ -302,8 +342,8 @@ type importSetRename struct {
 func (set importSetRename) resolve(library *Library) (importSetResolution, bool) {
 	subRes, ok := set.importSet.resolve(library)
 	return importSetResolution{
-		identifierResolutionRename{
-			subRes.identifierResolution,
+		identifierSpecRename{
+			subRes.identifierSpec,
 			set.identifierBindings,
 		},
 	}, ok
@@ -353,7 +393,7 @@ func newLibraryReference(d common.Datum) (importSetLibraryReference, error) {
 
 func (set importSetLibraryReference) resolve(library *Library) (importSetResolution, bool) {
 	ok := sameName(set.name, library.name) && set.versionReference.resolve(library)
-	return importSetResolution{identifierResolutionAll{}}, ok
+	return importSetResolution{identifierSpecAll{}}, ok
 }
 
 func (set importSetLibraryReference) libraryName() []common.Symbol {
@@ -611,7 +651,12 @@ func newSubVersion(d common.Datum) (subVersion, error) {
 	n, err := strconv.ParseInt(string(number), 10, 0)
 	if err != nil {
 		return 0, err
-	} else if n < 0 {
+	}
+	return newSubVersionInt(int(n))
+}
+
+func newSubVersionInt(n int) (subVersion, error) {
+	if n < 0 {
 		return 0, fmt.Errorf("runtime: malformed sub-version")
 	}
 	return subVersion(n), nil

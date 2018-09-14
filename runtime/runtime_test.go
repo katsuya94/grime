@@ -3,6 +3,7 @@ package runtime_test
 import (
 	"testing"
 
+	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
 	. "github.com/katsuya94/grime/runtime"
 )
@@ -16,8 +17,8 @@ func TestRuntime_Execute(t *testing.T) {
 		{
 			"hello world",
 			`
-			(import (rnrs))
-			(display "hello world")
+			(import (core))
+			(write "hello world")
 			`,
 			"",
 		},
@@ -29,6 +30,8 @@ func TestRuntime_Execute(t *testing.T) {
 				t.Fatal(err)
 			}
 			runtime := NewRuntime()
+			runtime.Provide(core.Library)
+			runtime.Bind(core.Library.Name(), core.Bindings)
 			err = runtime.Execute(data)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {

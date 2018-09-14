@@ -20,7 +20,6 @@ type Library struct {
 	importSpecs []importSpec
 	exportSpecs []identifierBinding
 	body        []common.Datum
-	instance    libraryInstance
 }
 
 func NewLibrary(source common.Datum) (*Library, error) {
@@ -84,6 +83,31 @@ func NewLibrary(source common.Datum) (*Library, error) {
 	return &library, nil
 }
 
+func NewEmptyLibrary(name []common.Symbol, version []int) (*Library, error) {
+	var library Library
+	library.name = name
+	for _, n := range version {
+		subV, err := newSubVersionInt(n)
+		if err != nil {
+			return nil, err
+		}
+		library.version = append(library.version, subV)
+	}
+	return &library, nil
+}
+
+func MustNewEmptyLibrary(name []common.Symbol, version []int) *Library {
+	library, err := NewEmptyLibrary(name, version)
+	if err != nil {
+		panic(err)
+	}
+	return library
+}
+
+func (l *Library) Name() []common.Symbol {
+	return l.name
+}
+
 func newExportSpecs(d common.Datum) ([]identifierBinding, error) {
 	if result, ok, err := util.Match(d, PatternExportRename, map[common.Symbol]common.Binding{
 		common.Symbol("rename"): nil,
@@ -129,13 +153,3 @@ func sameName(n1 []common.Symbol, n2 []common.Symbol) bool {
 	}
 	return true
 }
-
-func nameData(name []common.Symbol) []common.Datum {
-	var data []common.Datum
-	for _, symbol := range name {
-		data = append(data, symbol)
-	}
-	return data
-}
-
-type libraryInstance struct{}

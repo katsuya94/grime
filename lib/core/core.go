@@ -6,19 +6,21 @@ import (
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/runtime"
 	"github.com/katsuya94/grime/util"
 )
 
-func NewEnvironment() *common.Environment {
-	return &common.Environment{map[common.Symbol]common.Binding{
-		common.Symbol("quote"):         common.Keyword{common.Procedure(transformQuote)},
-		common.Symbol("if"):            common.Keyword{common.Procedure(transformIf)},
-		common.Symbol("let*"):          common.Keyword{common.Procedure(transformLetStar)},
-		common.Symbol("begin"):         common.Keyword{common.Procedure(transformBegin)},
-		common.Symbol("define"):        common.Keyword{common.Procedure(transformDefine)},
-		common.Symbol("define-syntax"): common.Keyword{common.Procedure(transformDefineSyntax)},
-		common.Symbol("cons"):          common.Variable{common.Procedure(cons)},
-	}, true}
+var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
+
+var Bindings = map[common.Symbol]common.Binding{
+	common.Symbol("quote"):         common.Keyword{common.Procedure(transformQuote)},
+	common.Symbol("if"):            common.Keyword{common.Procedure(transformIf)},
+	common.Symbol("let*"):          common.Keyword{common.Procedure(transformLetStar)},
+	common.Symbol("begin"):         common.Keyword{common.Procedure(transformBegin)},
+	common.Symbol("define"):        common.Keyword{common.Procedure(transformDefine)},
+	common.Symbol("define-syntax"): common.Keyword{common.Procedure(transformDefineSyntax)},
+	common.Symbol("cons"):          common.Variable{common.Procedure(cons)},
+	common.Symbol("write"):         common.Variable{common.Procedure(write)},
 }
 
 var (
@@ -172,4 +174,12 @@ func cons(env *common.Environment, args ...common.Datum) (common.Datum, error) {
 		return nil, fmt.Errorf("cons: wrong arity")
 	}
 	return common.Pair{args[0], args[1]}, nil
+}
+
+func write(env *common.Environment, args ...common.Datum) (common.Datum, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("write: wrong arity")
+	}
+	fmt.Print(util.Write(args[0]))
+	return common.Void, nil
 }

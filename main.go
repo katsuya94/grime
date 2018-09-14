@@ -9,10 +9,9 @@ import (
 	"syscall"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
+	"github.com/katsuya94/grime/runtime"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -28,7 +27,9 @@ func main() {
 }
 
 func repl() {
-	env := core.NewEnvironment()
+	r := runtime.NewRuntime()
+	r.Provide(core.Library)
+	r.Bind(core.Library.Name(), core.Bindings)
 	for {
 		fmt.Print("grime> ")
 		body, err := readReplData()
@@ -37,15 +38,10 @@ func repl() {
 		} else if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		expression, err := eval.ExpandBody(env, body)
+		err = r.Execute(append(read.MustReadString("(import (core))"), body...))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		value, err := eval.EvaluateExpression(env, expression)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		}
-		fmt.Println(util.Write(value))
 	}
 }
 
@@ -89,11 +85,11 @@ func splitReplLines(data []byte, atEOF bool) (int, []byte, error) {
 }
 
 func run() error {
-	var (
-		topLevelProgram []common.Datum
-		reader          = read.NewDatumReader(os.Stdin)
-		env             = core.NewEnvironment()
-	)
+	r := runtime.NewRuntime()
+	r.Provide(core.Library)
+	r.Bind(core.Library.Name(), core.Bindings)
+	reader := read.NewDatumReader(os.Stdin)
+	var topLevelProgram []common.Datum
 	for {
 		if datum, err := reader.ReadDatum(); err == io.EOF {
 			break
@@ -103,5 +99,5 @@ func run() error {
 			topLevelProgram = append(topLevelProgram, datum)
 		}
 	}
-	return eval.EvaluateTopLevelProgram(env, topLevelProgram)
+	return r.Execute(topLevelProgram)
 }

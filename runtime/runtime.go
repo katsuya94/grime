@@ -3,6 +3,8 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/katsuya94/grime/eval"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/util"
@@ -11,20 +13,29 @@ import (
 var PatternTopLevelProgramImportForm = read.MustReadString("(import import-spec ...)")[0]
 
 type Runtime struct {
-	libraries []*Library
+	provisions map[string]*provision
 }
 
 func NewRuntime() *Runtime {
-	return &Runtime{}
+	return &Runtime{make(map[string]*provision)}
 }
 
-func (r *Runtime) Bind(lib *Library) error {
-	for _, l := range r.libraries {
-		if sameName(lib.name, l.name) {
-			return fmt.Errorf("runtime: library %v already bound", util.Write(util.List(nameData(l.name)...)))
-		}
+func (r *Runtime) Provide(library *Library) error {
+	ns := nameString(library.name)
+	if _, ok := r.provisions[ns]; ok {
+		return fmt.Errorf("runtime: library %v already provided", ns)
 	}
-	r.libraries = append(r.libraries, lib)
+	r.provisions[ns] = &provision{library, nil, false}
+	return nil
+}
+
+func (r *Runtime) Bind(name []common.Symbol, bindings map[common.Symbol]common.Binding) error {
+	ns := nameString(name)
+	prov, ok := r.provisions[ns]
+	if !ok {
+		return fmt.Errorf("runtime: cannot bind unknowwn library %v", ns)
+	}
+	prov.bindings = bindings
 	return nil
 }
 
@@ -46,33 +57,75 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	library.body = topLevelProgram[1:]
-	return r.Instantiate(&library)
+	r.Provide(&library)
+	return r.instantiate(r.provisions["()"])
 }
 
-func (r *Runtime) Instantiate(l *Library) error {
+func (r *Runtime) instantiate(prov *provision) error {
+	if prov.bindings != nil {
+		return nil
+	}
+	if prov.visited {
+		return fmt.Errorf("runtime: import cycle detected when attempting to instantiate %v", nameString(prov.library.name))
+	}
+	prov.visited = true
 	var (
-		libraries   []*Library
+		subProvs    []*provision
 		resolutions []importSpecResolution
 	)
-	for _, importSpec := range l.importSpecs {
-		var (
-			library *Library
-			res     importSpecResolution
-			ok      = false
-		)
-		for _, library = range r.libraries {
-			res, ok = importSpec.resolve(library)
-			if ok {
-				break
-			}
+	for _, importSpec := range prov.library.importSpecs {
+		subProv, ok := r.provisions[nameString(importSpec.libraryName())]
+		var resolution importSpecResolution
+		if ok {
+			resolution, ok = importSpec.resolve(subProv.library)
 		}
 		if !ok {
-			return fmt.Errorf("runtime: could not resolve import spec %v", util.Write(util.List(nameData(importSpec.libraryName())...)))
+			return fmt.Errorf("runtime: could not resolve library %v", nameString(importSpec.libraryName()))
 		}
-		libraries = append(libraries, library)
-		resolutions = append(resolutions, res)
+		subProvs = append(subProvs, subProv)
+		resolutions = append(resolutions, resolution)
 	}
-	return nil
+	environment := common.Environment{
+		make(map[common.Symbol]common.Binding),
+		false,
+	}
+	for i := range subProvs {
+		err := r.instantiate(subProvs[i])
+		if err != nil {
+			return err
+		}
+		for external, binding := range subProvs[i].bindings {
+			internal, ok := resolutions[i].identifierSpec.resolve(external)
+			if !ok {
+				continue
+			}
+			environment.Bindings[internal] = binding
+		}
+	}
+	expression, err := eval.ExpandBody(&environment, prov.library.body)
+	if err != nil {
+		return err
+	}
+	_, err = eval.EvaluateExpression(&environment, expression)
+	return err
+}
+
+func nameString(name []common.Symbol) string {
+	return util.Write(util.List(nameData(name)...))
+}
+
+func nameData(name []common.Symbol) []common.Datum {
+	var data []common.Datum
+	for _, symbol := range name {
+		data = append(data, symbol)
+	}
+	return data
+}
+
+type provision struct {
+	library  *Library
+	bindings map[common.Symbol]common.Binding
+	visited  bool
 }
 
 type identifierBinding struct {

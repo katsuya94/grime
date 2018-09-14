@@ -2,6 +2,8 @@ package common
 
 type Datum interface{}
 
+var Void = &struct{}{}
+
 type Boolean bool
 type Number string
 type Character rune

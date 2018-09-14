@@ -83,6 +83,11 @@ func TestWrite(t *testing.T) {
 			common.Quote{common.Symbol("id")},
 			"'id",
 		},
+		{
+			"void",
+			common.Void,
+			"#<void>",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

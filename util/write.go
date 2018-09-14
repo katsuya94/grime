@@ -29,6 +29,9 @@ func Write(d common.Datum) string {
 	case common.Quote:
 		return fmt.Sprintf("'%v", Write(v.Datum))
 	default:
+		if v == common.Void {
+			return "#<void>"
+		}
 		panic("unhandled datum")
 	}
 }

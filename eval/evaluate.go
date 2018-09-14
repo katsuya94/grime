@@ -12,15 +12,6 @@ func Errorf(format string, a ...interface{}) error {
 	return fmt.Errorf("eval: "+format, a...)
 }
 
-func EvaluateTopLevelProgram(env *common.Environment, topLevelProgram []common.Datum) error {
-	expression, err := ExpandBody(env, topLevelProgram)
-	if err != nil {
-		return err
-	}
-	_, err = EvaluateExpression(env, expression)
-	return err
-}
-
 func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, error) {
 	var (
 		i           int

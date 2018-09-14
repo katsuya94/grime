@@ -24,7 +24,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base)",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -41,7 +41,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(for (rnrs base) expand)",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{1},
 			},
@@ -52,8 +52,8 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(only (rnrs base) id)",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionOnly{
-						identifierResolutionAll{},
+					identifierSpecOnly{
+						identifierSpecAll{},
 						[]common.Symbol{common.Symbol("id")},
 					},
 				},
@@ -66,8 +66,8 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(except (rnrs base) id)",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionExcept{
-						identifierResolutionAll{},
+					identifierSpecExcept{
+						identifierSpecAll{},
 						[]common.Symbol{common.Symbol("id")},
 					},
 				},
@@ -80,8 +80,8 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(prefix (rnrs base) id)",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionPrefix{
-						identifierResolutionAll{},
+					identifierSpecPrefix{
+						identifierSpecAll{},
 						common.Symbol("id"),
 					},
 				},
@@ -94,8 +94,8 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rename (rnrs base) (id thing))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionRename{
-						identifierResolutionAll{},
+					identifierSpecRename{
+						identifierSpecAll{},
 						[]identifierBinding{
 							identifierBinding{
 								common.Symbol("thing"),
@@ -113,7 +113,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ())",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -124,7 +124,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base (6))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -141,7 +141,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base (6 4))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -158,7 +158,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base (and (6) ((>= 5))))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -175,7 +175,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base (or (6) (4)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -192,7 +192,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base (not (4)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -209,7 +209,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ((>= 4)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -226,7 +226,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ((<= 7)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -243,7 +243,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ((and 6 (>= 4))))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -260,7 +260,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ((or 6 4)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
@@ -277,7 +277,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"(rnrs base ((not 4)))",
 			importSpecResolution{
 				importSetResolution{
-					identifierResolutionAll{},
+					identifierSpecAll{},
 				},
 				[]int{0},
 			},
