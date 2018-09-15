@@ -12,7 +12,7 @@ type letInitEvaluated struct {
 
 func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	return common.FurtherEvaluation{
-		c.env.Set(c.name, d),
+		c.env.Set(c.name, common.Variable{d}),
 		c.body,
 	}, nil
 }

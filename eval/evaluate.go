@@ -158,11 +158,15 @@ func Unwrap(env common.Environment, syntax common.Datum) (common.Datum, error) {
 
 type expressionEvaluated struct {
 	called *bool
+	value  *common.Datum
 }
 
 func newExpressionEvaluated() expressionEvaluated {
-	called := false
-	return expressionEvaluated{&called}
+	var (
+		called bool
+		value  common.Datum
+	)
+	return expressionEvaluated{&called, &value}
 }
 
 func (c expressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
@@ -170,6 +174,7 @@ func (c expressionEvaluated) Call(d common.Datum) (common.EvaluationResult, erro
 		return nil, fmt.Errorf("eval: continuation called twice in non-reentrant context")
 	}
 	*c.called = true
+	*c.value = d
 	return nil, nil
 }
 
@@ -192,9 +197,11 @@ func EvaluateExpressionOnce(env common.Environment, expression common.Datum) (co
 				evaluationResult, err = v.Continuation.Call(v.Value)
 				if err != nil {
 					return nil, err
+				} else if *continuation.called {
+					return *continuation.value, nil
 				}
 			default:
-				fmt.Errorf("eval: unhandled evaluation result: %#v", v)
+				return nil, fmt.Errorf("eval: unhandled evaluation result: %#v", v)
 			}
 			if furtherEvaluation {
 				break

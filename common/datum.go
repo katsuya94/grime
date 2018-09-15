@@ -17,7 +17,7 @@ type WrappedSyntax struct {
 	Form Datum
 	// TODO add marks and substitutions
 }
-type Procedure func(Environment, ...Datum) (Datum, error)
+type Procedure func(Environment, ...Datum) (ContinuationCall, error)
 type Application struct {
 	Procedure Datum
 	Arguments []Datum
