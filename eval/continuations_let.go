@@ -11,8 +11,16 @@ type letInitEvaluated struct {
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return common.FurtherEvaluation{
-		c.env.Set(c.name, common.Variable{d}),
+	return common.EvalC(
+		c.env.Set(c.name, common.Variable{d}).SetContinuation(letBodyEvaluated{c.env}),
 		c.body,
-	}, nil
+	)
+}
+
+type letBodyEvaluated struct {
+	env common.Environment
+}
+
+func (c letBodyEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	return common.CallC(c.env, d)
 }

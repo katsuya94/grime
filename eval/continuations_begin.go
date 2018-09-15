@@ -11,10 +11,10 @@ type beginFirstEvaluated struct {
 
 func (c beginFirstEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if len(c.forms) == 0 {
-		return common.ContinuationCall{c.env.Continuation(), d}, nil
+		return common.CallC(c.env, d)
 	}
-	return common.FurtherEvaluation{
+	return common.EvalC(
 		c.env.SetContinuation(beginFirstEvaluated{c.env, c.forms[1:]}),
 		c.forms[0],
-	}, nil
+	)
 }

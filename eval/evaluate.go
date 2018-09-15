@@ -140,7 +140,9 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	if !ok {
 		return nil, false, nil
 	}
-	output, err := Apply(env, keyword.Transformer, syntax)
+	output, err := CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
+		return applicationEvaluationResult(env.SetContinuation(escape), keyword.Transformer, []common.Datum{syntax})
+	})
 	if err != nil {
 		return nil, false, err
 	}
@@ -156,108 +158,56 @@ func Unwrap(env common.Environment, syntax common.Datum) (common.Datum, error) {
 	return syntax, nil
 }
 
-type expressionEvaluated struct {
-	called *bool
-	value  *common.Datum
-}
-
-func newExpressionEvaluated() expressionEvaluated {
-	var (
-		called bool
-		value  common.Datum
-	)
-	return expressionEvaluated{&called, &value}
-}
-
-func (c expressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	if *c.called {
-		return nil, fmt.Errorf("eval: continuation called twice in non-reentrant context")
-	}
-	*c.called = true
-	*c.value = d
-	return nil, nil
-}
-
-func EvaluateExpressionOnce(env common.Environment, expression common.Datum) (common.Datum, error) {
-	continuation := newExpressionEvaluated()
-	env = env.SetContinuation(continuation)
-	for {
-		evaluationResult, err := EvaluateExpression(env, expression)
-		if err != nil {
-			return nil, err
-		}
-		for {
-			furtherEvaluation := false
-			switch v := evaluationResult.(type) {
-			case common.FurtherEvaluation:
-				env = v.Environment
-				expression = v.Expression
-				furtherEvaluation = true
-			case common.ContinuationCall:
-				evaluationResult, err = v.Continuation.Call(v.Value)
-				if err != nil {
-					return nil, err
-				} else if *continuation.called {
-					return *continuation.value, nil
-				}
-			default:
-				return nil, fmt.Errorf("eval: unhandled evaluation result: %#v", v)
-			}
-			if furtherEvaluation {
-				break
-			}
-		}
-	}
-}
-
 func EvaluateExpression(env common.Environment, expression common.Datum) (common.EvaluationResult, error) {
 	switch v := expression.(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
-		return common.ContinuationCall{env.Continuation(), v}, nil
+		return common.CallC(env, v)
 	case common.Symbol:
-		if binding := env.Get(v); binding == nil {
+		binding := env.Get(v)
+		if binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
-		} else {
-			// No keywords should appear in an expanded expression.
-			value := binding.(common.Variable).Value
-			return common.ContinuationCall{env.Continuation(), value}, nil
 		}
+		variable, ok := binding.(common.Variable)
+		if !ok {
+			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
+		}
+		return common.CallC(env, variable.Value)
 	case common.Quote:
-		return common.ContinuationCall{env.Continuation(), v.Datum}, nil
+		return common.CallC(env, v.Datum)
 	case common.Application:
-		return common.FurtherEvaluation{
+		return common.EvalC(
 			env.SetContinuation(applicationProcedureEvaluated{
 				env,
 				v.Arguments,
 			}),
 			v.Procedure,
-		}, nil
+		)
 	case common.If:
-		return common.FurtherEvaluation{
+		return common.EvalC(
 			env.SetContinuation(ifConditionEvaluated{
 				env,
 				v.Then,
 				v.Else,
 			}),
 			v.Condition,
-		}, nil
+		)
 	case common.Let:
-		return common.FurtherEvaluation{
+		return common.EvalC(
 			env.SetContinuation(letInitEvaluated{
 				env,
 				v.Name,
 				v.Body,
 			}),
 			v.Init,
-		}, nil
+		)
 	case common.Begin:
-		return common.FurtherEvaluation{
+		return common.EvalC(
 			env.SetContinuation(beginFirstEvaluated{
 				env,
 				v.Forms[1:],
 			}),
 			v.Forms[0],
-		}, nil
+		)
 	default:
 		return nil, Errorf("unhandled expression %#v", v)
 	}
@@ -273,4 +223,44 @@ func Apply(env common.Environment, procedure common.Datum, args ...common.Datum)
 	} else {
 		return nil, Errorf("application: non-procedure in procedure position")
 	}
+}
+
+type escapeEvaluated struct{}
+
+func (escapeEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	return nil, fmt.Errorf("eval: escape continuation called without escaping context")
+}
+
+// perform further evaluation or call continuations as necessary until the nil continuation is called.
+func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.EvaluationResult, error)) (common.Datum, error) {
+	escape := escapeEvaluated{}
+	evaluationResult, err := evaluationResultFactory(&escape)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		switch v := evaluationResult.(type) {
+		case common.FurtherEvaluation:
+			evaluationResult, err = EvaluateExpression(v.Environment, v.Expression)
+			if err != nil {
+				return nil, err
+			}
+		case common.ContinuationCall:
+			if v.Continuation == &escape {
+				return v.Value, nil
+			}
+			evaluationResult, err = v.Continuation.Call(v.Value)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("eval: unhandled evaluation result: %#v", v)
+		}
+	}
+}
+
+func EvaluateExpressionOnce(env common.Environment, expression common.Datum) (common.Datum, error) {
+	return CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
+		return EvaluateExpression(env.SetContinuation(escape), expression)
+	})
 }

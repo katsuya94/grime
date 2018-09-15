@@ -10,45 +10,44 @@ type applicationProcedureEvaluated struct {
 }
 
 func (c applicationProcedureEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return applicationEvaluationResult(c.env, d, nil, c.arguments)
+	return partialEvaluationResult(c.env, d, nil, c.arguments)
 }
 
 type applicationArgumentEvaluated struct {
-	env                common.Environment
-	concreteProcedure  common.Datum
-	concreteArguments  []common.Datum
-	remainingArguments []common.Datum
+	env        common.Environment
+	procedureV common.Datum
+	argumentsV []common.Datum
+	arguments  []common.Datum
 }
 
 func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return applicationEvaluationResult(
+	return partialEvaluationResult(
 		c.env,
-		c.concreteProcedure,
-		append(c.concreteArguments, d),
-		c.remainingArguments,
+		c.procedureV,
+		append(c.argumentsV, d),
+		c.arguments,
 	)
 }
 
-func applicationEvaluationResult(
-	env common.Environment,
-	concreteProcedure common.Datum,
-	concreteArguments []common.Datum,
-	remainingArguments []common.Datum,
-) (common.EvaluationResult, error) {
-	if len(remainingArguments) == 0 {
-		p, ok := concreteProcedure.(common.Procedure)
-		if !ok {
-			return nil, Errorf("application: non-procedure in procedure position")
-		}
-		return p(env.Empty(), concreteArguments...)
+func partialEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Datum) (common.EvaluationResult, error) {
+	if len(arguments) == 0 {
+		return applicationEvaluationResult(env, procedureV, argumentsV)
 	}
-	return common.FurtherEvaluation{
+	return common.EvalC(
 		env.SetContinuation(applicationArgumentEvaluated{
 			env,
-			concreteProcedure,
-			concreteArguments,
-			remainingArguments[1:],
+			procedureV,
+			argumentsV,
+			arguments[1:],
 		}),
-		remainingArguments[0],
-	}, nil
+		arguments[0],
+	)
+}
+
+func applicationEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum) (common.EvaluationResult, error) {
+	p, ok := procedureV.(common.Procedure)
+	if !ok {
+		return nil, Errorf("application: non-procedure in procedure position")
+	}
+	return p(env, argumentsV...)
 }

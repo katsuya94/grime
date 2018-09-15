@@ -12,8 +12,8 @@ type ifConditionEvaluated struct {
 
 func (c ifConditionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if d == common.Boolean(false) {
-		return common.FurtherEvaluation{c.env, c._else}, nil
+		return common.EvalC(c.env, c._else)
 	} else {
-		return common.FurtherEvaluation{c.env, c.then}, nil
+		return common.EvalC(c.env, c.then)
 	}
 }

@@ -145,12 +145,6 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 		},
 		{
-			"let* multiple",
-			"(let* ((x 'id) (y 'name)) (cons x y))",
-			"(id . name)",
-			"",
-		},
-		{
 			"define",
 			"(define x 'foo) x",
 			"foo",
