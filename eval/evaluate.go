@@ -12,13 +12,13 @@ func Errorf(format string, a ...interface{}) error {
 	return fmt.Errorf("eval: "+format, a...)
 }
 
-func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, error) {
+func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, error) {
 	var (
 		i           int
 		definitions []common.Define
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
-	env = env.GetDefinitionContext()
+	env = env.SetDefinitionContext()
 	for i = 0; i < len(forms); i++ {
 		form, err := ExpandMacro(env, forms[i])
 		if err != nil {
@@ -45,7 +45,7 @@ func ExpandBody(env *common.Environment, forms []common.Datum) (common.Datum, er
 		break
 	}
 	// Expand variable definitions.
-	env = env.GetExpressionContext()
+	env = env.SetExpressionContext()
 	var definitionNames []common.Symbol
 	var definitionExpressions []common.Datum
 	for _, definition := range definitions {
@@ -76,7 +76,7 @@ var (
 	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
-func ExpandMacro(env *common.Environment, syntax common.Datum) (common.Datum, error) {
+func ExpandMacro(env common.Environment, syntax common.Datum) (common.Datum, error) {
 	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
 		return nil, err
 	} else if ok {
@@ -120,7 +120,7 @@ func ExpandMacro(env *common.Environment, syntax common.Datum) (common.Datum, er
 	return Unwrap(env, syntax)
 }
 
-func expandMacroMatching(env *common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
 	result, ok, err := util.Match(syntax, pattern, nil)
 	if err != nil {
@@ -151,72 +151,112 @@ func expandMacroMatching(env *common.Environment, syntax common.Datum, pattern c
 	return expression, true, nil
 }
 
-func Unwrap(env *common.Environment, syntax common.Datum) (common.Datum, error) {
+func Unwrap(env common.Environment, syntax common.Datum) (common.Datum, error) {
 	// TODO unwrap, handling hygiene
 	return syntax, nil
 }
 
-func EvaluateExpression(env *common.Environment, expression common.Datum) (*common.Environment, common.Datum, error) {
-	switch v := expression.(type) {
-	case common.Boolean, common.Number, common.Character, common.String:
-		return nil, v, nil
-	case common.Symbol:
-		if binding := env.Get(v); binding == nil {
-			return nil, nil, Errorf("unbound identifier %v", v)
-		} else {
-			// No keywords should appear in an expanded expression.
-			return nil, binding.(common.Variable).Value, nil
-		}
-	case common.Application:
-		procedure, err := EvaluateExpression(env, v.Procedure)
+type expressionEvaluated struct {
+	called *bool
+}
+
+func newExpressionEvaluated() expressionEvaluated {
+	called := false
+	return expressionEvaluated{&called}
+}
+
+func (c expressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	if *c.called {
+		return nil, fmt.Errorf("eval: continuation called twice in non-reentrant context")
+	}
+	*c.called = true
+	return nil, nil
+}
+
+func EvaluateExpressionOnce(env common.Environment, expression common.Datum) (common.Datum, error) {
+	continuation := newExpressionEvaluated()
+	env = env.SetContinuation(continuation)
+	for {
+		evaluationResult, err := EvaluateExpression(env, expression)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		var args []common.Datum
-		for _, subexpression := range v.Arguments {
-			if arg, err := EvaluateExpression(env, subexpression); err != nil {
-				return nil, nil, err
-			} else {
-				args = append(args, arg)
+		for {
+			furtherEvaluation := false
+			switch v := evaluationResult.(type) {
+			case common.FurtherEvaluation:
+				env = v.Environment
+				expression = v.Expression
+				furtherEvaluation = true
+			case common.ContinuationCall:
+				evaluationResult, err = v.Continuation.Call(v.Value)
+				if err != nil {
+					return nil, err
+				}
+			default:
+				fmt.Errorf("eval: unhandled evaluation result: %#v", v)
+			}
+			if furtherEvaluation {
+				break
 			}
 		}
-		return Apply(env, procedure, args...)
-	case common.Quote:
-		return nil, v.Datum, nil
-	case common.If:
-		if condition, err := EvaluateExpression(env, v.Condition); err != nil {
-			return nil, nil, err
-		} else if condition == common.Boolean(false) {
-			return EvaluateExpression(env, v.Else)
-		} else {
-			return EvaluateExpression(env, v.Then)
-		}
-	case common.Let:
-		value, err := EvaluateExpression(env, v.Value)
-		if err != nil {
-			return nil, nil, err
-		}
-		return EvaluateExpression(env.Set(v.Name, common.Variable{value}), v.Body)
-	case common.Begin:
-		if len(v.Forms) < 1 {
-			return nil, nil, Errorf("begin: empty in expression context")
-		}
-		for _, subexpression := range v.Forms[:len(v.Forms)-1] {
-			if _, err := EvaluateExpression(env, subexpression); err != nil {
-				return nil, nil, err
-			}
-		}
-		if value, err := EvaluateExpression(env, v.Forms[len(v.Forms)-1]); err != nil {
-			return nil, nil, err
-		} else {
-			return nil, value, nil
-		}
-	default:
-		return nil, nil, Errorf("unhandled expression %#v", v)
 	}
 }
 
-func Apply(env *common.Environment, procedure common.Datum, args ...common.Datum) (common.Datum, error) {
+func EvaluateExpression(env common.Environment, expression common.Datum) (common.EvaluationResult, error) {
+	switch v := expression.(type) {
+	case common.Boolean, common.Number, common.Character, common.String:
+		return common.ContinuationCall{env.Continuation(), v}, nil
+	case common.Symbol:
+		if binding := env.Get(v); binding == nil {
+			return nil, Errorf("unbound identifier %v", v)
+		} else {
+			// No keywords should appear in an expanded expression.
+			value := binding.(common.Variable).Value
+			return common.ContinuationCall{env.Continuation(), value}, nil
+		}
+	case common.Quote:
+		return common.ContinuationCall{env.Continuation(), v.Datum}, nil
+	case common.Application:
+		return common.FurtherEvaluation{
+			env.SetContinuation(applicationProcedureEvaluated{
+				env,
+				v.Arguments,
+			}),
+			v.Procedure,
+		}, nil
+	case common.If:
+		return common.FurtherEvaluation{
+			env.SetContinuation(ifConditionEvaluated{
+				env,
+				v.Then,
+				v.Else,
+			}),
+			v.Condition,
+		}, nil
+	case common.Let:
+		return common.FurtherEvaluation{
+			env.SetContinuation(letInitEvaluated{
+				env,
+				v.Name,
+				v.Body,
+			}),
+			v.Init,
+		}, nil
+	case common.Begin:
+		return common.FurtherEvaluation{
+			env.SetContinuation(beginFirstEvaluated{
+				env,
+				v.Forms[1:],
+			}),
+			v.Forms[0],
+		}, nil
+	default:
+		return nil, Errorf("unhandled expression %#v", v)
+	}
+}
+
+func Apply(env common.Environment, procedure common.Datum, args ...common.Datum) (common.Datum, error) {
 	if p, ok := procedure.(common.Procedure); ok {
 		if value, err := p(env, args...); err != nil {
 			return nil, err

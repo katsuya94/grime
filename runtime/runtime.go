@@ -33,7 +33,7 @@ func (r *Runtime) Bind(name []common.Symbol, bindings map[common.Symbol]common.B
 	ns := nameString(name)
 	prov, ok := r.provisions[ns]
 	if !ok {
-		return fmt.Errorf("runtime: cannot bind unknowwn library %v", ns)
+		return fmt.Errorf("runtime: cannot bind unknown library %v", ns)
 	}
 	prov.bindings = bindings
 	return nil
@@ -85,13 +85,10 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	environment := common.Environment{
+	env := common.NewEnvironment(
 		make(map[common.Symbol]common.Binding),
-		func (env *common.Environment, args ...core.Datum) {
-			
-		}
-		false,
-	}
+		nil,
+	)
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
@@ -102,14 +99,14 @@ func (r *Runtime) instantiate(prov *provision) error {
 			if !ok {
 				continue
 			}
-			environment.Bindings[internal] = binding
+			env = env.Set(internal, binding)
 		}
 	}
-	expression, err := eval.ExpandBody(&environment, prov.library.body)
+	expression, err := eval.ExpandBody(env, prov.library.body)
 	if err != nil {
 		return err
 	}
-	_, err = eval.EvaluateExpression(&environment, expression)
+	_, err = eval.EvaluateExpressionOnce(env, expression)
 	return err
 }
 

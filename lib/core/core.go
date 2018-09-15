@@ -21,6 +21,7 @@ var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("define-syntax"): common.Keyword{common.Procedure(transformDefineSyntax)},
 	common.Symbol("cons"):          common.Variable{common.Procedure(cons)},
 	common.Symbol("write"):         common.Variable{common.Procedure(write)},
+	common.Symbol("call/cc"):       common.Variable{common.Procedure(callWithCurrentContinuation)},
 }
 
 var (
@@ -33,7 +34,7 @@ var (
 	PatternDefineSyntax    = read.MustReadString("(define-syntax name value)")[0]
 )
 
-func transformQuote(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformQuote(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	if result, ok, err := util.Match(syntax[0], PatternQuote, nil); err != nil {
 		return nil, err
 	} else if !ok {
@@ -43,7 +44,7 @@ func transformQuote(env *common.Environment, syntax ...common.Datum) (common.Dat
 	}
 }
 
-func transformIf(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformIf(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	if result, ok, err := util.Match(syntax[0], PatternIf, nil); err != nil {
 		return nil, err
 	} else if !ok {
@@ -65,7 +66,7 @@ func transformIf(env *common.Environment, syntax ...common.Datum) (common.Datum,
 	}
 }
 
-func transformLetStar(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformLetStar(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	if result, ok, err := util.Match(syntax[0], PatternLetStar, nil); err != nil {
 		return nil, err
 	} else if !ok {
@@ -102,14 +103,14 @@ func transformLetStar(env *common.Environment, syntax ...common.Datum) (common.D
 	}
 }
 
-func transformBegin(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformBegin(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	result, ok, err := util.Match(syntax[0], PatternBegin, nil)
 	if err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("begin: bad syntax")
 	}
-	if env.ExpressionContext {
+	if env.ExpressionContext() {
 		forms := result[common.Symbol("body")].([]interface{})
 		if len(forms) == 0 {
 			return nil, fmt.Errorf("begin: bad syntax")
@@ -132,7 +133,7 @@ func transformBegin(env *common.Environment, syntax ...common.Datum) (common.Dat
 	}
 }
 
-func transformDefine(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformDefine(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	if _, ok, err := util.Match(syntax[0], PatternDefineProcedure, nil); err != nil {
 		return nil, err
 	} else if ok {
@@ -151,7 +152,7 @@ func transformDefine(env *common.Environment, syntax ...common.Datum) (common.Da
 	return nil, fmt.Errorf("define: bad syntax")
 }
 
-func transformDefineSyntax(env *common.Environment, syntax ...common.Datum) (common.Datum, error) {
+func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (common.Datum, error) {
 	if result, ok, err := util.Match(syntax[0], PatternDefineSyntax, nil); err != nil {
 		return nil, err
 	} else if !ok {
@@ -169,17 +170,21 @@ func transformDefineSyntax(env *common.Environment, syntax ...common.Datum) (com
 	}
 }
 
-func cons(env *common.Environment, args ...common.Datum) (common.Datum, error) {
+func cons(env common.Environment, args ...common.Datum) (common.Datum, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("cons: wrong arity")
 	}
 	return common.Pair{args[0], args[1]}, nil
 }
 
-func write(env *common.Environment, args ...common.Datum) (common.Datum, error) {
+func write(env common.Environment, args ...common.Datum) (common.Datum, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("write: wrong arity")
 	}
 	fmt.Print(util.Write(args[0]))
 	return common.Void, nil
+}
+
+func callWithCurrentContinuation(env common.Environment, args ...common.Datum) (common.Datum, error) {
+	return nil, fmt.Errorf("call/cc: not implemented")
 }

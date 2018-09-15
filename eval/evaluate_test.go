@@ -38,17 +38,17 @@ func TestExpandBody(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			environment := common.Environment{
+			env := common.NewEnvironment(
 				core.Bindings,
-				false,
-			}
+				nil,
+			)
 			var expected common.Datum
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)
 				if err != nil {
 					t.Fatal(err)
 				}
-				expected, err = ExpandBody(&environment, expectedBody)
+				expected, err = ExpandBody(env, expectedBody)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -57,7 +57,7 @@ func TestExpandBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := ExpandBody(&environment, sourceBody)
+			actual, err := ExpandBody(env, sourceBody)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -182,15 +182,15 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			environment := common.Environment{
+			env := common.NewEnvironment(
 				core.Bindings,
-				false,
-			}
-			expression, err := ExpandBody(&environment, body)
+				nil,
+			)
+			expression, err := ExpandBody(env, body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := EvaluateExpression(&environment, expression)
+			actual, err := EvaluateExpressionOnce(env, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

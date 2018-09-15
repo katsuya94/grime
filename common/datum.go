@@ -17,7 +17,7 @@ type WrappedSyntax struct {
 	Form Datum
 	// TODO add marks and substitutions
 }
-type Procedure func(*Environment, ...Datum) (Datum, error)
+type Procedure func(Environment, ...Datum) (Datum, error)
 type Application struct {
 	Procedure Datum
 	Arguments []Datum
@@ -31,9 +31,9 @@ type If struct {
 	Else      Datum
 }
 type Let struct {
-	Name  Symbol
-	Value Datum
-	Body  Datum
+	Name Symbol
+	Init Datum
+	Body Datum
 }
 type DefineSyntax struct {
 	Name       Symbol
