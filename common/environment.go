@@ -19,30 +19,31 @@ func NewEnvironment(bindings map[Symbol]Binding, continuation Continuation) Envi
 	return Environment{bindings, continuation, false}
 }
 
+func (env Environment) Bindings() map[Symbol]Binding {
+	bindings := make(map[Symbol]Binding, len(env.bindings))
+	for n, b := range env.bindings {
+		bindings[n] = b
+	}
+	return bindings
+}
+
 func (env Environment) Get(name Symbol) Binding {
 	binding, _ := env.bindings[name]
 	return binding
 }
 
 func (env Environment) Set(name Symbol, binding Binding) Environment {
-	newEnv := Environment{
-		make(map[Symbol]Binding, len(env.bindings)),
-		env.continuation,
-		env.expressionContext,
-	}
-	for n, b := range env.bindings {
-		newEnv.bindings[n] = b
-	}
-	newEnv.bindings[name] = binding
-	return newEnv
+	bindings := env.Bindings()
+	bindings[name] = binding
+	return Environment{bindings, env.continuation, env.expressionContext}
 }
 
 func (env Environment) Empty() Environment {
-	return Environment{
-		make(map[Symbol]Binding),
-		env.continuation,
-		env.expressionContext,
-	}
+	return Environment{make(map[Symbol]Binding), env.continuation, env.expressionContext}
+}
+
+func (env Environment) WithBindings(bindings map[Symbol]Binding) Environment {
+	return Environment{bindings, env.continuation, env.expressionContext}
 }
 
 func (env Environment) Continuation() Continuation {

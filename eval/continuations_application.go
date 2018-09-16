@@ -49,5 +49,5 @@ func applicationEvaluationResult(env common.Environment, procedureV common.Datum
 	if !ok {
 		return nil, Errorf("application: non-procedure in procedure position")
 	}
-	return p(env, argumentsV...)
+	return p.Call(env, argumentsV...)
 }

@@ -32,7 +32,7 @@ func Write(d common.Datum) string {
 		if v == common.Void {
 			return "#<void>"
 		}
-		panic("unhandled datum")
+		panic(fmt.Sprintf("write: unhandled datum: %#v", v))
 	}
 }
 

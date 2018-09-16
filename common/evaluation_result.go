@@ -12,14 +12,14 @@ type ContinuationCall struct {
 	Value        Datum
 }
 
-func EvalC(env Environment, expression Datum) (FurtherEvaluation, error) {
+func EvalC(env Environment, expression Datum) (EvaluationResult, error) {
 	return FurtherEvaluation{env, expression}, nil
 }
 
-func CallC(env Environment, value Datum) (ContinuationCall, error) {
+func CallC(env Environment, value Datum) (EvaluationResult, error) {
 	return ContinuationCall{env.Continuation(), value}, nil
 }
 
-func ErrorC(err error) (ContinuationCall, error) {
+func ErrorC(err error) (EvaluationResult, error) {
 	return ContinuationCall{}, err
 }

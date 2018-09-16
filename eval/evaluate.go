@@ -208,27 +208,20 @@ func EvaluateExpression(env common.Environment, expression common.Datum) (common
 			}),
 			v.Forms[0],
 		)
+	case common.Lambda:
+		return common.CallC(
+			env,
+			common.Closure{v, env.Bindings()},
+		)
 	default:
 		return nil, Errorf("unhandled expression %#v", v)
-	}
-}
-
-func Apply(env common.Environment, procedure common.Datum, args ...common.Datum) (common.Datum, error) {
-	if p, ok := procedure.(common.Procedure); ok {
-		if value, err := p(env, args...); err != nil {
-			return nil, err
-		} else {
-			return value, nil
-		}
-	} else {
-		return nil, Errorf("application: non-procedure in procedure position")
 	}
 }
 
 type escapeEvaluated struct{}
 
 func (escapeEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return nil, fmt.Errorf("eval: escape continuation called without escaping context")
+	return nil, Errorf("escape continuation called without escaping context")
 }
 
 // perform further evaluation or call continuations as necessary until the nil continuation is called.
@@ -254,7 +247,7 @@ func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.Ev
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("eval: unhandled evaluation result: %#v", v)
+			return nil, Errorf("unhandled evaluation result: %#v", v)
 		}
 	}
 }

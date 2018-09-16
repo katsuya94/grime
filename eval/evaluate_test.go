@@ -35,6 +35,24 @@ func TestExpandBody(t *testing.T) {
 			"'foo",
 			"",
 		},
+		{
+			"empty let*",
+			"(let* ())",
+			"",
+			"begin: bad syntax",
+		},
+		{
+			"empty lambda",
+			"(let* ())",
+			"",
+			"begin: bad syntax",
+		},
+		{
+			"empty define procedure",
+			"(define (id))",
+			"",
+			"begin: bad syntax",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -147,6 +165,18 @@ func TestEvaluateExpression(t *testing.T) {
 		{
 			"define",
 			"(define x 'foo) x",
+			"foo",
+			"",
+		},
+		{
+			"define procedure",
+			"(define (id) 'foo) (id)",
+			"foo",
+			"",
+		},
+		{
+			"define procedure with argument",
+			"(define (id x) x) (id 'foo)",
 			"foo",
 			"",
 		},
