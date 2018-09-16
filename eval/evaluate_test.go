@@ -43,7 +43,7 @@ func TestExpandBody(t *testing.T) {
 		},
 		{
 			"empty lambda",
-			"(let* ())",
+			"(lambda ())",
 			"",
 			"begin: bad syntax",
 		},
@@ -191,6 +191,36 @@ func TestEvaluateExpression(t *testing.T) {
 			"(cons (begin 'foo 'bar) '())",
 			"(bar)",
 			"",
+		},
+		{
+			"lambda",
+			"((lambda () 'foo))",
+			"foo",
+			"",
+		},
+		{
+			"lambda with argument",
+			"((lambda (x) x) 'foo)",
+			"foo",
+			"",
+		},
+		{
+			"lambda using enclosing context",
+			"((let* ((x 'foo)) (lambda () x)))",
+			"foo",
+			"",
+		},
+		{
+			"lambda does not leak enclosing context",
+			"((let* ((x 'foo)) (lambda () x))) x",
+			"",
+			"eval: unbound identifier x",
+		},
+		{
+			"lambda does not leak arguments",
+			"((lambda (x) x) 'foo) x",
+			"",
+			"eval: unbound identifier x",
 		},
 	}
 	for _, test := range tests {
