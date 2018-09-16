@@ -21,6 +21,9 @@ var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("define"):        common.Keyword{common.Function(transformDefine)},
 	common.Symbol("define-syntax"): common.Keyword{common.Function(transformDefineSyntax)},
 	common.Symbol("cons"):          common.Variable{common.Function(cons)},
+	common.Symbol("car"):           common.Variable{common.Function(car)},
+	common.Symbol("cdr"):           common.Variable{common.Function(cdr)},
+	common.Symbol("null?"):         common.Variable{common.Function(null)},
 	common.Symbol("write"):         common.Variable{common.Function(write)},
 	common.Symbol("call/cc"):       common.Variable{common.Function(callWithCurrentContinuation)},
 }
@@ -226,6 +229,35 @@ func cons(env common.Environment, args ...common.Datum) (common.EvaluationResult
 	return common.CallC(env, common.Pair{args[0], args[1]})
 }
 
+func car(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("car: wrong arity"))
+	}
+	pair, ok := args[0].(common.Pair)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("car: expected pair"))
+	}
+	return common.CallC(env, pair.First)
+}
+
+func cdr(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("cdr: wrong arity"))
+	}
+	pair, ok := args[0].(common.Pair)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("cdr: expected pair"))
+	}
+	return common.CallC(env, pair.Rest)
+}
+
+func null(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("null?: wrong arity"))
+	}
+	return common.CallC(env, common.Boolean(args[0] == nil))
+}
+
 func write(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("write: wrong arity"))
@@ -235,5 +267,8 @@ func write(env common.Environment, args ...common.Datum) (common.EvaluationResul
 }
 
 func callWithCurrentContinuation(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
-	return common.ErrorC(fmt.Errorf("call/cc: not implemented"))
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("call/cc: wrong arity"))
+	}
+	return eval.Apply(env, args[0], common.ContinuationProcedure{env.Continuation()})
 }

@@ -141,7 +141,7 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 		return nil, false, nil
 	}
 	output, err := CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return applicationEvaluationResult(env.SetContinuation(escape), keyword.Transformer, []common.Datum{syntax})
+		return Apply(env.SetContinuation(escape), keyword.Transformer, syntax)
 	})
 	if err != nil {
 		return nil, false, err

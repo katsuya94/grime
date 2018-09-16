@@ -93,3 +93,14 @@ func (c Closure) Call(env Environment, args ...Datum) (EvaluationResult, error) 
 }
 
 type LetSyntax struct{}
+
+type ContinuationProcedure struct {
+	Continuation Continuation
+}
+
+func (c ContinuationProcedure) Call(env Environment, args ...Datum) (EvaluationResult, error) {
+	if len(args) != 1 {
+		return ErrorC(fmt.Errorf("wrong number of arguments %v for continuation", len(args)))
+	}
+	return c.Continuation.Call(args[0])
+}

@@ -222,6 +222,12 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 			"eval: unbound identifier x",
 		},
+		{
+			"call/cc used to escape early",
+			"(call/cc (lambda (c) (c 'foo) 'bar))",
+			"foo",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

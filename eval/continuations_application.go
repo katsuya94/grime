@@ -31,7 +31,7 @@ func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationRes
 
 func partialEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Datum) (common.EvaluationResult, error) {
 	if len(arguments) == 0 {
-		return applicationEvaluationResult(env, procedureV, argumentsV)
+		return Apply(env, procedureV, argumentsV...)
 	}
 	return common.EvalC(
 		env.SetContinuation(applicationArgumentEvaluated{
@@ -44,7 +44,7 @@ func partialEvaluationResult(env common.Environment, procedureV common.Datum, ar
 	)
 }
 
-func applicationEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum) (common.EvaluationResult, error) {
+func Apply(env common.Environment, procedureV common.Datum, argumentsV ...common.Datum) (common.EvaluationResult, error) {
 	p, ok := procedureV.(common.Procedure)
 	if !ok {
 		return nil, Errorf("application: non-procedure in procedure position")

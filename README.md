@@ -12,14 +12,13 @@
 * [ ] 100% test coverage
 * [ ] Documentation
 * [ ] Implement Clojure-style keywords
-* [ ] Implement call/cc
-* [ ] Implement lambda
 * [ ] Implement REPL with continuations
 * [ ] Use a better data structure for bindings
 * [ ] Make command line utility for generating bindings for arbitrary go packages
 * [ ] Macro transformers shouldn't be responsible for expanding their own subforms, instead the expander should know how to expand the resulting core forms. This will allow us to pass an isolated environment into native callables
 * [ ] Use consistent coding style with success cases in tail-position
 * [ ] Implement variadic lambdas
+* [ ] Implement set!
 
 ## Notes
 
