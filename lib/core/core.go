@@ -20,6 +20,7 @@ var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("lambda"):        common.Keyword{common.Function(transformLambda)},
 	common.Symbol("define"):        common.Keyword{common.Function(transformDefine)},
 	common.Symbol("define-syntax"): common.Keyword{common.Function(transformDefineSyntax)},
+	common.Symbol("set!"):          common.Keyword{common.Function(transformSet)},
 	common.Symbol("cons"):          common.Variable{common.Function(cons)},
 	common.Symbol("car"):           common.Variable{common.Function(car)},
 	common.Symbol("cdr"):           common.Variable{common.Function(cdr)},
@@ -37,6 +38,7 @@ var (
 	PatternDefineFunction = read.MustReadString("(define (name formals ...) body ...)")[0]
 	PatternDefine         = read.MustReadString("(define name value)")[0]
 	PatternDefineSyntax   = read.MustReadString("(define-syntax name value)")[0]
+	PatternSet            = read.MustReadString("(set! variable expression)")[0]
 )
 
 func transformQuote(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -219,6 +221,25 @@ func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (comm
 			return common.ErrorC(err)
 		}
 		return common.CallC(env, common.DefineSyntax{name, expression})
+	}
+}
+
+func transformSet(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+	if result, ok, err := util.Match(syntax[0], PatternSet, nil); err != nil {
+		return common.ErrorC(err)
+	} else if !ok {
+		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
+	} else {
+		// TODO somehow determine variable to mutate at expand time
+		variable, ok := result[common.Symbol("variable")].(common.Symbol)
+		if !ok {
+			return common.ErrorC(fmt.Errorf("set!: bad syntax"))
+		}
+		expression, err := eval.ExpandMacro(env, result[common.Symbol("expression")])
+		if err != nil {
+			return common.ErrorC(err)
+		}
+		return common.CallC(env, common.Set{variable, expression})
 	}
 }
 

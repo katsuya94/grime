@@ -77,6 +77,12 @@ var (
 )
 
 func ExpandMacro(env common.Environment, syntax common.Datum) (common.Datum, error) {
+	// TODO use literals to ensure that set! would point at the keyword in base
+	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
+		return nil, err
+	} else if ok {
+		return expression, nil
+	}
 	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
 		return nil, err
 	} else if ok {
@@ -88,12 +94,6 @@ func ExpandMacro(env common.Environment, syntax common.Datum) (common.Datum, err
 		return expression, nil
 	}
 	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); err != nil {
-		return nil, err
-	} else if ok {
-		return expression, nil
-	}
-	// TODO use literals to ensure that set! would point at the procedure in base
-	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
 		return nil, err
 	} else if ok {
 		return expression, nil
@@ -212,6 +212,19 @@ func EvaluateExpression(env common.Environment, expression common.Datum) (common
 		return common.CallC(
 			env,
 			common.Closure{v, env.Bindings()},
+		)
+	case common.Set:
+		binding := env.Get(v.Variable)
+		if binding == nil {
+			return nil, Errorf("unbound identifier %v", v)
+		}
+		variable, ok := binding.(*common.Variable)
+		if !ok {
+			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
+		}
+		return common.CallC(
+			env,
+			common.Void,
 		)
 	default:
 		return nil, Errorf("unhandled expression %#v", v)

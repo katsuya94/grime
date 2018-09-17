@@ -104,3 +104,8 @@ func (c ContinuationProcedure) Call(env Environment, args ...Datum) (EvaluationR
 	}
 	return c.Continuation.Call(args[0])
 }
+
+type Set struct {
+	Variable   Symbol
+	Expression Datum
+}

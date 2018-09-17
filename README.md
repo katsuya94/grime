@@ -19,6 +19,7 @@
 * [ ] Use consistent coding style with success cases in tail-position
 * [ ] Implement variadic lambdas
 * [ ] Implement set!
+* [ ] resolve references at expand time
 
 ## Notes
 
