@@ -21,12 +21,12 @@ var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("define"):        common.Keyword{common.Function(transformDefine)},
 	common.Symbol("define-syntax"): common.Keyword{common.Function(transformDefineSyntax)},
 	common.Symbol("set!"):          common.Keyword{common.Function(transformSet)},
-	common.Symbol("cons"):          common.Variable{common.Function(cons)},
-	common.Symbol("car"):           common.Variable{common.Function(car)},
-	common.Symbol("cdr"):           common.Variable{common.Function(cdr)},
-	common.Symbol("null?"):         common.Variable{common.Function(null)},
-	common.Symbol("write"):         common.Variable{common.Function(write)},
-	common.Symbol("call/cc"):       common.Variable{common.Function(callWithCurrentContinuation)},
+	common.Symbol("cons"):          &common.Variable{common.Function(cons)},
+	common.Symbol("car"):           &common.Variable{common.Function(car)},
+	common.Symbol("cdr"):           &common.Variable{common.Function(cdr)},
+	common.Symbol("null?"):         &common.Variable{common.Function(null)},
+	common.Symbol("write"):         &common.Variable{common.Function(write)},
+	common.Symbol("call/cc"):       &common.Variable{common.Function(callWithCurrentContinuation)},
 }
 
 var (

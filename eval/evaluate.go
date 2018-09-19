@@ -167,7 +167,7 @@ func EvaluateExpression(env common.Environment, expression common.Datum) (common
 		if binding == nil {
 			return nil, Errorf("unbound identifier %v", v)
 		}
-		variable, ok := binding.(common.Variable)
+		variable, ok := binding.(*common.Variable)
 		if !ok {
 			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
 		}

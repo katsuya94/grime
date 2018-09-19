@@ -234,6 +234,22 @@ func TestEvaluateExpression(t *testing.T) {
 			"foo",
 			"",
 		},
+		{
+			"call/cc and set! used to loop",
+			`
+			(define x '(foo bar baz))
+			(define y '())
+			(define c (call/cc (lambda (c) c)))
+			(if (null? x)
+			  y
+			  (begin
+			    (set! y (cons (car x) y))
+			    (set! x (cdr x))
+			    (c c)))
+			`,
+			"(baz bar foo)",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -87,7 +87,7 @@ func (c Closure) Call(env Environment, args ...Datum) (EvaluationResult, error) 
 	}
 	env = env.WithBindings(c.Bindings)
 	for i := range c.Formals {
-		env = env.Set(c.Formals[i], Variable{args[i]})
+		env = env.Set(c.Formals[i], &Variable{args[i]})
 	}
 	return EvalC(env, c.Body)
 }
