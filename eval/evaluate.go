@@ -222,9 +222,12 @@ func EvaluateExpression(env common.Environment, expression common.Datum) (common
 		if !ok {
 			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
 		}
-		return common.CallC(
-			env,
-			common.Void,
+		return common.EvalC(
+			env.SetContinuation(setExpressionEvaluated{
+				env,
+				variable,
+			}),
+			v.Expression,
 		)
 	default:
 		return nil, Errorf("unhandled expression %#v", v)

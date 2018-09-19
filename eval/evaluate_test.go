@@ -228,6 +228,12 @@ func TestEvaluateExpression(t *testing.T) {
 			"foo",
 			"",
 		},
+		{
+			"set! used to set a defined variable",
+			"(define x 'bar) (set! x 'foo) x",
+			"foo",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
