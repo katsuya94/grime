@@ -47,14 +47,14 @@ func NewLibrary(source common.Datum) (*Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := util.Match(libraryName[i].(common.Datum), PatternVersion, map[common.Symbol]common.Binding{})
+		result, ok, err := util.Match(libraryName[i], PatternVersion, map[common.Symbol]common.Binding{})
 		if err != nil {
 			return nil, err
 		} else if !ok {
 			return nil, fmt.Errorf("runtime: malformed library name")
 		}
 		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
-			subV, err := newSubVersion(d.(common.Datum))
+			subV, err := newSubVersion(d)
 			if err != nil {
 				return nil, err
 			}
@@ -64,21 +64,21 @@ func NewLibrary(source common.Datum) (*Library, error) {
 		return nil, fmt.Errorf("runtime: malformed library name")
 	}
 	for _, d := range result[common.Symbol("export-spec")].([]interface{}) {
-		exportSpecs, err := newExportSpecs(d.(common.Datum))
+		exportSpecs, err := newExportSpecs(d)
 		if err != nil {
 			return nil, err
 		}
 		library.exportSpecs = append(library.exportSpecs, exportSpecs...)
 	}
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
-		importSpec, err := newImportSpec(d.(common.Datum))
+		importSpec, err := newImportSpec(d)
 		if err != nil {
 			return nil, err
 		}
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	for _, d := range result[common.Symbol("body")].([]interface{}) {
-		library.body = append(library.body, d.(common.Datum))
+		library.body = append(library.body, d)
 	}
 	return &library, nil
 }

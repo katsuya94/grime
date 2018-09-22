@@ -50,7 +50,7 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	}
 	var library Library
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
-		importSpec, err := newImportSpec(d.(common.Datum))
+		importSpec, err := newImportSpec(d)
 		if err != nil {
 			return nil
 		}
@@ -102,7 +102,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 			env = env.Set(internal, binding)
 		}
 	}
-	form, err := eval.Expand(env, prov.library.body)
+	form, err := eval.ExpandBody(env, prov.library.body)
 	if err != nil {
 		return err
 	}

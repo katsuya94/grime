@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/runtime"
 	"github.com/katsuya94/grime/util"
@@ -84,15 +85,15 @@ func transformLetStar(env common.Environment, syntax ...common.Datum) (common.Ev
 			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
 		}
 	}
-	var inits []common.Syntax
+	var inits []common.Datum
 	for _, init := range result[common.Symbol("init")].([]interface{}) {
-		names = append(inits, init)
+		inits = append(inits, init)
 	}
-	var forms []common.Syntax
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	form, err := common.BeginForm{forms}
+	var form common.Datum = common.BeginForm{forms}
 	for i := len(names) - 1; i >= 0; i-- {
 		form = common.LetForm{names[i], inits[i], form}
 	}
@@ -106,15 +107,16 @@ func transformBegin(env common.Environment, syntax ...common.Datum) (common.Eval
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
 	}
-	var forms []common.Syntax
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.CallC(env, common.Begin{forms})
+	return common.CallC(env, common.BeginForm{forms})
 }
 
 func transformLambda(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternLambda, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternLambda, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
@@ -156,7 +158,7 @@ func transformDefine(env common.Environment, syntax ...common.Datum) (common.Eva
 	} else {
 		return common.ErrorC(fmt.Errorf("define: bad syntax"))
 	}
-	return common.CallC(env, common.Define{name, form})
+	return common.CallC(env, common.DefineForm{name, form})
 }
 
 func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaForm, error) {
@@ -168,11 +170,11 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 			return common.LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 	}
-	var forms []common.Syntax
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.Lambda{formals, common.BeginForm(forms)}, nil
+	return common.LambdaForm{formals, forms}, nil
 }
 
 func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -186,10 +188,7 @@ func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (comm
 	if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
-	form, ok := eval.ExpandMacro(env, result[common.Symbol("value")]).(core.Datum)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
-	}
+	form := result[common.Symbol("value")]
 	return common.CallC(env, common.DefineSyntaxForm{name, form})
 }
 
@@ -204,10 +203,7 @@ func transformSet(env common.Environment, syntax ...common.Datum) (common.Evalua
 	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
-	form, ok := eval.ExpandMacro(env, result[common.Symbol("value")]).(core.Datum)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
-	}
+	form := result[common.Symbol("value")]
 	return common.CallC(env, common.SetForm{name, form})
 }
 
@@ -251,7 +247,7 @@ func write(env common.Environment, args ...common.Datum) (common.EvaluationResul
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("write: wrong arity"))
 	}
-	fmt.Print(util.Write(args[0]))
+	fmt.Print(common.Write(args[0]))
 	return common.CallC(env, common.Void)
 }
 

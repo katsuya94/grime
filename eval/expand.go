@@ -8,7 +8,7 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-func ExpandBody(env common.Environment, forms []common.Syntax) (common.Syntax, error) {
+func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, error) {
 	var (
 		i           int
 		definitions []common.DefineForm
@@ -41,13 +41,13 @@ func ExpandBody(env common.Environment, forms []common.Syntax) (common.Syntax, e
 	}
 	// Expand variable definitions.
 	var definitionNames []common.Symbol
-	var definitionForms []common.Syntax
+	var definitionForms []common.Datum
 	for _, definition := range definitions {
 		definitionNames = append(definitionNames, definition.Name)
 		definitionForms = append(definitionForms, definition.Form)
 	}
 	// Create a begin form with the remaining expressions.
-	var form common.Syntax = common.BeginForm{forms[i:]}
+	var form common.Datum = common.BeginForm{forms[i:]}
 	// Wrap it in a letrec* with the definitions.
 	for i := len(definitions) - 1; i >= 0; i-- {
 		form = common.LetForm{definitionNames[i], definitionForms[i], form}
@@ -63,7 +63,7 @@ var (
 	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
-func Expand(env common.Environment, syntax common.Syntax) (common.Syntax, error) {
+func Expand(env common.Environment, syntax common.Datum) (common.Datum, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func Expand(env common.Environment, syntax common.Syntax) (common.Syntax, error)
 		if !ok {
 			return nil, fmt.Errorf("application: bad syntax")
 		}
-		var arguments []common.Syntax
+		var arguments []common.Datum
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
 			if argument, ok := argument.(common.Datum); !ok {
 				return nil, fmt.Errorf("application: bad syntax")
@@ -108,7 +108,7 @@ func Expand(env common.Environment, syntax common.Syntax) (common.Syntax, error)
 	return syntax, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Syntax, pattern common.Datum) (common.Syntax, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
 	result, ok, err := util.Match(syntax.(common.Datum), pattern, nil)
 	if err != nil {

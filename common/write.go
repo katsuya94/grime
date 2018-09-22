@@ -1,9 +1,14 @@
 package common
 
+import "fmt"
+
 func Write(d Datum) string {
 	if d == nil {
 		return "()"
-	} else {
-		return d.Write()
 	}
+	w, ok := d.(Writable)
+	if !ok {
+		return fmt.Sprintf("#<%#v>", d)
+	}
+	return w.Write()
 }
