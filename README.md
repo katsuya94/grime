@@ -18,6 +18,7 @@
 * [ ] Implement variadic lambdas
 * [ ] resolve references at expand time
 * [ ] Consider removing error handling in match in favor of a panic
+* [ ] Consider adding match result type for easy result retrieval
 
 ## Notes
 

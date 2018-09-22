@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/runtime"
 	"github.com/katsuya94/grime/util"
@@ -30,15 +29,15 @@ var Bindings = map[common.Symbol]common.Binding{
 }
 
 var (
-	PatternQuote          = read.MustReadString("(quote datum)")[0]
-	PatternIf             = read.MustReadString("(if condition then else)")[0]
-	PatternLetStar        = read.MustReadString("(let* ((name init) ...) body ...)")[0]
-	PatternBegin          = read.MustReadString("(begin body ...)")[0]
-	PatternLambda         = read.MustReadString("(lambda (formals ...) body ...)")[0]
+	PatternQuote        = read.MustReadString("(quote datum)")[0]
+	PatternIf           = read.MustReadString("(if condition then else)")[0]
+	PatternLetStar      = read.MustReadString("(let* ((name init) ...) body ...)")[0]
+	PatternBegin        = read.MustReadString("(begin body ...)")[0]
+	PatternLambda       = read.MustReadString("(lambda (formals ...) body ...)")[0]
 	PatternDefineLambda = read.MustReadString("(define (name formals ...) body ...)")[0]
-	PatternDefine         = read.MustReadString("(define name value)")[0]
-	PatternDefineSyntax   = read.MustReadString("(define-syntax name value)")[0]
-	PatternSet            = read.MustReadString("(set! name expression)")[0]
+	PatternDefine       = read.MustReadString("(define name value)")[0]
+	PatternDefineSyntax = read.MustReadString("(define-syntax name value)")[0]
+	PatternSet          = read.MustReadString("(set! name expression)")[0]
 )
 
 func transformQuote(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -48,7 +47,11 @@ func transformQuote(env common.Environment, syntax ...common.Datum) (common.Eval
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
-	return common.CallC(env, result[common.Symbol("datum")])
+	datum, ok := result[common.Symbol("datum")].(common.Datum)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
+	}
+	return common.CallC(env, datum)
 }
 
 func transformIf(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -76,22 +79,18 @@ func transformLetStar(env common.Environment, syntax ...common.Datum) (common.Ev
 	var names []common.Symbol
 	for _, name := range result[common.Symbol("name")].([]interface{}) {
 		if name, ok := name.(common.Symbol); ok {
-			names = append(names, name
+			names = append(names, name)
 		} else {
 			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
 		}
 	}
-	var inits []common.Datum
+	var inits []common.Syntax
 	for _, init := range result[common.Symbol("init")].([]interface{}) {
-		if init, ok := init.(common.Datum) {
-			names = append(names, symbol)
-		}
+		names = append(inits, init)
 	}
-	var forms []common.Datum
+	var forms []common.Syntax
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
-		if form, ok := form.(common.Datum) {
-			forms = append(forms, form)
-		}
+		forms = append(forms, form)
 	}
 	form, err := common.BeginForm{forms}
 	for i := len(names) - 1; i >= 0; i-- {
@@ -107,11 +106,9 @@ func transformBegin(env common.Environment, syntax ...common.Datum) (common.Eval
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
 	}
-	var forms []common.Datum
+	var forms []common.Syntax
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
-		if form, ok := form.(common.Datum) {
-			forms = append(forms, form)
-		}
+		forms = append(forms, form)
 	}
 	return common.CallC(env, common.Begin{forms})
 }
@@ -131,7 +128,7 @@ func transformLambda(env common.Environment, syntax ...common.Datum) (common.Eva
 
 func transformDefine(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
 	var (
-		name  common.Symbol
+		name common.Symbol
 		form common.Datum
 	)
 	// TODO implement other define forms
@@ -171,11 +168,9 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 			return common.LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 	}
-	var forms []common.Datum
+	var forms []common.Syntax
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
-		if form, ok := form.(common.Datum) {
-			forms = append(forms, form)
-		}
+		forms = append(forms, form)
 	}
 	return common.Lambda{formals, common.BeginForm(forms)}, nil
 }

@@ -42,13 +42,13 @@ func newImportSpec(d common.Datum) (importSpec, error) {
 	}); err != nil {
 		return importSpec{}, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Datum))
 		if err != nil {
 			return importSpec{}, err
 		}
 		var levels []int
 		for _, d := range result[common.Symbol("import-level")].([]interface{}) {
-			level, err := newImportLevel(d)
+			level, err := newImportLevel(d.(common.Datum))
 			if err != nil {
 				return importSpec{}, err
 			}
@@ -122,14 +122,14 @@ func newImportSet(d common.Datum) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		return newLibraryReference(result[common.Symbol("library-reference")])
+		return newLibraryReference(result[common.Symbol("library-reference")].(common.Datum))
 	}
 	if result, ok, err := util.Match(d, PatternImportSetOnly, map[common.Symbol]common.Binding{
 		common.Symbol("only"): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")])
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -380,7 +380,7 @@ func newLibraryReference(d common.Datum) (importSetLibraryReference, error) {
 	}
 	ref.versionReference = versionReferenceSubVersionReferences{}
 	if i == len(libraryName)-1 {
-		vRef, err := newVersionReference(libraryName[i])
+		vRef, err := newVersionReference(libraryName[i].(common.Datum))
 		if err != nil {
 			return importSetLibraryReference{}, err
 		}
@@ -412,7 +412,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 	} else if ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
-			vRef, err := newVersionReference(d)
+			vRef, err := newVersionReference(d.(common.Datum))
 			if err != nil {
 				return nil, err
 			}
@@ -427,7 +427,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 	} else if ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
-			vRef, err := newVersionReference(d)
+			vRef, err := newVersionReference(d.(common.Datum))
 			if err != nil {
 				return nil, err
 			}
@@ -440,7 +440,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		vRef, err := newVersionReference(result[common.Symbol("version-reference")])
+		vRef, err := newVersionReference(result[common.Symbol("version-reference")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -451,7 +451,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d)
+			subVRef, err := newSubVersionReference(d.(common.Datum))
 			if err != nil {
 				return nil, err
 			}
@@ -522,7 +522,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")])
+		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -533,7 +533,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")])
+		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -546,7 +546,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d)
+			subVRef, err := newSubVersionReference(d.(common.Datum))
 			if err != nil {
 				return nil, err
 			}
@@ -561,7 +561,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d)
+			subVRef, err := newSubVersionReference(d.(common.Datum))
 			if err != nil {
 				return nil, err
 			}
@@ -574,7 +574,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")])
+		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")].(common.Datum))
 		if err != nil {
 			return nil, err
 		}

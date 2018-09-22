@@ -235,39 +235,45 @@ func (r Reference) Debug() string {
 
 type DefineSyntaxForm struct {
 	Name Symbol
-	Form Datum
+	Form Syntax
 }
 
 type DefineForm struct {
 	Name Symbol
-	Form Datum
+	Form Syntax
+}
+
+type IfForm struct {
+	Condition Syntax
+	Then      Syntax
+	Else      Syntax
 }
 
 type LetForm struct {
 	Name Symbol
-	Init Datum
-	Body Datum
+	Init Syntax
+	Body Syntax
 }
 
 type LetSyntaxForm struct{}
 
 type BeginForm struct {
-	Forms []Datum
+	Forms []Syntax
 }
 
 type ApplicationForm struct {
-	Procedure Datum
-	Arguments []Datum
+	Procedure Syntax
+	Arguments []Syntax
 }
 
 type LambdaForm struct {
 	Formals []Symbol
-	Body    Datum
+	Body    Syntax
 }
 
 type SetForm struct {
 	Name Symbol
-	Form Datum
+	Form Syntax
 }
 
 type ReferenceForm struct {
