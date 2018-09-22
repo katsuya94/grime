@@ -6,7 +6,7 @@ import (
 
 type applicationProcedureEvaluated struct {
 	env       common.Environment
-	arguments []common.Datum
+	arguments []common.Expression
 }
 
 func (c applicationProcedureEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
@@ -17,7 +17,7 @@ type applicationArgumentEvaluated struct {
 	env        common.Environment
 	procedureV common.Datum
 	argumentsV []common.Datum
-	arguments  []common.Datum
+	arguments  []common.Expression
 }
 
 func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
@@ -29,7 +29,7 @@ func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationRes
 	)
 }
 
-func partialEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Datum) (common.EvaluationResult, error) {
+func partialEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Expression) (common.EvaluationResult, error) {
 	if len(arguments) == 0 {
 		return Apply(env, procedureV, argumentsV...)
 	}

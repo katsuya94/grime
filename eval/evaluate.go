@@ -12,44 +12,46 @@ func Errorf(format string, a ...interface{}) error {
 	return fmt.Errorf("eval: "+format, a...)
 }
 
-func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, error) {
+func ExpandBody(env common.Environment, forms []common.Syntax) (common.Datum, error) {
 	var (
 		i           int
-		definitions []common.Define
+		definitions []common.DefineForm
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
-	env = env.SetDefinitionContext()
 	for i = 0; i < len(forms); i++ {
 		form, err := ExpandMacro(env, forms[i])
 		if err != nil {
 			return nil, err
 		}
 		switch v := form.(type) {
-		case common.DefineSyntax:
+		case common.DefineSyntaxForm:
 			// TODO pull phase n + 1 bindings from runtime via some sort of chain.
-			if _, err := EvaluateExpression(env, v.Expression); err != nil {
+			if _, err := EvaluateExpression(env, v.Form); err != nil {
 				return nil, err
 			} else {
 				return nil, Errorf("define-syntax not implemented")
 			}
-		case common.Define:
+		case common.DefineForm:
 			definitions = append(definitions, v)
 			continue
-		case common.Begin:
-			forms = append(forms[0:i], append(v.Forms, forms[i+1:]...)...)
+		case common.BeginForm:
+			forms = forms[0:i]
+			for _, form := range v.Forms {
+				forms = append(forms, common.Syntax(form))
+			}
+			forms = append(forms, forms[i+1:]...)
 			i -= 1
 			continue
-		case common.LetSyntax:
+		case common.LetSyntaxForm:
 			return nil, Errorf("let-syntax not implemented")
 		}
 		break
 	}
 	// Expand variable definitions.
-	env = env.SetExpressionContext()
 	var definitionNames []common.Symbol
 	var definitionExpressions []common.Datum
 	for _, definition := range definitions {
-		expression, err := ExpandMacro(env, definition.Syntax)
+		expression, err := ExpandMacro(env, definition.Form)
 		if err != nil {
 			return nil, err
 		}
@@ -76,51 +78,52 @@ var (
 	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
-func ExpandMacro(env common.Environment, syntax common.Datum) (common.Datum, error) {
+func ExpandMacro(env common.Environment, syntax common.Syntax) (common.Syntax, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
-	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
 		return nil, err
 	} else if ok {
-		return expression, nil
+		return form, nil
 	}
-	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
 		return nil, err
 	} else if ok {
-		return expression, nil
+		return form, nil
 	}
-	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); err != nil {
 		return nil, err
 	} else if ok {
-		return expression, nil
+		return form, nil
 	}
-	if expression, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); err != nil {
 		return nil, err
 	} else if ok {
-		return expression, nil
+		return form, nil
 	}
 	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
-		var application common.Application
-		if expression, err := ExpandMacro(env, result[common.Symbol("procedure")].(common.Datum)); err != nil {
-			return nil, err
-		} else {
-			application.Procedure = expression
+		procedure, ok := result[common.Symbol("procedure")].(common.Datum)
+		if !ok {
+			return fmt.Errorf("application: bad syntax")
 		}
+		var arguments []common.Datum
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
-			if expression, err := ExpandMacro(env, argument.(common.Datum)); err != nil {
-				return nil, err
+			if argument, ok := argument.(common.Datum); !ok {
+				return fmt.Errorf("application: bad syntax")
 			} else {
-				application.Arguments = append(application.Arguments, expression)
+				arguments = append(arguments, argument)
 			}
 		}
-		return application, nil
+		return common.ApplicationForm{procedure, arguments}, nil
 	}
-	// TODO handle malformed applications. Note that the Racket implementation does not appear to consider () invalid
-	return Unwrap(env, syntax)
+	if name, ok := syntax.(common.Symbol); ok {
+		return common.ReferenceForm{name}
+	}
+	return syntax, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Syntax, pattern common.Datum) (common.Syntax, bool, error) {
 	// TODO identifiers are actually wrapped
 	result, ok, err := util.Match(syntax, pattern, nil)
 	if err != nil {
@@ -151,11 +154,6 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 		return nil, false, err
 	}
 	return expression, true, nil
-}
-
-func Unwrap(env common.Environment, syntax common.Datum) (common.Datum, error) {
-	// TODO unwrap, handling hygiene
-	return syntax, nil
 }
 
 func EvaluateExpression(env common.Environment, expression common.Datum) (common.EvaluationResult, error) {

@@ -10,13 +10,12 @@ type Variable struct {
 }
 
 type Environment struct {
-	bindings          map[Symbol]Binding
-	continuation      Continuation
-	expressionContext bool
+	bindings     map[Symbol]Binding
+	continuation Continuation
 }
 
 func NewEnvironment(bindings map[Symbol]Binding, continuation Continuation) Environment {
-	return Environment{bindings, continuation, false}
+	return Environment{bindings, continuation}
 }
 
 func (env Environment) Bindings() map[Symbol]Binding {
@@ -35,15 +34,15 @@ func (env Environment) Get(name Symbol) Binding {
 func (env Environment) Set(name Symbol, binding Binding) Environment {
 	bindings := env.Bindings()
 	bindings[name] = binding
-	return Environment{bindings, env.continuation, env.expressionContext}
+	return Environment{bindings, env.continuation}
 }
 
 func (env Environment) Empty() Environment {
-	return Environment{make(map[Symbol]Binding), env.continuation, env.expressionContext}
+	return Environment{make(map[Symbol]Binding), env.continuation}
 }
 
 func (env Environment) WithBindings(bindings map[Symbol]Binding) Environment {
-	return Environment{bindings, env.continuation, env.expressionContext}
+	return Environment{bindings, env.continuation}
 }
 
 func (env Environment) Continuation() Continuation {
@@ -51,17 +50,5 @@ func (env Environment) Continuation() Continuation {
 }
 
 func (env Environment) SetContinuation(c Continuation) Environment {
-	return Environment{env.bindings, c, env.expressionContext}
-}
-
-func (env Environment) ExpressionContext() bool {
-	return env.expressionContext
-}
-
-func (env Environment) SetExpressionContext() Environment {
-	return Environment{env.bindings, env.continuation, true}
-}
-
-func (env Environment) SetDefinitionContext() Environment {
-	return Environment{env.bindings, env.continuation, false}
+	return Environment{env.bindings, c}
 }

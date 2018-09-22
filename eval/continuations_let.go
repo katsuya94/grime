@@ -7,7 +7,7 @@ import (
 type letInitEvaluated struct {
 	env  common.Environment
 	name common.Symbol
-	body common.Datum
+	body common.Expression
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {

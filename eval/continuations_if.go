@@ -5,14 +5,14 @@ import (
 )
 
 type ifConditionEvaluated struct {
-	env   common.Environment
-	then  common.Datum
-	_else common.Datum
+	env       common.Environment
+	then      common.Expression
+	otherwise common.Expression
 }
 
 func (c ifConditionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if d == common.Boolean(false) {
-		return common.EvalC(c.env, c._else)
+		return common.EvalC(c.env, c.otherwise)
 	} else {
 		return common.EvalC(c.env, c.then)
 	}

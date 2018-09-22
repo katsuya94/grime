@@ -4,7 +4,7 @@ type EvaluationResult interface{}
 
 type FurtherEvaluation struct {
 	Environment Environment
-	Expression  Datum
+	Expression  Expression
 }
 
 type ContinuationCall struct {
@@ -12,7 +12,7 @@ type ContinuationCall struct {
 	Value        Datum
 }
 
-func EvalC(env Environment, expression Datum) (EvaluationResult, error) {
+func EvalC(env Environment, expression Expression) (EvaluationResult, error) {
 	return FurtherEvaluation{env, expression}, nil
 }
 

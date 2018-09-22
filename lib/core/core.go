@@ -32,82 +32,72 @@ var Bindings = map[common.Symbol]common.Binding{
 var (
 	PatternQuote          = read.MustReadString("(quote datum)")[0]
 	PatternIf             = read.MustReadString("(if condition then else)")[0]
-	PatternLetStar        = read.MustReadString("(let* ((name value) ...) body ...)")[0]
+	PatternLetStar        = read.MustReadString("(let* ((name init) ...) body ...)")[0]
 	PatternBegin          = read.MustReadString("(begin body ...)")[0]
 	PatternLambda         = read.MustReadString("(lambda (formals ...) body ...)")[0]
-	PatternDefineFunction = read.MustReadString("(define (name formals ...) body ...)")[0]
+	PatternDefineLambda = read.MustReadString("(define (name formals ...) body ...)")[0]
 	PatternDefine         = read.MustReadString("(define name value)")[0]
 	PatternDefineSyntax   = read.MustReadString("(define-syntax name value)")[0]
-	PatternSet            = read.MustReadString("(set! variable expression)")[0]
+	PatternSet            = read.MustReadString("(set! name expression)")[0]
 )
 
 func transformQuote(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternQuote, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternQuote, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
-	} else {
-		return common.CallC(env, common.Quote{result[common.Symbol("datum")]})
 	}
+	return common.CallC(env, result[common.Symbol("datum")])
 }
 
 func transformIf(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternIf, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternIf, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("if: bad syntax"))
-	} else {
-		conditionExpression, err := eval.ExpandMacro(env, result[common.Symbol("condition")])
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		thenExpression, err := eval.ExpandMacro(env, result[common.Symbol("then")])
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		elseExpression, err := eval.ExpandMacro(env, result[common.Symbol("else")])
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		return common.CallC(env, common.If{conditionExpression, thenExpression, elseExpression})
 	}
+	form := common.IfForm{
+		result[common.Symbol("condition")],
+		result[common.Symbol("then")],
+		result[common.Symbol("else")],
+	}
+	return common.CallC(env, form)
 }
 
 func transformLetStar(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternLetStar, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternLetStar, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
-		return common.ErrorC(fmt.Errorf("let: bad syntax"))
-	} else {
-		var names []common.Symbol
-		for _, s := range result[common.Symbol("name")].([]interface{}) {
-			if symbol, ok := s.(common.Symbol); ok {
-				names = append(names, symbol)
-			} else {
-				return common.ErrorC(fmt.Errorf("let: bad syntax"))
-			}
+		return common.ErrorC(fmt.Errorf("let*: bad syntax"))
+	}
+	var names []common.Symbol
+	for _, name := range result[common.Symbol("name")].([]interface{}) {
+		if name, ok := name.(common.Symbol); ok {
+			names = append(names, name
+		} else {
+			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
 		}
-		var valueExpressions []common.Datum
-		for _, s := range result[common.Symbol("value")].([]interface{}) {
-			if expression, err := eval.ExpandMacro(env, s); err != nil {
-				return common.ErrorC(err)
-			} else {
-				valueExpressions = append(valueExpressions, expression)
-			}
+	}
+	var inits []common.Datum
+	for _, init := range result[common.Symbol("init")].([]interface{}) {
+		if init, ok := init.(common.Datum) {
+			names = append(names, symbol)
 		}
-		var forms []common.Datum
-		for _, form := range result[common.Symbol("body")].([]interface{}) {
+	}
+	var forms []common.Datum
+	for _, form := range result[common.Symbol("body")].([]interface{}) {
+		if form, ok := form.(common.Datum) {
 			forms = append(forms, form)
 		}
-		expression, err := eval.ExpandBody(env, forms)
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		for i := len(names) - 1; i >= 0; i-- {
-			expression = common.Let{names[i], valueExpressions[i], expression}
-		}
-		return common.CallC(env, expression)
 	}
+	form, err := common.BeginForm{forms}
+	for i := len(names) - 1; i >= 0; i-- {
+		form = common.LetForm{names[i], inits[i], form}
+	}
+	return common.CallC(env, form)
 }
 
 func transformBegin(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -117,61 +107,47 @@ func transformBegin(env common.Environment, syntax ...common.Datum) (common.Eval
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
 	}
-	if env.ExpressionContext() {
-		forms := result[common.Symbol("body")].([]interface{})
-		if len(forms) == 0 {
-			return common.ErrorC(fmt.Errorf("begin: bad syntax"))
-		}
-		var expressions []common.Datum
-		for _, form := range forms {
-			if expression, err := eval.ExpandMacro(env, form); err != nil {
-				return common.ErrorC(err)
-			} else {
-				expressions = append(expressions, expression)
-			}
-		}
-		return common.CallC(env, common.Begin{expressions})
-	} else {
-		var forms []common.Datum
-		for _, form := range result[common.Symbol("body")].([]interface{}) {
+	var forms []common.Datum
+	for _, form := range result[common.Symbol("body")].([]interface{}) {
+		if form, ok := form.(common.Datum) {
 			forms = append(forms, form)
 		}
-		return common.CallC(env, common.Begin{forms})
 	}
+	return common.CallC(env, common.Begin{forms})
 }
 
 func transformLambda(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
 	if result, ok, err := util.Match(syntax[0], PatternLambda, nil); err != nil {
 		return common.ErrorC(err)
-	} else if ok {
-		lambda, err := makeLambdaFromResult(env, result)
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		return common.CallC(env, lambda)
+	} else if !ok {
+		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 	}
-	return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
+	form, err := makeLambdaFromResult(result)
+	if err != nil {
+		return common.ErrorC(err)
+	}
+	return common.CallC(env, form)
 }
 
 func transformDefine(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
 	var (
 		name  common.Symbol
-		value common.Datum
+		form common.Datum
 	)
 	// TODO implement other define forms
 	// TODO implement define procedure with syntax transformation
-	if result, ok, err := util.Match(syntax[0], PatternDefineFunction, nil); err != nil {
+	if result, ok, err := util.Match(syntax[0], PatternDefineLambda, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
 		name, ok = result[common.Symbol("name")].(common.Symbol)
 		if !ok {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
-		lambda, err := makeLambdaFromResult(env, result)
+		lambda, err := makeLambdaFromResult(result)
 		if err != nil {
 			return common.ErrorC(err)
 		}
-		value = lambda
+		form = lambda
 	} else if result, ok, err := util.Match(syntax[0], PatternDefine, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
@@ -179,68 +155,65 @@ func transformDefine(env common.Environment, syntax ...common.Datum) (common.Eva
 		if !ok {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
-		value = result[common.Symbol("value")]
+		form = result[common.Symbol("value")]
 	} else {
 		return common.ErrorC(fmt.Errorf("define: bad syntax"))
 	}
-	return common.CallC(env, common.Define{name, value})
+	return common.CallC(env, common.Define{name, form})
 }
 
-func makeLambdaFromResult(env common.Environment, result map[common.Symbol]interface{}) (common.Lambda, error) {
+func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaForm, error) {
 	var formals []common.Symbol
 	for _, s := range result[common.Symbol("formals")].([]interface{}) {
 		if formal, ok := s.(common.Symbol); ok {
 			formals = append(formals, formal)
 		} else {
-			return common.Lambda{}, fmt.Errorf("lambda: bad syntax")
+			return common.LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 	}
 	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, form)
+		if form, ok := form.(common.Datum) {
+			forms = append(forms, form)
+		}
 	}
-	expression, err := eval.ExpandBody(env, forms)
-	if err != nil {
-		return common.Lambda{}, err
-	}
-	return common.Lambda{formals, expression}, nil
+	return common.Lambda{formals, common.BeginForm(forms)}, nil
 }
 
 func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternDefineSyntax, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternDefineSyntax, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
-	} else {
-		name, ok := result[common.Symbol("name")].(common.Symbol)
-		if !ok {
-			return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
-		}
-		expression, err := eval.ExpandMacro(env, result[common.Symbol("value")])
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		return common.CallC(env, common.DefineSyntax{name, expression})
 	}
+	name, ok := result[common.Symbol("name")].(common.Symbol)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
+	}
+	form, ok := eval.ExpandMacro(env, result[common.Symbol("value")]).(core.Datum)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
+	}
+	return common.CallC(env, common.DefineSyntaxForm{name, form})
 }
 
 func transformSet(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
-	if result, ok, err := util.Match(syntax[0], PatternSet, nil); err != nil {
+	result, ok, err := util.Match(syntax[0], PatternSet, nil)
+	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
-	} else {
-		// TODO somehow determine variable to mutate at expand time
-		variable, ok := result[common.Symbol("variable")].(common.Symbol)
-		if !ok {
-			return common.ErrorC(fmt.Errorf("set!: bad syntax"))
-		}
-		expression, err := eval.ExpandMacro(env, result[common.Symbol("expression")])
-		if err != nil {
-			return common.ErrorC(err)
-		}
-		return common.CallC(env, common.Set{variable, expression})
 	}
+	name, ok := result[common.Symbol("name")].(common.Symbol)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
+	}
+	form, ok := eval.ExpandMacro(env, result[common.Symbol("value")]).(core.Datum)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
+	}
+	return common.CallC(env, common.SetForm{name, form})
 }
 
 func cons(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
