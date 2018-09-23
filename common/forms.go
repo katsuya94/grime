@@ -35,7 +35,7 @@ type ApplicationForm struct {
 
 type LambdaForm struct {
 	Formals []Symbol
-	Body    Datum
+	Body    []Datum
 }
 
 type SetForm struct {

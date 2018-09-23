@@ -12,7 +12,9 @@ func Errorf(format string, a ...interface{}) error {
 
 func EvaluateExpression(env common.Environment, expression common.Expression) (common.EvaluationResult, error) {
 	switch v := expression.(type) {
-	case common.Boolean, common.Number, common.Character, common.String, common.Symbol:
+	case nil:
+		return common.CallC(env, nil)
+	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair:
 		return common.CallC(env, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(
@@ -56,7 +58,7 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 	case common.Set:
 		binding := env.Get(v.Name)
 		if binding == nil {
-			return nil, Errorf("unbound identifier %v", v)
+			return nil, Errorf("unbound identifier %v", v.Name)
 		}
 		variable, ok := binding.(*common.Variable)
 		if !ok {
@@ -72,7 +74,7 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 	case common.Reference:
 		binding := env.Get(v.Name)
 		if binding == nil {
-			return nil, Errorf("unbound identifier %v", v)
+			return nil, Errorf("unbound identifier %v", v.Name)
 		}
 		variable, ok := binding.(*common.Variable)
 		if !ok {

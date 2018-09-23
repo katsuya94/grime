@@ -10,8 +10,9 @@ import (
 
 func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, error) {
 	var (
-		i           int
-		definitions []common.DefineForm
+		i               int
+		definitionNames []common.Symbol
+		definitionForms []common.Datum
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
 	for i = 0; i < len(forms); i++ {
@@ -21,35 +22,32 @@ func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, err
 		}
 		switch v := form.(type) {
 		case common.DefineSyntaxForm:
-			// TODO pull phase n + 1 bindings from runtime via some sort of chain.
 			return nil, Errorf("define-syntax not implemented")
 		case common.DefineForm:
-			definitions = append(definitions, v)
+			definitionNames = append(definitionNames, v.Name)
+			definitionForms = append(definitionForms, v.Form)
 			continue
 		case common.BeginForm:
+			if len(forms) == i+1 {
+				break
+			}
+			following := forms[i+1:]
 			forms = forms[0:i]
 			for _, form := range v.Forms {
 				forms = append(forms, form)
 			}
-			forms = append(forms, forms[i+1:]...)
-			i -= 1
+			forms = append(forms, following...)
+			i--
 			continue
 		case common.LetSyntaxForm:
 			return nil, Errorf("let-syntax not implemented")
 		}
 		break
 	}
-	// Expand variable definitions.
-	var definitionNames []common.Symbol
-	var definitionForms []common.Datum
-	for _, definition := range definitions {
-		definitionNames = append(definitionNames, definition.Name)
-		definitionForms = append(definitionForms, definition.Form)
-	}
 	// Create a begin form with the remaining expressions.
 	var form common.Datum = common.BeginForm{forms[i:]}
 	// Wrap it in a letrec* with the definitions.
-	for i := len(definitions) - 1; i >= 0; i-- {
+	for i := len(definitionNames) - 1; i >= 0; i-- {
 		form = common.LetForm{definitionNames[i], definitionForms[i], form}
 	}
 	return form, nil
@@ -85,7 +83,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, error) {
 	} else if ok {
 		return form, nil
 	}
-	if result, ok, err := util.Match(syntax.(common.Datum), PatternApplication, nil); err != nil {
+	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
 		return nil, err
 	} else if ok {
 		procedure, ok := result[common.Symbol("procedure")].(common.Datum)
@@ -110,7 +108,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, error) {
 
 func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := util.Match(syntax.(common.Datum), pattern, nil)
+	result, ok, err := util.Match(syntax, pattern, nil)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
@@ -129,14 +127,10 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 		return nil, false, nil
 	}
 	output, err := CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return Apply(env.SetContinuation(escape), keyword.Transformer, syntax.(common.Datum))
+		return Apply(env.SetContinuation(escape), keyword.Transformer, syntax)
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	expression, err := Expand(env, output)
-	if err != nil {
-		return nil, false, err
-	}
-	return expression, true, nil
+	return output, true, nil
 }

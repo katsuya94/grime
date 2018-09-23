@@ -48,11 +48,7 @@ func transformQuote(env common.Environment, syntax ...common.Datum) (common.Eval
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
-	datum, ok := result[common.Symbol("datum")].(common.Datum)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
-	}
-	return common.CallC(env, datum)
+	return common.CallC(env, common.QuoteForm{result[common.Symbol("datum")]})
 }
 
 func transformIf(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
@@ -203,7 +199,7 @@ func transformSet(env common.Environment, syntax ...common.Datum) (common.Evalua
 	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
-	form := result[common.Symbol("value")]
+	form := result[common.Symbol("expression")]
 	return common.CallC(env, common.SetForm{name, form})
 }
 
