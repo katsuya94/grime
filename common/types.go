@@ -116,7 +116,7 @@ func (f Function) Write() string {
 }
 
 func (f Function) Call(env Environment, args ...Datum) (EvaluationResult, error) {
-	return f(env, args...)
+	return f(env.Empty(), args...)
 }
 
 type Closure struct {
