@@ -24,22 +24,28 @@ func TestCompile(t *testing.T) {
 			"",
 		},
 		{
+			"body forms after expression in begin",
+			"(begin 'foo (define x 'bar))",
+			"",
+			"compile: unexpected body form in expression context",
+		},
+		{
 			"empty let*",
 			"(let* ())",
 			"",
-			"compile: begin: empty in expression context",
+			"expand: begin: empty in expression context",
 		},
 		{
 			"empty lambda",
 			"(lambda ())",
 			"",
-			"compile: begin: empty in expression context",
+			"expand: begin: empty in expression context",
 		},
 		{
 			"empty define procedure",
-			"(define (id))",
+			"(define (id)) 'foo",
 			"",
-			"compile: begin: empty in expression context",
+			"expand: begin: empty in expression context",
 		},
 	}
 	for _, test := range tests {

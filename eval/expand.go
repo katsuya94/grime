@@ -22,7 +22,7 @@ func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, err
 		}
 		switch v := form.(type) {
 		case common.DefineSyntaxForm:
-			return nil, Errorf("define-syntax not implemented")
+			return nil, fmt.Errorf("expand: define-syntax not implemented")
 		case common.DefineForm:
 			definitionNames = append(definitionNames, v.Name)
 			definitionForms = append(definitionForms, v.Form)
@@ -40,11 +40,14 @@ func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, err
 			i--
 			continue
 		case common.LetSyntaxForm:
-			return nil, Errorf("let-syntax not implemented")
+			return nil, fmt.Errorf("expand: let-syntax not implemented")
 		}
 		break
 	}
 	// Create a begin form with the remaining expressions.
+	if len(forms[i:]) == 0 {
+		return nil, fmt.Errorf("expand: begin: empty in expression context")
+	}
 	var form common.Datum = common.BeginForm{forms[i:]}
 	// Wrap it in a letrec* with the definitions.
 	for i := len(definitionNames) - 1; i >= 0; i-- {

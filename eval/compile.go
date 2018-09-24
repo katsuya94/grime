@@ -20,22 +20,29 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return expression, nil
 	case common.BeginForm:
-		if len(form.Forms) == 0 {
-			return nil, fmt.Errorf("compile: begin: empty in expression context")
-		}
-		var subExpressions []common.Expression
-		for _, subForm := range form.Forms {
-			expanded, err := Expand(env, subForm)
-			if err != nil {
-				return nil, err
+		expanded, err := ExpandBody(env, form.Forms)
+		if err != nil {
+			return nil, err
+		} else if begin, ok := expanded.(common.BeginForm); ok {
+			var subExpressions []common.Expression
+			for _, subForm := range begin.Forms {
+				expanded, err := Expand(env, subForm)
+				if err != nil {
+					return nil, err
+				}
+				expression, err := Compile(env, expanded)
+				if err != nil {
+					return nil, err
+				}
+				subExpressions = append(subExpressions, expression)
 			}
-			expression, err := Compile(env, expanded)
-			if err != nil {
-				return nil, err
-			}
-			subExpressions = append(subExpressions, expression)
+			return common.Begin{subExpressions}, nil
 		}
-		return common.Begin{subExpressions}, nil
+		expression, err := Compile(env, expanded)
+		if err != nil {
+			return nil, err
+		}
+		return expression, nil
 	case common.IfForm:
 		conditionExpanded, err := Expand(env, form.Condition)
 		if err != nil {
@@ -124,7 +131,17 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, err
 		}
 		return common.Set{form.Name, expression}, nil
+	case common.DefineForm, common.DefineSyntaxForm, common.LetSyntaxForm:
+		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	default:
-		return nil, fmt.Errorf("compile: unhandled form: %#v", form)
+		expanded, err := Expand(env, form)
+		if err != nil {
+			return nil, err
+		}
+		expression, err := Compile(env, expanded)
+		if err != nil {
+			return nil, err
+		}
+		return expression, nil
 	}
 }

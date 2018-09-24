@@ -6,10 +6,6 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func Errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("eval: "+format, a...)
-}
-
 func EvaluateExpression(env common.Environment, expression common.Expression) (common.EvaluationResult, error) {
 	switch v := expression.(type) {
 	case nil:
@@ -58,11 +54,11 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 	case common.Set:
 		binding := env.Get(v.Name)
 		if binding == nil {
-			return nil, Errorf("unbound identifier %v", v.Name)
+			return nil, fmt.Errorf("evaluate: unbound identifier %v", v.Name)
 		}
 		variable, ok := binding.(*common.Variable)
 		if !ok {
-			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
+			return nil, fmt.Errorf("evaluate: unexpected non-variable binding in expression context: %#v", binding)
 		}
 		return common.EvalC(
 			env.SetContinuation(setExpressionEvaluated{
@@ -74,22 +70,22 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 	case common.Reference:
 		binding := env.Get(v.Name)
 		if binding == nil {
-			return nil, Errorf("unbound identifier %v", v.Name)
+			return nil, fmt.Errorf("evaluate: unbound identifier %v", v.Name)
 		}
 		variable, ok := binding.(*common.Variable)
 		if !ok {
-			return nil, Errorf("unexpected non-variable binding in expression context: %#v", binding)
+			return nil, fmt.Errorf("evaluate: unexpected non-variable binding in expression context: %#v", binding)
 		}
 		return common.CallC(env, variable.Value)
 	default:
-		return nil, Errorf("unhandled expression %#v", v)
+		return nil, fmt.Errorf("evaluate: unhandled expression %#v", v)
 	}
 }
 
 type escapeEvaluated struct{}
 
 func (escapeEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return nil, Errorf("escape continuation called without escaping context")
+	return nil, fmt.Errorf("evaluate: escape continuation called without escaping context")
 }
 
 // perform further evaluation or call continuations as necessary until the nil continuation is called.
@@ -115,7 +111,7 @@ func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.Ev
 				return nil, err
 			}
 		default:
-			return nil, Errorf("unhandled evaluation result: %#v", v)
+			return nil, fmt.Errorf("evaluate: unhandled evaluation result: %#v", v)
 		}
 	}
 }

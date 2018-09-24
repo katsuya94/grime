@@ -153,13 +153,13 @@ func TestEvaluateExpression(t *testing.T) {
 			"lambda does not leak enclosing context",
 			"((let* ((x 'foo)) (lambda () x))) x",
 			"",
-			"eval: unbound identifier x",
+			"evaluate: unbound identifier x",
 		},
 		{
 			"lambda does not leak arguments",
 			"((lambda (x) x) 'foo) x",
 			"",
-			"eval: unbound identifier x",
+			"evaluate: unbound identifier x",
 		},
 		{
 			"call/cc used to escape early",
@@ -180,11 +180,11 @@ func TestEvaluateExpression(t *testing.T) {
 			(define y '())
 			(define c (call/cc (lambda (c) c)))
 			(if (null? x)
-			  y
-			  (begin
-			    (set! y (cons (car x) y))
-			    (set! x (cdr x))
-			    (c c)))
+				y
+				(begin
+				(set! y (cons (car x) y))
+				(set! x (cdr x))
+				(c c)))
 			`,
 			"(baz bar foo)",
 			"",

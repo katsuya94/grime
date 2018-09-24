@@ -1,6 +1,8 @@
 package eval
 
 import (
+	"fmt"
+
 	"github.com/katsuya94/grime/common"
 )
 
@@ -47,7 +49,7 @@ func partialEvaluationResult(env common.Environment, procedureV common.Datum, ar
 func Apply(env common.Environment, procedureV common.Datum, argumentsV ...common.Datum) (common.EvaluationResult, error) {
 	p, ok := procedureV.(common.Procedure)
 	if !ok {
-		return nil, Errorf("application: non-procedure in procedure position")
+		return nil, fmt.Errorf("application: non-procedure in procedure position")
 	}
 	return p.Call(env, argumentsV...)
 }
