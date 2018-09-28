@@ -22,7 +22,26 @@ func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, err
 		}
 		switch v := form.(type) {
 		case common.DefineSyntaxForm:
-			return nil, fmt.Errorf("expand: define-syntax not implemented")
+			transformerEnv := env.Next()
+			expanded, err := Expand(transformerEnv, v.Form)
+			if err != nil {
+				return nil, err
+			}
+			expression, err := Compile(transformerEnv, expanded)
+			if err != nil {
+				return nil, err
+			}
+			value, err := EvaluateExpressionOnce(expression)
+			if err != nil {
+				return nil, err
+			}
+			procedure, ok := value.(common.Procedure)
+			if !ok {
+				return nil, fmt.Errorf("expand: non-procedure as transformer")
+			}
+			fmt.Printf("%#v", procedure)
+			env = env.Set(v.Name, common.Keyword{procedure})
+			continue
 		case common.DefineForm:
 			definitionNames = append(definitionNames, v.Name)
 			definitionForms = append(definitionForms, v.Form)
@@ -130,7 +149,7 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 		return nil, false, nil
 	}
 	output, err := CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return Apply(escape, keyword.Transformer, syntax)
+		return keyword.Transformer.Call(escape, syntax)
 	})
 	if err != nil {
 		return nil, false, err

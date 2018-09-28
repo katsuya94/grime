@@ -14,6 +14,7 @@ var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{commo
 
 var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("quote"):         common.Keyword{common.Function(transformQuote)},
+	common.Symbol("syntax"):        common.Keyword{common.Function(transformSyntax)},
 	common.Symbol("if"):            common.Keyword{common.Function(transformIf)},
 	common.Symbol("let*"):          common.Keyword{common.Function(transformLetStar)},
 	common.Symbol("begin"):         common.Keyword{common.Function(transformBegin)},
@@ -33,6 +34,7 @@ var Bindings = map[common.Symbol]common.Binding{
 
 var (
 	PatternQuote        = read.MustReadString("(quote datum)")[0]
+	PatternSyntax       = read.MustReadString("(syntax datum)")[0]
 	PatternIf           = read.MustReadString("(if condition then else)")[0]
 	PatternLetStar      = read.MustReadString("(let* ((name init) ...) body ...)")[0]
 	PatternBegin        = read.MustReadString("(begin body ...)")[0]
@@ -51,6 +53,16 @@ func transformQuote(c common.Continuation, syntax ...common.Datum) (common.Evalu
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
 	return common.CallC(c, common.QuoteForm{result[common.Symbol("datum")]})
+}
+
+func transformSyntax(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
+	result, ok, err := util.Match(syntax[0], PatternQuote, nil)
+	if err != nil {
+		return common.ErrorC(err)
+	} else if !ok {
+		return common.ErrorC(fmt.Errorf("syntax: bad syntax"))
+	}
+	return common.CallC(c, common.SyntaxForm{result[common.Symbol("datum")]})
 }
 
 func transformIf(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {

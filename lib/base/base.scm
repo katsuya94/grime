@@ -1,6 +1,7 @@
 (library (base)
   (export
     quote
+    syntax
     if
     let*
     begin

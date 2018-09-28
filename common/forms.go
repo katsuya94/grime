@@ -51,4 +51,8 @@ type QuoteForm struct {
 	Datum Datum
 }
 
+type SyntaxForm struct {
+	Datum Datum
+}
+
 type ExposeForm func(Environment)

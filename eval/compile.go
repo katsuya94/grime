@@ -19,6 +19,8 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, fmt.Errorf("compile: cannot quote %#v", form.Datum)
 		}
 		return expression, nil
+	case common.SyntaxForm:
+		return common.Syntax{form.Datum}, nil
 	case common.BeginForm:
 		expanded, err := ExpandBody(env, form.Forms)
 		if err != nil {

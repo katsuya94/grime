@@ -62,7 +62,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export) (import) 'id)",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				body: []common.Datum{common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), nil}}},
+				body: []common.Datum{common.QuoteForm{common.Symbol("id")}},
 			},
 			"",
 		},

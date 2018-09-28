@@ -7,16 +7,13 @@
 * [ ] Handle hex literals in ids
 * [ ] Improve error messaging
 * [ ] Track error line/col
-* [ ] Replace references to common with .
 * [ ] 100% test coverage
 * [ ] Documentation
 * [ ] Implement Clojure-style keywords
 * [ ] Implement REPL with continuations
 * [ ] Make command line utility for generating bindings for arbitrary go packages
-* [ ] Macro transformers shouldn't be responsible for expanding their own subforms, instead the expander should know how to expand the resulting core forms. This will allow us to pass an isolated environment into native callables
 * [ ] Use consistent coding style with success cases in tail-position
 * [ ] Implement variadic lambdas
-* [ ] resolve references at expand time
 * [ ] Consider removing error handling in match in favor of a panic
 * [ ] Consider adding match result type for easy result retrieval
 

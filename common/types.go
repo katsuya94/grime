@@ -112,6 +112,18 @@ func (p Pair) Debug() string {
 	return fmt.Sprintf("'%v", Write(p))
 }
 
+type Syntax struct {
+	Datum Datum
+}
+
+func (s Syntax) Write() string {
+	return fmt.Sprintf("#<syntax: %v>", Write(s.Datum))
+}
+
+func (s Syntax) Debug() string {
+	return fmt.Sprintf("#'%v", Write(s.Datum))
+}
+
 type Function func(Continuation, ...Datum) (EvaluationResult, error)
 
 func (f Function) Write() string {

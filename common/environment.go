@@ -3,7 +3,7 @@ package common
 type Binding interface{}
 
 type Keyword struct {
-	Transformer Datum
+	Transformer Procedure
 }
 type Variable struct {
 	Value Datum
@@ -11,11 +11,14 @@ type Variable struct {
 
 type Environment struct {
 	bindings map[Symbol]Binding
+	next     *Environment
 }
 
 func NewEnvironment(bindings map[Symbol]Binding) Environment {
-	return Environment{bindings}
+	return Environment{bindings, nil}
 }
+
+var EmptyEnvironment = NewEnvironment(make(map[Symbol]Binding))
 
 func (env Environment) Bindings() map[Symbol]Binding {
 	bindings := make(map[Symbol]Binding, len(env.bindings))
@@ -33,13 +36,17 @@ func (env Environment) Get(name Symbol) Binding {
 func (env Environment) Set(name Symbol, binding Binding) Environment {
 	bindings := env.Bindings()
 	bindings[name] = binding
-	return Environment{bindings}
+	return Environment{bindings, env.next}
 }
 
-func (env Environment) Empty() Environment {
-	return Environment{make(map[Symbol]Binding)}
+func (env Environment) Next() Environment {
+	if env.next == nil {
+		return EmptyEnvironment
+	} else {
+		return *env.next
+	}
 }
 
-func (env Environment) WithBindings(bindings map[Symbol]Binding) Environment {
-	return Environment{bindings}
+func (env Environment) SetNext(next Environment) Environment {
+	return Environment{env.bindings, &next}
 }

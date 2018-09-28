@@ -59,10 +59,17 @@ func TestCompile(t *testing.T) {
 			"",
 			"compile: unbound identifier x",
 		},
+		{
+			"define-syntax",
+			"(define-syntax id (lambda (stx) #''foo)) (id)",
+			"'foo",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			environment := common.NewEnvironment(core.Bindings)
+			environment = environment.SetNext(common.NewEnvironment(core.Bindings))
 			var expected common.Expression
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)

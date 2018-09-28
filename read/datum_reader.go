@@ -43,7 +43,7 @@ func (d *DatumReader) ReadDatum() (common.Datum, error) {
 		return d.readList(BRACKETS)
 	case Quote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("quote"), common.Pair{datum, nil}}, nil
+			return common.QuoteForm{datum}, nil
 		} else {
 			return nil, err
 		}
@@ -67,7 +67,7 @@ func (d *DatumReader) ReadDatum() (common.Datum, error) {
 		}
 	case Syntax:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("syntax"), common.Pair{datum, nil}}, nil
+			return common.SyntaxForm{datum}, nil
 		} else {
 			return nil, err
 		}
