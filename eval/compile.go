@@ -157,6 +157,9 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		return common.Set{variable, expression}, nil
 	case common.DefineForm, common.DefineSyntaxForm, common.LetSyntaxForm:
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
+	case common.ExposeForm:
+		form(env)
+		return common.Void, nil
 	default:
 		expanded, err := Expand(env, form)
 		if err != nil {

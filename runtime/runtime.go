@@ -66,7 +66,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		return nil
 	}
 	if prov.visited {
-		return fmt.Errorf("runtime: import cycle detected when attempting to instantiate %v", nameString(prov.library.name))
+		return fmt.Errorf("runtime: import cycle detected while attempting to instantiate %v", nameString(prov.library.name))
 	}
 	prov.visited = true
 	var (
@@ -99,7 +99,11 @@ func (r *Runtime) instantiate(prov *provision) error {
 			env = env.Set(internal, binding)
 		}
 	}
-	form, err := eval.ExpandBody(env, prov.library.body)
+	var exposed common.Environment
+	expose := common.ExposeForm(func(env common.Environment) {
+		exposed = env
+	})
+	form, err := eval.ExpandBody(env, append(prov.library.body, expose))
 	if err != nil {
 		return err
 	}
@@ -108,7 +112,18 @@ func (r *Runtime) instantiate(prov *provision) error {
 		return err
 	}
 	_, err = eval.EvaluateExpressionOnce(expression)
-	return err
+	if err != nil {
+		return err
+	}
+	prov.bindings = make(map[common.Symbol]common.Binding)
+	for _, exportSpec := range prov.library.exportSpecs {
+		binding := exposed.Get(exportSpec.internal)
+		if binding == nil {
+			return fmt.Errorf("runtime: can't export unbound identifier %v", exportSpec.internal)
+		}
+		prov.bindings[exportSpec.external] = binding
+	}
+	return nil
 }
 
 func nameString(name []common.Symbol) string {
@@ -130,6 +145,6 @@ type provision struct {
 }
 
 type identifierBinding struct {
-	external common.Symbol
 	internal common.Symbol
+	external common.Symbol
 }

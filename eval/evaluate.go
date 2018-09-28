@@ -57,6 +57,9 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 	case common.Reference:
 		return common.CallC(c, v.Variable.Value)
 	default:
+		if v == common.Void {
+			return common.CallC(c, common.Void)
+		}
 		return nil, fmt.Errorf("evaluate: unhandled expression %#v", v)
 	}
 }

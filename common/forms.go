@@ -50,3 +50,5 @@ type ReferenceForm struct {
 type QuoteForm struct {
 	Datum Datum
 }
+
+type ExposeForm func(Environment)

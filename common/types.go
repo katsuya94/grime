@@ -28,6 +28,10 @@ func (voidType) Write() string {
 	return "#<void>"
 }
 
+func (v voidType) Debug() string {
+	return Write(v)
+}
+
 var Void = &voidType{}
 
 type Boolean bool
