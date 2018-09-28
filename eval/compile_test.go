@@ -62,10 +62,7 @@ func TestCompile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			environment := common.NewEnvironment(
-				core.Bindings,
-				nil,
-			)
+			environment := common.NewEnvironment(core.Bindings)
 			var expected common.Expression
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)

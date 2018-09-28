@@ -6,56 +6,56 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func EvaluateExpression(env common.Environment, expression common.Expression) (common.EvaluationResult, error) {
+func EvaluateExpression(c common.Continuation, expression common.Expression) (common.EvaluationResult, error) {
 	switch v := expression.(type) {
 	case nil:
-		return common.CallC(env, nil)
+		return common.CallC(c, nil)
 	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.Lambda:
-		return common.CallC(env, v.(common.Datum))
+		return common.CallC(c, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(
-			env.SetContinuation(applicationProcedureEvaluated{
-				env,
+			applicationProcedureEvaluated{
+				c,
 				v.Arguments,
-			}),
+			},
 			v.Procedure,
 		)
 	case common.If:
 		return common.EvalC(
-			env.SetContinuation(ifConditionEvaluated{
-				env,
+			ifConditionEvaluated{
+				c,
 				v.Then,
 				v.Else,
-			}),
+			},
 			v.Condition,
 		)
 	case common.Let:
 		return common.EvalC(
-			env.SetContinuation(letInitEvaluated{
-				env,
+			letInitEvaluated{
+				c,
 				v.Variable,
 				v.Body,
-			}),
+			},
 			v.Init,
 		)
 	case common.Begin:
 		return common.EvalC(
-			env.SetContinuation(beginFirstEvaluated{
-				env,
+			beginFirstEvaluated{
+				c,
 				v.Expressions[1:],
-			}),
+			},
 			v.Expressions[0],
 		)
 	case common.Set:
 		return common.EvalC(
-			env.SetContinuation(setExpressionEvaluated{
-				env,
+			setExpressionEvaluated{
+				c,
 				v.Variable,
-			}),
+			},
 			v.Expression,
 		)
 	case common.Reference:
-		return common.CallC(env, v.Variable.Value)
+		return common.CallC(c, v.Variable.Value)
 	default:
 		return nil, fmt.Errorf("evaluate: unhandled expression %#v", v)
 	}
@@ -77,7 +77,7 @@ func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.Ev
 	for {
 		switch v := evaluationResult.(type) {
 		case common.FurtherEvaluation:
-			evaluationResult, err = EvaluateExpression(v.Environment, v.Expression)
+			evaluationResult, err = EvaluateExpression(v.Continuation, v.Expression)
 			if err != nil {
 				return nil, err
 			}
@@ -95,8 +95,8 @@ func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.Ev
 	}
 }
 
-func EvaluateExpressionOnce(env common.Environment, expression common.Expression) (common.Datum, error) {
+func EvaluateExpressionOnce(expression common.Expression) (common.Datum, error) {
 	return CallWithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return EvaluateExpression(env.SetContinuation(escape), expression)
+		return EvaluateExpression(escape, expression)
 	})
 }

@@ -85,10 +85,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	env := common.NewEnvironment(
-		make(map[common.Symbol]common.Binding),
-		nil,
-	)
+	env := common.NewEnvironment(make(map[common.Symbol]common.Binding))
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
@@ -110,7 +107,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	if err != nil {
 		return err
 	}
-	_, err = eval.EvaluateExpressionOnce(env, expression)
+	_, err = eval.EvaluateExpressionOnce(expression)
 	return err
 }
 

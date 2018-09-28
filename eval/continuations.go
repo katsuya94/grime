@@ -7,110 +7,110 @@ import (
 )
 
 type applicationProcedureEvaluated struct {
-	env       common.Environment
-	arguments []common.Expression
+	continuation common.Continuation
+	arguments    []common.Expression
 }
 
 func (c applicationProcedureEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return partialEvaluationResult(c.env, d, nil, c.arguments)
+	return partialEvaluationResult(c.continuation, d, nil, c.arguments)
 }
 
 type applicationArgumentEvaluated struct {
-	env        common.Environment
-	procedureV common.Datum
-	argumentsV []common.Datum
-	arguments  []common.Expression
+	continuation common.Continuation
+	procedureV   common.Datum
+	argumentsV   []common.Datum
+	arguments    []common.Expression
 }
 
 func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	return partialEvaluationResult(
-		c.env,
+		c.continuation,
 		c.procedureV,
 		append(c.argumentsV, d),
 		c.arguments,
 	)
 }
 
-func partialEvaluationResult(env common.Environment, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Expression) (common.EvaluationResult, error) {
+func partialEvaluationResult(c common.Continuation, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Expression) (common.EvaluationResult, error) {
 	if len(arguments) == 0 {
-		return Apply(env, procedureV, argumentsV...)
+		return Apply(c, procedureV, argumentsV...)
 	}
 	return common.EvalC(
-		env.SetContinuation(applicationArgumentEvaluated{
-			env,
+		applicationArgumentEvaluated{
+			c,
 			procedureV,
 			argumentsV,
 			arguments[1:],
-		}),
+		},
 		arguments[0],
 	)
 }
 
-func Apply(env common.Environment, procedureV common.Datum, argumentsV ...common.Datum) (common.EvaluationResult, error) {
+func Apply(c common.Continuation, procedureV common.Datum, argumentsV ...common.Datum) (common.EvaluationResult, error) {
 	p, ok := procedureV.(common.Procedure)
 	if !ok {
 		return nil, fmt.Errorf("application: non-procedure in procedure position")
 	}
-	return p.Call(env, argumentsV...)
+	return p.Call(c, argumentsV...)
 }
 
 type beginFirstEvaluated struct {
-	env         common.Environment
-	expressions []common.Expression
+	continuation common.Continuation
+	expressions  []common.Expression
 }
 
 func (c beginFirstEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if len(c.expressions) == 0 {
-		return common.CallC(c.env, d)
+		return common.CallC(c.continuation, d)
 	}
 	return common.EvalC(
-		c.env.SetContinuation(beginFirstEvaluated{c.env, c.expressions[1:]}),
+		beginFirstEvaluated{c.continuation, c.expressions[1:]},
 		c.expressions[0],
 	)
 }
 
 type ifConditionEvaluated struct {
-	env       common.Environment
-	then      common.Expression
-	otherwise common.Expression
+	continuation common.Continuation
+	then         common.Expression
+	otherwise    common.Expression
 }
 
 func (c ifConditionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if d == common.Boolean(false) {
-		return common.EvalC(c.env, c.otherwise)
+		return common.EvalC(c.continuation, c.otherwise)
 	} else {
-		return common.EvalC(c.env, c.then)
+		return common.EvalC(c.continuation, c.then)
 	}
 }
 
 type letInitEvaluated struct {
-	env      common.Environment
-	variable *common.Variable
-	body     common.Expression
+	continuation common.Continuation
+	variable     *common.Variable
+	body         common.Expression
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	(*c.variable).Value = d
 	return common.EvalC(
-		c.env.SetContinuation(letBodyEvaluated{c.env}),
+		letBodyEvaluated{c.continuation},
 		c.body,
 	)
 }
 
 type letBodyEvaluated struct {
-	env common.Environment
+	continuation common.Continuation
 }
 
 func (c letBodyEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	return common.CallC(c.env, d)
+	return common.CallC(c.continuation, d)
 }
 
 type setExpressionEvaluated struct {
-	env      common.Environment
-	variable *common.Variable
+	continuation common.Continuation
+	variable     *common.Variable
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	(*c.variable).Value = d
-	return common.CallC(c.env, common.Void)
+	return common.CallC(c.continuation, common.Void)
 }

@@ -3,8 +3,8 @@ package common
 type EvaluationResult interface{}
 
 type FurtherEvaluation struct {
-	Environment Environment
-	Expression  Expression
+	Continuation Continuation
+	Expression   Expression
 }
 
 type ContinuationCall struct {
@@ -12,12 +12,12 @@ type ContinuationCall struct {
 	Value        Datum
 }
 
-func EvalC(env Environment, expression Expression) (EvaluationResult, error) {
-	return FurtherEvaluation{env, expression}, nil
+func EvalC(c Continuation, expression Expression) (EvaluationResult, error) {
+	return FurtherEvaluation{c, expression}, nil
 }
 
-func CallC(env Environment, value Datum) (EvaluationResult, error) {
-	return ContinuationCall{env.Continuation(), value}, nil
+func CallC(c Continuation, value Datum) (EvaluationResult, error) {
+	return ContinuationCall{c, value}, nil
 }
 
 func ErrorC(err error) (EvaluationResult, error) {

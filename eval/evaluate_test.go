@@ -191,10 +191,7 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			environment := common.NewEnvironment(
-				core.Bindings,
-				nil,
-			)
+			environment := common.NewEnvironment(core.Bindings)
 			form, err := ExpandBody(environment, body)
 			if err != nil {
 				t.Fatal(err)
@@ -203,7 +200,7 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := EvaluateExpressionOnce(environment, expression)
+			actual, err := EvaluateExpressionOnce(expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

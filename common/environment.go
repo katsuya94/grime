@@ -10,12 +10,11 @@ type Variable struct {
 }
 
 type Environment struct {
-	bindings     map[Symbol]Binding
-	continuation Continuation
+	bindings map[Symbol]Binding
 }
 
-func NewEnvironment(bindings map[Symbol]Binding, continuation Continuation) Environment {
-	return Environment{bindings, continuation}
+func NewEnvironment(bindings map[Symbol]Binding) Environment {
+	return Environment{bindings}
 }
 
 func (env Environment) Bindings() map[Symbol]Binding {
@@ -34,21 +33,13 @@ func (env Environment) Get(name Symbol) Binding {
 func (env Environment) Set(name Symbol, binding Binding) Environment {
 	bindings := env.Bindings()
 	bindings[name] = binding
-	return Environment{bindings, env.continuation}
+	return Environment{bindings}
 }
 
 func (env Environment) Empty() Environment {
-	return Environment{make(map[Symbol]Binding), env.continuation}
+	return Environment{make(map[Symbol]Binding)}
 }
 
 func (env Environment) WithBindings(bindings map[Symbol]Binding) Environment {
-	return Environment{bindings, env.continuation}
-}
-
-func (env Environment) Continuation() Continuation {
-	return env.continuation
-}
-
-func (env Environment) SetContinuation(c Continuation) Environment {
-	return Environment{env.bindings, c}
+	return Environment{bindings}
 }

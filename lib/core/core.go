@@ -41,17 +41,17 @@ var (
 	PatternSet          = read.MustReadString("(set! name expression)")[0]
 )
 
-func transformQuote(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformQuote(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternQuote, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
-	return common.CallC(env, common.QuoteForm{result[common.Symbol("datum")]})
+	return common.CallC(c, common.QuoteForm{result[common.Symbol("datum")]})
 }
 
-func transformIf(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformIf(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternIf, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -63,10 +63,10 @@ func transformIf(env common.Environment, syntax ...common.Datum) (common.Evaluat
 		result[common.Symbol("then")],
 		result[common.Symbol("else")],
 	}
-	return common.CallC(env, form)
+	return common.CallC(c, form)
 }
 
-func transformLetStar(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformLetStar(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternLetStar, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -93,10 +93,10 @@ func transformLetStar(env common.Environment, syntax ...common.Datum) (common.Ev
 	for i := len(names) - 1; i >= 0; i-- {
 		form = common.LetForm{names[i], inits[i], form}
 	}
-	return common.CallC(env, form)
+	return common.CallC(c, form)
 }
 
-func transformBegin(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformBegin(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternBegin, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -107,10 +107,10 @@ func transformBegin(env common.Environment, syntax ...common.Datum) (common.Eval
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.CallC(env, common.BeginForm{forms})
+	return common.CallC(c, common.BeginForm{forms})
 }
 
-func transformLambda(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformLambda(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternLambda, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -121,10 +121,10 @@ func transformLambda(env common.Environment, syntax ...common.Datum) (common.Eva
 	if err != nil {
 		return common.ErrorC(err)
 	}
-	return common.CallC(env, form)
+	return common.CallC(c, form)
 }
 
-func transformDefine(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformDefine(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	var (
 		name common.Symbol
 		form common.Datum
@@ -154,7 +154,7 @@ func transformDefine(env common.Environment, syntax ...common.Datum) (common.Eva
 	} else {
 		return common.ErrorC(fmt.Errorf("define: bad syntax"))
 	}
-	return common.CallC(env, common.DefineForm{name, form})
+	return common.CallC(c, common.DefineForm{name, form})
 }
 
 func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaForm, error) {
@@ -173,7 +173,7 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 	return common.LambdaForm{formals, forms}, nil
 }
 
-func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformDefineSyntax(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternDefineSyntax, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -185,10 +185,10 @@ func transformDefineSyntax(env common.Environment, syntax ...common.Datum) (comm
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
 	form := result[common.Symbol("value")]
-	return common.CallC(env, common.DefineSyntaxForm{name, form})
+	return common.CallC(c, common.DefineSyntaxForm{name, form})
 }
 
-func transformSet(env common.Environment, syntax ...common.Datum) (common.EvaluationResult, error) {
+func transformSet(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.Match(syntax[0], PatternSet, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -200,17 +200,17 @@ func transformSet(env common.Environment, syntax ...common.Datum) (common.Evalua
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
 	form := result[common.Symbol("expression")]
-	return common.CallC(env, common.SetForm{name, form})
+	return common.CallC(c, common.SetForm{name, form})
 }
 
-func cons(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func cons(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("cons: wrong arity"))
 	}
-	return common.CallC(env, common.Pair{args[0], args[1]})
+	return common.CallC(c, common.Pair{args[0], args[1]})
 }
 
-func car(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func car(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("car: wrong arity"))
 	}
@@ -218,10 +218,10 @@ func car(env common.Environment, args ...common.Datum) (common.EvaluationResult,
 	if !ok {
 		return common.ErrorC(fmt.Errorf("car: expected pair"))
 	}
-	return common.CallC(env, pair.First)
+	return common.CallC(c, pair.First)
 }
 
-func cdr(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func cdr(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("cdr: wrong arity"))
 	}
@@ -229,27 +229,27 @@ func cdr(env common.Environment, args ...common.Datum) (common.EvaluationResult,
 	if !ok {
 		return common.ErrorC(fmt.Errorf("cdr: expected pair"))
 	}
-	return common.CallC(env, pair.Rest)
+	return common.CallC(c, pair.Rest)
 }
 
-func null(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func null(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("null?: wrong arity"))
 	}
-	return common.CallC(env, common.Boolean(args[0] == nil))
+	return common.CallC(c, common.Boolean(args[0] == nil))
 }
 
-func write(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func write(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("write: wrong arity"))
 	}
 	fmt.Print(common.Write(args[0]))
-	return common.CallC(env, common.Void)
+	return common.CallC(c, common.Void)
 }
 
-func callWithCurrentContinuation(env common.Environment, args ...common.Datum) (common.EvaluationResult, error) {
+func callWithCurrentContinuation(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("call/cc: wrong arity"))
 	}
-	return eval.Apply(env, args[0], common.ContinuationProcedure{env.Continuation()})
+	return eval.Apply(c, args[0], common.ContinuationProcedure{c})
 }

@@ -19,7 +19,7 @@ type Expression interface {
 
 type Procedure interface {
 	Datum
-	Call(Environment, ...Datum) (EvaluationResult, error)
+	Call(Continuation, ...Datum) (EvaluationResult, error)
 }
 
 type voidType struct{}
@@ -108,7 +108,7 @@ func (p Pair) Debug() string {
 	return fmt.Sprintf("'%v", Write(p))
 }
 
-type Function func(Environment, ...Datum) (EvaluationResult, error)
+type Function func(Continuation, ...Datum) (EvaluationResult, error)
 
 func (f Function) Write() string {
 	var i interface{} = f
@@ -116,8 +116,8 @@ func (f Function) Write() string {
 	return fmt.Sprintf("#<func: %v>", name)
 }
 
-func (f Function) Call(env Environment, args ...Datum) (EvaluationResult, error) {
-	return f(env.Empty(), args...)
+func (f Function) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
+	return f(c, args...)
 }
 
 type Lambda struct {
@@ -137,14 +137,14 @@ func (l Lambda) Debug() string {
 	return fmt.Sprintf("(lambda (%v) %v)", strings.Join(formals, " "), l.Body.Debug())
 }
 
-func (l Lambda) Call(env Environment, args ...Datum) (EvaluationResult, error) {
+func (l Lambda) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
 	if len(args) != len(l.Variables) {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for lambda expecting %v arguments", len(args), len(l.Variables)))
 	}
 	for i := range l.Variables {
 		(*l.Variables[i]).Value = args[i]
 	}
-	return EvalC(env, l.Body)
+	return EvalC(c, l.Body)
 }
 
 type ContinuationProcedure struct {
@@ -155,7 +155,7 @@ func (ContinuationProcedure) Write() string {
 	return "#<continuation>"
 }
 
-func (c ContinuationProcedure) Call(env Environment, args ...Datum) (EvaluationResult, error) {
+func (c ContinuationProcedure) Call(_ Continuation, args ...Datum) (EvaluationResult, error) {
 	if len(args) != 1 {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for continuation", len(args)))
 	}
