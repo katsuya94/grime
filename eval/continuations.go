@@ -84,14 +84,15 @@ func (c ifConditionEvaluated) Call(d common.Datum) (common.EvaluationResult, err
 }
 
 type letInitEvaluated struct {
-	env  common.Environment
-	name common.Symbol
-	body common.Expression
+	env      common.Environment
+	variable *common.Variable
+	body     common.Expression
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	(*c.variable).Value = d
 	return common.EvalC(
-		c.env.Set(c.name, &common.Variable{d}).SetContinuation(letBodyEvaluated{c.env}),
+		c.env.SetContinuation(letBodyEvaluated{c.env}),
 		c.body,
 	)
 }

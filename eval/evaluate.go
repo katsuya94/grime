@@ -10,7 +10,7 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 	switch v := expression.(type) {
 	case nil:
 		return common.CallC(env, nil)
-	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair:
+	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.Lambda:
 		return common.CallC(env, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(
@@ -33,7 +33,7 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 		return common.EvalC(
 			env.SetContinuation(letInitEvaluated{
 				env,
-				v.Name,
+				v.Variable,
 				v.Body,
 			}),
 			v.Init,
@@ -46,37 +46,16 @@ func EvaluateExpression(env common.Environment, expression common.Expression) (c
 			}),
 			v.Expressions[0],
 		)
-	case common.Lambda:
-		return common.CallC(
-			env,
-			common.Closure{v, env.Bindings()},
-		)
 	case common.Set:
-		binding := env.Get(v.Name)
-		if binding == nil {
-			return nil, fmt.Errorf("evaluate: unbound identifier %v", v.Name)
-		}
-		variable, ok := binding.(*common.Variable)
-		if !ok {
-			return nil, fmt.Errorf("evaluate: unexpected non-variable binding in expression context: %#v", binding)
-		}
 		return common.EvalC(
 			env.SetContinuation(setExpressionEvaluated{
 				env,
-				variable,
+				v.Variable,
 			}),
 			v.Expression,
 		)
 	case common.Reference:
-		binding := env.Get(v.Name)
-		if binding == nil {
-			return nil, fmt.Errorf("evaluate: unbound identifier %v", v.Name)
-		}
-		variable, ok := binding.(*common.Variable)
-		if !ok {
-			return nil, fmt.Errorf("evaluate: unexpected non-variable binding in expression context: %#v", binding)
-		}
-		return common.CallC(env, variable.Value)
+		return common.CallC(env, v.Variable.Value)
 	default:
 		return nil, fmt.Errorf("evaluate: unhandled expression %#v", v)
 	}

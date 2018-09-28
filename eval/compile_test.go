@@ -47,6 +47,18 @@ func TestCompile(t *testing.T) {
 			"",
 			"expand: begin: empty in expression context",
 		},
+		{
+			"lambda does not leak enclosing context",
+			"((let* ((x 'foo)) (lambda () x))) x",
+			"",
+			"compile: unbound identifier x",
+		},
+		{
+			"lambda does not leak arguments",
+			"((lambda (x) x) 'foo) x",
+			"",
+			"compile: unbound identifier x",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

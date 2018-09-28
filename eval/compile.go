@@ -78,6 +78,8 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		if err != nil {
 			return nil, err
 		}
+		variable := &common.Variable{common.Void}
+		env = env.Set(form.Name, variable)
 		bodyExpanded, err := Expand(env, form.Body)
 		if err != nil {
 			return nil, err
@@ -86,7 +88,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		if err != nil {
 			return nil, err
 		}
-		return common.Let{form.Name, initExpression, bodyExpression}, nil
+		return common.Let{variable, initExpression, bodyExpression}, nil
 	case common.ApplicationForm:
 		procedureExpanded, err := Expand(env, form.Procedure)
 		if err != nil {
@@ -110,6 +112,12 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return common.Application{procedureExpression, argumentExpressions}, nil
 	case common.LambdaForm:
+		var variables []*common.Variable
+		for _, formal := range form.Formals {
+			variable := &common.Variable{common.Void}
+			env = env.Set(formal, variable)
+			variables = append(variables, variable)
+		}
 		expanded, err := ExpandBody(env, form.Body)
 		if err != nil {
 			return nil, err
@@ -118,10 +126,26 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		if err != nil {
 			return nil, err
 		}
-		return common.Lambda{form.Formals, expression}, nil
+		return common.Lambda{variables, expression}, nil
 	case common.ReferenceForm:
-		return common.Reference{form.Name}, nil
+		binding := env.Get(form.Name)
+		if binding == nil {
+			return nil, fmt.Errorf("compile: unbound identifier %v", form.Name)
+		}
+		variable, ok := binding.(*common.Variable)
+		if !ok {
+			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", form.Name)
+		}
+		return common.Reference{variable}, nil
 	case common.SetForm:
+		binding := env.Get(form.Name)
+		if binding == nil {
+			return nil, fmt.Errorf("compile: unbound identifier %v", form.Name)
+		}
+		variable, ok := binding.(*common.Variable)
+		if !ok {
+			return nil, fmt.Errorf("compile: non-variable identifier %v in set!", form.Name)
+		}
 		expanded, err := Expand(env, form.Form)
 		if err != nil {
 			return nil, err
@@ -130,7 +154,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		if err != nil {
 			return nil, err
 		}
-		return common.Set{form.Name, expression}, nil
+		return common.Set{variable, expression}, nil
 	case common.DefineForm, common.DefineSyntaxForm, common.LetSyntaxForm:
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	default:

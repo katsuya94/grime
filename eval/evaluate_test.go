@@ -150,18 +150,6 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 		},
 		{
-			"lambda does not leak enclosing context",
-			"((let* ((x 'foo)) (lambda () x))) x",
-			"",
-			"evaluate: unbound identifier x",
-		},
-		{
-			"lambda does not leak arguments",
-			"((lambda (x) x) 'foo) x",
-			"",
-			"evaluate: unbound identifier x",
-		},
-		{
 			"call/cc used to escape early",
 			"(call/cc (lambda (c) (c 'foo) 'bar))",
 			"foo",

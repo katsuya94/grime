@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 )
 
 type Datum interface{}
@@ -119,24 +120,31 @@ func (f Function) Call(env Environment, args ...Datum) (EvaluationResult, error)
 	return f(env.Empty(), args...)
 }
 
-type Closure struct {
-	Lambda
-	Bindings map[Symbol]Binding
+type Lambda struct {
+	Variables []*Variable
+	Body      Expression
 }
 
-func (Closure) Write() string {
-	return "#<closure>"
+func (Lambda) Write() string {
+	return "#<lambda>"
 }
 
-func (c Closure) Call(env Environment, args ...Datum) (EvaluationResult, error) {
-	if len(args) != len(c.Formals) {
-		return ErrorC(fmt.Errorf("wrong number of arguments %v for closure expecting %v arguments", len(args), len(c.Formals)))
+func (l Lambda) Debug() string {
+	var formals []string
+	for _, variable := range l.Variables {
+		formals = append(formals, fmt.Sprintf("%v", variable))
 	}
-	env = env.WithBindings(c.Bindings)
-	for i := range c.Formals {
-		env = env.Set(c.Formals[i], &Variable{args[i]})
+	return fmt.Sprintf("(lambda (%v) %v)", strings.Join(formals, " "), l.Body.Debug())
+}
+
+func (l Lambda) Call(env Environment, args ...Datum) (EvaluationResult, error) {
+	if len(args) != len(l.Variables) {
+		return ErrorC(fmt.Errorf("wrong number of arguments %v for lambda expecting %v arguments", len(args), len(l.Variables)))
 	}
-	return EvalC(env, c.Body)
+	for i := range l.Variables {
+		(*l.Variables[i]).Value = args[i]
+	}
+	return EvalC(env, l.Body)
 }
 
 type ContinuationProcedure struct {
@@ -178,13 +186,13 @@ func (i If) Debug() string {
 }
 
 type Let struct {
-	Name Symbol
-	Init Expression
-	Body Expression
+	Variable *Variable
+	Init     Expression
+	Body     Expression
 }
 
 func (l Let) Debug() string {
-	return fmt.Sprintf("(let ((%v %v)) %v)", l.Name, l.Init.Debug(), l.Body.Debug())
+	return fmt.Sprintf("(let ((%v %v)) %v)", l.Variable, l.Init.Debug(), l.Body.Debug())
 }
 
 type Begin struct {
@@ -199,36 +207,19 @@ func (b Begin) Debug() string {
 	return fmt.Sprintf("%v)", s)
 }
 
-type Lambda struct {
-	Formals []Symbol
-	Body    Expression
-}
-
-func (l Lambda) Debug() string {
-	s := "(lambda ("
-	for i, formal := range l.Formals {
-		if i == 0 {
-			s = fmt.Sprintf("%v%v", s, formal)
-		} else {
-			s = fmt.Sprintf("%v %v", s, formal)
-		}
-	}
-	return fmt.Sprintf("%v) %v)", s, l.Body.Debug())
-}
-
 type Set struct {
-	Name       Symbol
+	Variable   *Variable
 	Expression Expression
 }
 
 func (s Set) Debug() string {
-	return fmt.Sprintf("(set! %v %v)", s.Name, s.Expression.Debug())
+	return fmt.Sprintf("(set! %v %v)", s.Variable, s.Expression.Debug())
 }
 
 type Reference struct {
-	Name Symbol
+	Variable *Variable
 }
 
 func (r Reference) Debug() string {
-	return string(r.Name)
+	return fmt.Sprintf("%v", r.Variable)
 }
