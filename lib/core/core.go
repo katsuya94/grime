@@ -27,6 +27,8 @@ var Bindings = map[common.Symbol]common.Binding{
 	common.Symbol("null?"):         &common.Variable{common.Function(null)},
 	common.Symbol("write"):         &common.Variable{common.Function(write)},
 	common.Symbol("call/cc"):       &common.Variable{common.Function(callWithCurrentContinuation)},
+	common.Symbol("error"):         &common.Variable{common.Function(err)},
+	common.Symbol("eqv?"):          &common.Variable{common.Function(eqv)},
 }
 
 var (
@@ -252,4 +254,28 @@ func callWithCurrentContinuation(c common.Continuation, args ...common.Datum) (c
 		return common.ErrorC(fmt.Errorf("call/cc: wrong arity"))
 	}
 	return eval.Apply(c, args[0], common.ContinuationProcedure{c})
+}
+
+type stringError string
+
+func (s stringError) Error() string {
+	return string(s)
+}
+
+func err(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("error: wrong arity"))
+	}
+	message, ok := args[0].(common.String)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("error: expected string"))
+	}
+	return common.ErrorC(stringError(message))
+}
+
+func eqv(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 2 {
+		return common.ErrorC(fmt.Errorf("eqv?: wrong arity"))
+	}
+	return common.CallC(c, common.Boolean(args[0] == args[1]))
 }

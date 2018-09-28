@@ -2,9 +2,10 @@ package read
 
 import (
 	"bytes"
-	"github.com/katsuya94/grime/common"
 	"io"
 	"strings"
+
+	"github.com/katsuya94/grime/common"
 )
 
 const (
@@ -183,6 +184,14 @@ func Read(r io.Reader) ([]common.Datum, error) {
 			return nil, err
 		}
 	}
+}
+
+func MustRead(r io.Reader) []common.Datum {
+	data, err := Read(r)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
 
 func ReadString(s string) ([]common.Datum, error) {

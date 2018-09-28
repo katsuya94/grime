@@ -177,6 +177,12 @@ func TestEvaluateExpression(t *testing.T) {
 			"(baz bar foo)",
 			"",
 		},
+		{
+			"error raises errors",
+			`(error "well that's too bad")`,
+			"",
+			"well that's too bad",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

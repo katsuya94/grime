@@ -83,6 +83,14 @@ func NewLibrary(source common.Datum) (*Library, error) {
 	return &library, nil
 }
 
+func MustNewLibrary(source common.Datum) *Library {
+	library, err := NewLibrary(source)
+	if err != nil {
+		panic(err)
+	}
+	return library
+}
+
 func NewEmptyLibrary(name []common.Symbol, version []int) (*Library, error) {
 	var library Library
 	library.name = name
