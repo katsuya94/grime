@@ -8,73 +8,6 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-func ExpandBody(env common.Environment, forms []common.Datum) (common.Datum, error) {
-	var (
-		i               int
-		definitionNames []common.Symbol
-		definitionForms []common.Datum
-	)
-	// Expand and handle definitions, deferring expansion of variable definitions.
-	for i = 0; i < len(forms); i++ {
-		form, err := Expand(env, forms[i])
-		if err != nil {
-			return nil, err
-		}
-		switch v := form.(type) {
-		case common.DefineSyntaxForm:
-			transformerEnv := env.Next()
-			expanded, err := Expand(transformerEnv, v.Form)
-			if err != nil {
-				return nil, err
-			}
-			expression, err := Compile(transformerEnv, expanded)
-			if err != nil {
-				return nil, err
-			}
-			value, err := EvaluateExpressionOnce(expression)
-			if err != nil {
-				return nil, err
-			}
-			procedure, ok := value.(common.Procedure)
-			if !ok {
-				return nil, fmt.Errorf("expand: non-procedure as transformer")
-			}
-			fmt.Printf("%#v", procedure)
-			env = env.Set(v.Name, common.Keyword{procedure})
-			continue
-		case common.DefineForm:
-			definitionNames = append(definitionNames, v.Name)
-			definitionForms = append(definitionForms, v.Form)
-			continue
-		case common.BeginForm:
-			if len(forms) == i+1 {
-				break
-			}
-			following := forms[i+1:]
-			forms = forms[0:i]
-			for _, form := range v.Forms {
-				forms = append(forms, form)
-			}
-			forms = append(forms, following...)
-			i--
-			continue
-		case common.LetSyntaxForm:
-			return nil, fmt.Errorf("expand: let-syntax not implemented")
-		}
-		break
-	}
-	// Create a begin form with the remaining expressions.
-	if len(forms[i:]) == 0 {
-		return nil, fmt.Errorf("expand: begin: empty in expression context")
-	}
-	var form common.Datum = common.BeginForm{forms[i:]}
-	// Wrap it in a letrec* with the definitions.
-	for i := len(definitionNames) - 1; i >= 0; i-- {
-		form = common.LetForm{definitionNames[i], definitionForms[i], form}
-	}
-	return form, nil
-}
-
 var (
 	PatternMacroUseList                = read.MustReadString("(keyword _ ...)")[0]
 	PatternMacroUseImproperList        = read.MustReadString("(keyword _ ... . _)")[0]
@@ -83,49 +16,41 @@ var (
 	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
 )
 
-func Expand(env common.Environment, syntax common.Datum) (common.Datum, error) {
+func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); err != nil {
-		return nil, err
-	} else if ok {
-		return form, nil
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); ok || err != nil {
+		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); err != nil {
-		return nil, err
-	} else if ok {
-		return form, nil
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); ok || err != nil {
+		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); err != nil {
-		return nil, err
-	} else if ok {
-		return form, nil
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); ok || err != nil {
+		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); err != nil {
-		return nil, err
-	} else if ok {
-		return form, nil
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); ok || err != nil {
+		return form, ok, err
 	}
 	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
-		return nil, err
+		return nil, false, err
 	} else if ok {
 		procedure, ok := result[common.Symbol("procedure")].(common.Datum)
 		if !ok {
-			return nil, fmt.Errorf("application: bad syntax")
+			return nil, false, fmt.Errorf("application: bad syntax")
 		}
 		var arguments []common.Datum
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
 			if argument, ok := argument.(common.Datum); !ok {
-				return nil, fmt.Errorf("application: bad syntax")
+				return nil, false, fmt.Errorf("application: bad syntax")
 			} else {
 				arguments = append(arguments, argument)
 			}
 		}
-		return common.ApplicationForm{procedure, arguments}, nil
+		return common.ApplicationForm{procedure, arguments}, true, nil
 	}
 	if name, ok := syntax.(common.Symbol); ok {
-		return common.ReferenceForm{name}, nil
+		return common.ReferenceForm{name}, true, nil
 	}
-	return syntax, nil
+	return nil, false, nil
 }
 
 func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
@@ -155,4 +80,16 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 		return nil, false, err
 	}
 	return output, true, nil
+}
+
+func ExpandCompletely(env common.Environment, syntax common.Datum) (common.Datum, error) {
+	for {
+		s, ok, err := Expand(env, syntax)
+		if err != nil {
+			return nil, err
+		} else if !ok {
+			return syntax, nil
+		}
+		syntax = s
+	}
 }

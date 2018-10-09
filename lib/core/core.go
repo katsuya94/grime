@@ -184,7 +184,8 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.LambdaForm{formals, forms}, nil
+	var body common.Datum = common.BeginForm{forms}
+	return common.LambdaForm{formals, body}, nil
 }
 
 func transformDefineSyntax(c common.Continuation, syntax ...common.Datum) (common.EvaluationResult, error) {

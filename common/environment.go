@@ -9,6 +9,8 @@ type Variable struct {
 	Value Datum
 }
 
+type Undeferred struct{}
+
 type Environment struct {
 	bindings map[Symbol]Binding
 	next     *Environment
