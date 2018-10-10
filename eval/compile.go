@@ -9,7 +9,6 @@ import (
 func CompileBody(env common.Environment, forms []common.Datum) (common.Expression, map[common.Symbol]common.Binding, error) {
 	var (
 		i                   int
-		definitionNames     []common.Symbol
 		definitionVariables []*common.Variable
 		definitionForms     []common.Datum
 	)
@@ -32,15 +31,22 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				}
 				procedure, ok := value.(common.Procedure)
 				if !ok {
-					return nil, nil, fmt.Errorf("expand: non-procedure as transformer")
+					return nil, nil, fmt.Errorf("compile: define-syntax: bad syntax")
 				}
-				env = env.Set(form.Name, common.Keyword{procedure})
+				env, err = env.Define(form.Name, nil, common.Keyword{procedure})
+				if err != nil {
+					return nil, nil, err
+				}
 				processed = true
 			case common.DefineForm:
-				variable := &common.Undeferred{}
-				env = env.Set(form.Name, variable)
+				variable := &common.Variable{common.Void, false}
 				definitionVariables = append(definitionVariables, variable)
 				definitionForms = append(definitionForms, form.Form)
+				var err error
+				env, err = env.Define(form.Name, nil, variable)
+				if err != nil {
+					return nil, nil, err
+				}
 				processed = true
 			case common.BeginForm:
 				if len(forms) == i+1 {
@@ -55,7 +61,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				i--
 				processed = true
 			case common.LetSyntaxForm:
-				return nil, nil, fmt.Errorf("expand: let-syntax not implemented")
+				return nil, nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
 				s, ok, err := Expand(env, form)
 				if err != nil {
@@ -72,16 +78,19 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 			break
 		}
 	}
-	// Compile set! expressions for the definitions.
+	// Compile define expressions for the definitions.
 	var expressions []common.Expression
 	for i := range definitionVariables {
 		expression, err := Compile(env, definitionForms[i])
 		if err != nil {
 			return nil, nil, err
 		}
-		expressions = append(expressions, common.Set{definitionVariables[i], expression})
+		expressions = append(expressions, common.Define{definitionVariables[i], expression})
 	}
-	// Create a begin form with the remaining expressions.
+	// Compile the remaining expressions.
+	if len(forms[i:]) == 0 {
+		return nil, nil, fmt.Errorf("compile: no expressions in body")
+	}
 	for _, form := range forms[i:] {
 		expression, err := Compile(env, form)
 		if err != nil {
@@ -89,16 +98,13 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 		}
 		expressions = append(expressions, expression)
 	}
-	if len(expressions) == 0 {
-		return nil, nil, fmt.Errorf("compile: begin: empty in expression context")
-	}
 	var expression common.Expression
 	if len(expressions) > 1 {
 		expression = expressions[0]
 	} else {
 		expression = common.Begin{expressions}
 	}
-	return expression, env.Bindings(), nil
+	return expression, env.Definitions(), nil
 }
 
 func Compile(env common.Environment, form common.Datum) (common.Expression, error) {
@@ -145,7 +151,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		if err != nil {
 			return nil, err
 		}
-		variable := &common.Variable{common.Void}
+		variable := &common.Variable{common.Void, true}
 		env = env.Set(form.Name, variable)
 		bodyExpression, err := Compile(env, form.Body)
 		if err != nil {
@@ -169,7 +175,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 	case common.LambdaForm:
 		var variables []*common.Variable
 		for _, formal := range form.Formals {
-			variable := &common.Variable{common.Void}
+			variable := &common.Variable{common.Void, true}
 			env = env.Set(formal, variable)
 			variables = append(variables, variable)
 		}

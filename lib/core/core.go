@@ -12,24 +12,28 @@ import (
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
 
-var Bindings = map[common.Symbol]common.Binding{
-	common.Symbol("quote"):         common.Keyword{common.Function(transformQuote)},
-	common.Symbol("syntax"):        common.Keyword{common.Function(transformSyntax)},
-	common.Symbol("if"):            common.Keyword{common.Function(transformIf)},
-	common.Symbol("let*"):          common.Keyword{common.Function(transformLetStar)},
-	common.Symbol("begin"):         common.Keyword{common.Function(transformBegin)},
-	common.Symbol("lambda"):        common.Keyword{common.Function(transformLambda)},
-	common.Symbol("define"):        common.Keyword{common.Function(transformDefine)},
-	common.Symbol("define-syntax"): common.Keyword{common.Function(transformDefineSyntax)},
-	common.Symbol("set!"):          common.Keyword{common.Function(transformSet)},
-	common.Symbol("cons"):          &common.Variable{common.Function(cons)},
-	common.Symbol("car"):           &common.Variable{common.Function(car)},
-	common.Symbol("cdr"):           &common.Variable{common.Function(cdr)},
-	common.Symbol("null?"):         &common.Variable{common.Function(null)},
-	common.Symbol("write"):         &common.Variable{common.Function(write)},
-	common.Symbol("call/cc"):       &common.Variable{common.Function(callWithCurrentContinuation)},
-	common.Symbol("error"):         &common.Variable{common.Function(err)},
-	common.Symbol("eqv?"):          &common.Variable{common.Function(eqv)},
+var Bindings map[common.Symbol]common.Binding
+
+func init() {
+	env := common.EmptyEnvironment
+	env.Define(common.Symbol("quote"), []int{0}, common.Keyword{common.Function(transformQuote)})
+	env.Define(common.Symbol("syntax"), []int{0}, common.Keyword{common.Function(transformSyntax)})
+	env.Define(common.Symbol("if"), []int{0}, common.Keyword{common.Function(transformIf)})
+	env.Define(common.Symbol("let*"), []int{0}, common.Keyword{common.Function(transformLetStar)})
+	env.Define(common.Symbol("begin"), []int{0}, common.Keyword{common.Function(transformBegin)})
+	env.Define(common.Symbol("lambda"), []int{0}, common.Keyword{common.Function(transformLambda)})
+	env.Define(common.Symbol("define"), []int{0}, common.Keyword{common.Function(transformDefine)})
+	env.Define(common.Symbol("define-syntax"), []int{0}, common.Keyword{common.Function(transformDefineSyntax)})
+	env.Define(common.Symbol("set!"), []int{0}, common.Keyword{common.Function(transformSet)})
+	env.Define(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons), true})
+	env.Define(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car), true})
+	env.Define(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr), true})
+	env.Define(common.Symbol("null?"), []int{0}, &common.Variable{common.Function(null), true})
+	env.Define(common.Symbol("write"), []int{0}, &common.Variable{common.Function(write), true})
+	env.Define(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation), true})
+	env.Define(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err), true})
+	env.Define(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
+	Bindings = env.Definitions()
 }
 
 var (

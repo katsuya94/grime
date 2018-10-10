@@ -54,5 +54,3 @@ type QuoteForm struct {
 type SyntaxForm struct {
 	Datum Datum
 }
-
-type ExposeForm func(Environment)

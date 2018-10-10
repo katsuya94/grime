@@ -223,6 +223,15 @@ func (b Begin) Debug() string {
 	return fmt.Sprintf("%v)", s)
 }
 
+type Define struct {
+	Variable   *Variable
+	Expression Expression
+}
+
+func (d Define) Debug() string {
+	return fmt.Sprintf("(define %v %v)", d.Variable, d.Expression.Debug())
+}
+
 type Set struct {
 	Variable   *Variable
 	Expression Expression

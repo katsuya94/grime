@@ -10,13 +10,43 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func TestCompile(t *testing.T) {
+func TestCompileBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
 		expected string
 		error    string
 	}{
+		{
+			"malformed quote",
+			"(quote)",
+			"",
+			"quote: bad syntax",
+		},
+		{
+			"duplicate definitions: define, define",
+			"(define foo 'id) (define foo 'thing)",
+			"",
+			"placeholder",
+		},
+		{
+			"duplicate definitions: define, define-syntax",
+			"(define foo 'id) (define-syntax foo (lambda (x) #''thing))",
+			"",
+			"placeholder",
+		},
+		{
+			"duplicate definitions: define-syntax, define",
+			"(define-syntax foo (lambda (x) #''thing)) (define foo 'thing)",
+			"",
+			"placeholder",
+		},
+		{
+			"duplicate definitions: define-syntax, define-syntax",
+			"(define-syntax foo (lambda (x) #''thing)) (define-syntax foo (lambda (x) #''thing))",
+			"",
+			"placeholder",
+		},
 		{
 			"empty begin in definition context",
 			"(begin) 'foo",
@@ -69,18 +99,13 @@ func TestCompile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			environment := common.NewEnvironment(core.Bindings)
-			environment = environment.SetNext(common.NewEnvironment(core.Bindings))
-			var expected common.Expression
+			var expected common.Datum
 			if test.expected != "" {
 				expectedBody, err := read.ReadString(test.expected)
 				if err != nil {
 					t.Fatal(err)
 				}
-				expectedForm, err := ExpandBody(environment, expectedBody)
-				if err != nil {
-					t.Fatal(err)
-				}
-				expected, err = Compile(environment, expectedForm)
+				expected, _, err = CompileBody(environment, expectedBody)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -89,11 +114,7 @@ func TestCompile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			form, err := ExpandBody(environment, sourceBody)
-			if err != nil {
-				t.Fatal(err)
-			}
-			actual, err := Compile(environment, form)
+			actual, _, err := CompileBody(environment, sourceBody)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

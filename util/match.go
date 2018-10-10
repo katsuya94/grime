@@ -7,10 +7,10 @@ import (
 )
 
 type matcher struct {
-	literals map[common.Symbol]common.Binding
+	literals map[common.Symbol]common.Location
 }
 
-func newMatcher(literals map[common.Symbol]common.Binding) *matcher {
+func newMatcher(literals map[common.Symbol]common.Location) *matcher {
 	return &matcher{literals}
 }
 
@@ -169,6 +169,6 @@ func (m *matcher) patternVariables(pattern common.Datum) ([]common.Symbol, error
 	}
 }
 
-func Match(input common.Datum, pattern common.Datum, literals map[common.Symbol]common.Binding) (map[common.Symbol]interface{}, bool, error) {
+func Match(input common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]interface{}, bool, error) {
 	return newMatcher(literals).match(input, pattern, true)
 }

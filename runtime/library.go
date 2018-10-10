@@ -24,7 +24,7 @@ type Library struct {
 
 func NewLibrary(source common.Datum) (*Library, error) {
 	var library Library
-	result, ok, err := util.Match(source, PatternLibrary, map[common.Symbol]common.Binding{
+	result, ok, err := util.Match(source, PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 		common.Symbol("export"):  nil,
 		common.Symbol("import"):  nil,
@@ -47,7 +47,7 @@ func NewLibrary(source common.Datum) (*Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := util.Match(libraryName[i], PatternVersion, map[common.Symbol]common.Binding{})
+		result, ok, err := util.Match(libraryName[i], PatternVersion, map[common.Symbol]common.Location{})
 		if err != nil {
 			return nil, err
 		} else if !ok {
@@ -117,7 +117,7 @@ func (l *Library) Name() []common.Symbol {
 }
 
 func newExportSpecs(d common.Datum) ([]identifierBinding, error) {
-	if result, ok, err := util.Match(d, PatternExportRename, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternExportRename, map[common.Symbol]common.Location{
 		common.Symbol("rename"): nil,
 	}); err != nil {
 		return nil, err

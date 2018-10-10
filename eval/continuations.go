@@ -105,12 +105,26 @@ func (c letBodyEvaluated) Call(d common.Datum) (common.EvaluationResult, error) 
 	return common.CallC(c.continuation, d)
 }
 
+type defineExpressionEvaluated struct {
+	continuation common.Continuation
+	variable     *common.Variable
+}
+
+func (c defineExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	(*c.variable).Defined = true
+	(*c.variable).Value = d
+	return common.CallC(c.continuation, common.Void)
+}
+
 type setExpressionEvaluated struct {
 	continuation common.Continuation
 	variable     *common.Variable
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	if !c.variable.Defined {
+		return nil, fmt.Errorf("evaluate: cannot set identifier before its definition")
+	}
 	(*c.variable).Value = d
 	return common.CallC(c.continuation, common.Void)
 }

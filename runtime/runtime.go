@@ -40,7 +40,7 @@ func (r *Runtime) Bind(name []common.Symbol, bindings map[common.Symbol]common.B
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
-	result, ok, err := util.Match(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Binding{
+	result, ok, err := util.Match(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
 	if err != nil {
@@ -96,32 +96,42 @@ func (r *Runtime) instantiate(prov *provision) error {
 			if !ok {
 				continue
 			}
-			env = env.Set(internal, binding)
+			var levels []int
+			for _, importLevel := range resolutions[i].levels {
+				for _, exportLevel := range binding.Levels {
+					exists := false
+					for _, level := range levels {
+						if level == importLevel+exportLevel {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						levels = append(levels, importLevel+exportLevel)
+					}
+				}
+			}
+			env, err = env.Define(internal, levels, binding.Location)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	var exposed common.Environment
-	expose := common.ExposeForm(func(env common.Environment) {
-		exposed = env
-	})
-	form, err := eval.ExpandBody(env, append(prov.library.body, expose))
-	if err != nil {
-		return err
-	}
-	expression, err := eval.Compile(env, form)
-	if err != nil {
-		return err
-	}
-	_, err = eval.EvaluateExpressionOnce(expression)
+	expression, definitions, err := eval.CompileBody(env, append(prov.library.body, common.Void))
 	if err != nil {
 		return err
 	}
 	prov.bindings = make(map[common.Symbol]common.Binding)
 	for _, exportSpec := range prov.library.exportSpecs {
-		binding := exposed.Get(exportSpec.internal)
-		if binding == nil {
+		binding, ok := definitions[exportSpec.internal]
+		if !ok {
 			return fmt.Errorf("runtime: can't export unbound identifier %v", exportSpec.internal)
 		}
 		prov.bindings[exportSpec.external] = binding
+	}
+	_, err = eval.EvaluateExpressionOnce(expression)
+	if err != nil {
+		return err
 	}
 	return nil
 }

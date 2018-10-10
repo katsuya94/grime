@@ -37,7 +37,7 @@ type importSpec struct {
 }
 
 func newImportSpec(d common.Datum) (importSpec, error) {
-	if result, ok, err := util.Match(d, PatternImportSpecFor, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSpecFor, map[common.Symbol]common.Location{
 		common.Symbol("for"): nil,
 	}); err != nil {
 		return importSpec{}, err
@@ -79,7 +79,7 @@ func (spec importSpec) libraryName() []common.Symbol {
 }
 
 func newImportLevel(d common.Datum) (int, error) {
-	if result, ok, err := util.Match(d, PatternImportLevelMeta, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportLevelMeta, map[common.Symbol]common.Location{
 		common.Symbol("meta"): nil,
 	}); err != nil {
 		return 0, err
@@ -94,14 +94,14 @@ func newImportLevel(d common.Datum) (int, error) {
 		}
 		return int(n), nil
 	}
-	if _, ok, err := util.Match(d, PatternImportLevelRun, map[common.Symbol]common.Binding{
+	if _, ok, err := util.Match(d, PatternImportLevelRun, map[common.Symbol]common.Location{
 		common.Symbol("run"): nil,
 	}); err != nil {
 		return 0, err
 	} else if ok {
 		return 0, nil
 	}
-	if _, ok, err := util.Match(d, PatternImportLevelExpand, map[common.Symbol]common.Binding{
+	if _, ok, err := util.Match(d, PatternImportLevelExpand, map[common.Symbol]common.Location{
 		common.Symbol("expand"): nil,
 	}); err != nil {
 		return 0, err
@@ -117,14 +117,14 @@ type importSet interface {
 }
 
 func newImportSet(d common.Datum) (importSet, error) {
-	if result, ok, err := util.Match(d, PatternImportSetLibrary, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSetLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
 		return newLibraryReference(result[common.Symbol("library-reference")])
 	}
-	if result, ok, err := util.Match(d, PatternImportSetOnly, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSetOnly, map[common.Symbol]common.Location{
 		common.Symbol("only"): nil,
 	}); err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 		}
 		return importSetOnly{iSet, ids}, nil
 	}
-	if result, ok, err := util.Match(d, PatternImportSetExcept, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSetExcept, map[common.Symbol]common.Location{
 		common.Symbol("except"): nil,
 	}); err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 		}
 		return importSetExcept{iSet, ids}, nil
 	}
-	if result, ok, err := util.Match(d, PatternImportSetPrefix, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSetPrefix, map[common.Symbol]common.Location{
 		common.Symbol("prefix"): nil,
 	}); err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func newImportSet(d common.Datum) (importSet, error) {
 		}
 		return importSetPrefix{iSet, id}, nil
 	}
-	if result, ok, err := util.Match(d, PatternImportSetRename, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternImportSetRename, map[common.Symbol]common.Location{
 		common.Symbol("rename"): nil,
 	}); err != nil {
 		return nil, err
@@ -360,7 +360,7 @@ type importSetLibraryReference struct {
 
 func newLibraryReference(d common.Datum) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
-	result, ok, err := util.Match(d, PatternLibraryReference, map[common.Symbol]common.Binding{})
+	result, ok, err := util.Match(d, PatternLibraryReference, map[common.Symbol]common.Location{})
 	if err != nil {
 		return importSetLibraryReference{}, err
 	} else if !ok {
@@ -405,7 +405,7 @@ type versionReference interface {
 }
 
 func newVersionReference(d common.Datum) (versionReference, error) {
-	if result, ok, err := util.Match(d, PatternVersionReferenceAnd, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternVersionReferenceAnd, map[common.Symbol]common.Location{
 		common.Symbol("and"): nil,
 	}); err != nil {
 		return nil, err
@@ -420,7 +420,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 		}
 		return versionReferenceAnd{vRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternVersionReferenceOr, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternVersionReferenceOr, map[common.Symbol]common.Location{
 		common.Symbol("or"): nil,
 	}); err != nil {
 		return nil, err
@@ -435,7 +435,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 		}
 		return versionReferenceOr{vRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternVersionReferenceNot, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternVersionReferenceNot, map[common.Symbol]common.Location{
 		common.Symbol("not"): nil,
 	}); err != nil {
 		return nil, err
@@ -446,7 +446,7 @@ func newVersionReference(d common.Datum) (versionReference, error) {
 		}
 		return versionReferenceNot{vRef}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferences, map[common.Symbol]common.Binding{}); err != nil {
+	if result, ok, err := util.Match(d, PatternSubVersionReferences, map[common.Symbol]common.Location{}); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
@@ -517,7 +517,7 @@ type subVersionReference interface {
 }
 
 func newSubVersionReference(d common.Datum) (subVersionReference, error) {
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Location{
 		common.Symbol(">="): nil,
 	}); err != nil {
 		return nil, err
@@ -528,7 +528,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceGte{subV}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Location{
 		common.Symbol("<="): nil,
 	}); err != nil {
 		return nil, err
@@ -539,7 +539,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceLte{subV}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Location{
 		common.Symbol("and"): nil,
 	}); err != nil {
 		return nil, err
@@ -554,7 +554,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceAnd{subVRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Location{
 		common.Symbol("or"): nil,
 	}); err != nil {
 		return nil, err
@@ -569,7 +569,7 @@ func newSubVersionReference(d common.Datum) (subVersionReference, error) {
 		}
 		return subVersionReferenceOr{subVRefs}, nil
 	}
-	if result, ok, err := util.Match(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Binding{
+	if result, ok, err := util.Match(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Location{
 		common.Symbol("not"): nil,
 	}); err != nil {
 		return nil, err

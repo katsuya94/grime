@@ -183,6 +183,18 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 			"well that's too bad",
 		},
+		{
+			"cannot reference identifer before its definition",
+			"(define (foo) bar) (define baz (foo)) (define bar 'id)",
+			"",
+			"placeholder",
+		},
+		{
+			"cannot set identifer before its definition",
+			"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id)",
+			"",
+			"placeholder",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -198,11 +210,7 @@ func TestEvaluateExpression(t *testing.T) {
 				t.Fatal(err)
 			}
 			environment := common.NewEnvironment(core.Bindings)
-			form, err := ExpandBody(environment, body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			expression, err := Compile(environment, form)
+			expression, _, err := CompileBody(environment, body)
 			if err != nil {
 				t.Fatal(err)
 			}

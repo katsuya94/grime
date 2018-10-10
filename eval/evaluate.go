@@ -14,47 +14,38 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 		return common.CallC(c, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(
-			applicationProcedureEvaluated{
-				c,
-				v.Arguments,
-			},
+			applicationProcedureEvaluated{c, v.Arguments},
 			v.Procedure,
 		)
 	case common.If:
 		return common.EvalC(
-			ifConditionEvaluated{
-				c,
-				v.Then,
-				v.Else,
-			},
+			ifConditionEvaluated{c, v.Then, v.Else},
 			v.Condition,
 		)
 	case common.Let:
 		return common.EvalC(
-			letInitEvaluated{
-				c,
-				v.Variable,
-				v.Body,
-			},
+			letInitEvaluated{c, v.Variable, v.Body},
 			v.Init,
 		)
 	case common.Begin:
 		return common.EvalC(
-			beginFirstEvaluated{
-				c,
-				v.Expressions[1:],
-			},
+			beginFirstEvaluated{c, v.Expressions[1:]},
 			v.Expressions[0],
+		)
+	case common.Define:
+		return common.EvalC(
+			defineExpressionEvaluated{c, v.Variable},
+			v.Expression,
 		)
 	case common.Set:
 		return common.EvalC(
-			setExpressionEvaluated{
-				c,
-				v.Variable,
-			},
+			setExpressionEvaluated{c, v.Variable},
 			v.Expression,
 		)
 	case common.Reference:
+		if !v.Variable.Defined {
+			return nil, fmt.Errorf("evaluate: cannot reference identifier before its definition")
+		}
 		return common.CallC(c, v.Variable.Value)
 	default:
 		if v == common.Void {
