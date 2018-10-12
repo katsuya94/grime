@@ -18,10 +18,10 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 		processed := false
 		expression := false
 		for !processed {
-			switch form := form.(type) {
+			switch v := form.(type) {
 			case common.DefineSyntaxForm:
 				transformerEnv := env.Next()
-				expression, err := Compile(transformerEnv, form.Form)
+				expression, err := Compile(transformerEnv, v.Form)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -33,7 +33,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				if !ok {
 					return nil, nil, fmt.Errorf("compile: define-syntax: bad syntax")
 				}
-				env, err = env.Define(form.Name, nil, common.Keyword{procedure})
+				env, err = env.Define(v.Name, nil, common.Keyword{procedure})
 				if err != nil {
 					return nil, nil, err
 				}
@@ -41,9 +41,9 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 			case common.DefineForm:
 				variable := &common.Variable{common.Void, false}
 				definitionVariables = append(definitionVariables, variable)
-				definitionForms = append(definitionForms, form.Form)
+				definitionForms = append(definitionForms, v.Form)
 				var err error
-				env, err = env.Define(form.Name, nil, variable)
+				env, err = env.Define(v.Name, nil, variable)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -56,14 +56,14 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				}
 				following := forms[i+1:]
 				forms = forms[0:i]
-				forms = append(forms, form.Forms...)
+				forms = append(forms, v.Forms...)
 				forms = append(forms, following...)
 				i--
 				processed = true
 			case common.LetSyntaxForm:
 				return nil, nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
-				s, ok, err := Expand(env, form)
+				s, ok, err := Expand(env, v)
 				if err != nil {
 					return nil, nil, err
 				} else if ok {
@@ -209,6 +209,9 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return common.Set{variable, expression}, nil
 	default:
+		if form == common.Void {
+			return common.Void, nil
+		}
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)
 	}
 }

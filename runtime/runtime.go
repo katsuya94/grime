@@ -61,6 +61,26 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	return r.instantiate(r.provisions["()"])
 }
 
+func (r *Runtime) BindingsFor(name []common.Symbol) (map[common.Symbol]common.Binding, error) {
+	prov, err := r.provisionFor(name)
+	if err != nil {
+		return nil, err
+	}
+	err = r.instantiate(prov)
+	if err != nil {
+		return nil, err
+	}
+	return prov.bindings, nil
+}
+
+func (r *Runtime) provisionFor(name []common.Symbol) (*provision, error) {
+	prov, ok := r.provisions[nameString(name)]
+	if !ok {
+		return nil, fmt.Errorf("runtime: no such library %v", nameString(name))
+	}
+	return prov, nil
+}
+
 func (r *Runtime) instantiate(prov *provision) error {
 	if prov.bindings != nil {
 		return nil
@@ -74,13 +94,13 @@ func (r *Runtime) instantiate(prov *provision) error {
 		resolutions []importSpecResolution
 	)
 	for _, importSpec := range prov.library.importSpecs {
-		subProv, ok := r.provisions[nameString(importSpec.libraryName())]
-		var resolution importSpecResolution
-		if ok {
-			resolution, ok = importSpec.resolve(subProv.library)
+		subProv, err := r.provisionFor(importSpec.libraryName())
+		if err != nil {
+			return err
 		}
+		resolution, ok := importSpec.resolve(subProv.library)
 		if !ok {
-			return fmt.Errorf("runtime: could not resolve library %v", nameString(importSpec.libraryName()))
+			return fmt.Errorf("runtime: version mismatch for library %v at version %v", nameString(importSpec.libraryName()), versionString(subProv.library.version))
 		}
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
@@ -146,6 +166,14 @@ func nameData(name []common.Symbol) []common.Datum {
 		data = append(data, symbol)
 	}
 	return data
+}
+
+func versionString(version []subVersion) string {
+	var data []common.Datum
+	for _, subV := range version {
+		data = append(data, common.Number(fmt.Sprintf("%d", subV)))
+	}
+	return common.Write(util.List(data...))
 }
 
 type provision struct {
