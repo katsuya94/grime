@@ -12,118 +12,60 @@ type Variable struct {
 	Defined bool
 }
 
-type Binding struct {
-	Location Location
-	Levels   []int // nil for lexical bindings
-}
-
-type level struct {
-	level   int
-	lexical bool
-}
+type BindingSet map[int]map[Symbol]Location
 
 type Environment struct {
-	bindings    map[Symbol]map[level]Location
-	definitions map[Symbol]map[int]bool
+	leveled     BindingSet
+	lexical     map[Symbol]Location
+	definitions map[Symbol]bool
 	level       int
 }
 
-func NewEnvironment(init map[Symbol]map[int]Location) Environment {
-	bindings := make(map[Symbol]map[level]Location)
-	for name, locations := range init {
-		bindings[name] = make(map[level]Location)
-		for l, location := range locations {
-			bindings[name][level{l, false}] = location
-		}
+func NewEnvironment(init BindingSet) Environment {
+	return Environment{
+		cloneBindingSet(init),
+		make(map[Symbol]Location),
+		make(map[Symbol]bool),
+		0,
 	}
-	return Environment{bindings, make(map[Symbol]map[int]bool), 0}
 }
 
-var EmptyEnvironment = NewEnvironment(make(map[Symbol]map[int]Location))
-
-func (env Environment) cloneBindings() map[Symbol]map[level]Location {
-	bindings := make(map[Symbol]map[level]Location, len(env.bindings))
-	for name, locations := range env.bindings {
-		bindings[name] = make(map[level]Location, len(env.bindings[name]))
-		for level, location := range locations {
-			bindings[name][level] = location
-		}
-	}
-	return bindings
-}
-
-func (env Environment) Definitions() map[Symbol]map[int]Location {
-	definitions := make(map[Symbol]Binding)
-	for n := range env.definitions {
-		binding := env.bindings[n]
-		// Lexical bindings are exported at level 0.
-		if binding.Levels == nil {
-			binding.Levels = []int{0}
-		}
-		definitions[n] = binding
-	}
-	return definitions
-}
+var EmptyEnvironment = NewEnvironment(make(BindingSet))
 
 func (env Environment) Get(name Symbol) Location {
-	locations, _ := env.bindings[name]
-	if locations == nil {
-		return nil
-	}
-	if location, _ := locations[level{0, true}]; location != nil {
+	location, _ := env.lexical[name]
+	if location != nil {
 		return location
 	}
-	location, _ := locations[level{env.level, false}]
+	location, _ = env.leveled[env.level][name]
 	return location
 }
 
 func (env Environment) Set(name Symbol, location Location) Environment {
-	bindings := env.cloneBindings()
-	if locations, _ := bindings[name]; locations == nil {
-		bindings[name] = make(map[level]Location)
-	}
-	bindings[name][level{0, true}] = location
-	return Environment{bindings, env.definitions, env.level}
+	lexical := cloneLexical(env.lexical)
+	lexical[name] = location
+	return Environment{env.leveled, lexical, env.definitions, env.level}
 }
 
 func (env Environment) Define(name Symbol, levels []int, location Location) (Environment, error) {
-	definitions, _ := env.definitions[name]
 	if levels == nil {
-		levels = []int{0}
-	}
-	for _, l := range levels {
-		if definitions != nil {
-			for x, _ := range definitions {
-				if l == x {
-					return Environment{}, fmt.Errorf("previously defined at level %v: %v", x, name)
-				}
-			}
+		if env.definitions[name] {
+			return Environment{}, fmt.Errorf("previously defined: %v", name)
 		}
+		env = env.Set(name, location)
+		definitions := cloneDefinitions(env.definitions)
+		definitions[name] = true
+		return Environment{env.leveled, env.lexical, definitions, env.level}, nil
 	}
-	bindings := env.cloneBindings()
-	newDefinitions := make(map[Symbol]map[int]bool, len(env.definitions))
-	for name, definitions := range env.definitions {
-		newDefinitions[name] = make(map[int]bool, len(definitions))
-		for level := range definitions {
-			newDefinitions[name][level] = true
+	leveled := cloneBindingSet(env.leveled)
+	for _, level := range levels {
+		existing, ok := env.leveled[level][name]
+		if ok && location != existing {
+			return Environment{}, fmt.Errorf("previously defined at level %v: %v", level, name)
 		}
+		leveled[level][name] = location
 	}
-	if locations, _ := bindings[name]; locations == nil {
-		bindings[name] = make(map[level]Location)
-	}
-	if definitions, _ := newDefinitions[name]; definitions == nil {
-		newDefinitions[name] = make(map[int]bool)
-	}
-	if levels == nil {
-		bindings[name][level{0, true}] = Binding{location, levels}
-		newDefinitions[name][l] = true
-	} else {
-		for _, l := range levels {
-			bindings[name][level{l, false}] = Binding{location, levels}
-			newDefinitions[name][l] = true
-		}
-	}
-	return Environment{bindings, newDefinitions, env.level}, nil
+	return Environment{leveled, env.lexical, env.definitions, env.level}, nil
 }
 
 func (env Environment) MustDefine(name Symbol, levels []int, location Location) Environment {
@@ -134,10 +76,45 @@ func (env Environment) MustDefine(name Symbol, levels []int, location Location) 
 	return env
 }
 
+func (env Environment) Bindings() BindingSet {
+	bindingSet := cloneBindingSet(env.leveled)
+	for name, location := range env.lexical {
+		bindingSet[0][name] = location
+	}
+	return bindingSet
+}
+
 func (env Environment) Next() Environment {
-	return Environment{env.bindings, env.definitions, env.level + 1}
+	return Environment{env.leveled, env.lexical, env.definitions, env.level + 1}
 }
 
 func (env Environment) Clear() Environment {
-	return Environment{env.bindings, make(map[Symbol]map[int]bool), env.level}
+	return Environment{env.leveled, env.lexical, make(map[Symbol]bool), env.level}
+}
+
+func cloneBindingSet(init BindingSet) BindingSet {
+	bindingSet := make(BindingSet)
+	for level, locations := range init {
+		bindingSet[level] = make(map[Symbol]Location)
+		for name, location := range locations {
+			bindingSet[level][name] = location
+		}
+	}
+	return bindingSet
+}
+
+func cloneLexical(init map[Symbol]Location) map[Symbol]Location {
+	lexical := make(map[Symbol]Location)
+	for name, location := range init {
+		lexical[name] = location
+	}
+	return lexical
+}
+
+func cloneDefinitions(init map[Symbol]bool) map[Symbol]bool {
+	definitions := make(map[Symbol]bool)
+	for name := range init {
+		definitions[name] = true
+	}
+	return definitions
 }

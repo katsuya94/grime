@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func CompileBody(env common.Environment, forms []common.Datum) (common.Expression, map[common.Symbol]common.Binding, error) {
+func CompileBody(env common.Environment, forms []common.Datum) (common.Expression, common.BindingSet, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -104,7 +104,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 	} else {
 		expression = common.Begin{expressions}
 	}
-	return expression, env.Definitions(), nil
+	return expression, env.Bindings(), nil
 }
 
 func Compile(env common.Environment, form common.Datum) (common.Expression, error) {

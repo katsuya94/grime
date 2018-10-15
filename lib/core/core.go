@@ -12,7 +12,7 @@ import (
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
 
-var Bindings map[common.Symbol]common.Binding
+var Bindings common.BindingSet
 
 func init() {
 	env := common.EmptyEnvironment
@@ -33,7 +33,7 @@ func init() {
 	env = env.MustDefine(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation), true})
 	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err), true})
 	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
-	Bindings = env.Definitions()
+	Bindings = env.Bindings()
 }
 
 var (

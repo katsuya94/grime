@@ -29,7 +29,7 @@ func (r *Runtime) Provide(library *Library) error {
 	return nil
 }
 
-func (r *Runtime) Bind(name []common.Symbol, bindings map[common.Symbol]common.Binding) error {
+func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
 	ns := nameString(name)
 	prov, ok := r.provisions[ns]
 	if !ok {
@@ -61,7 +61,7 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	return r.instantiate(r.provisions["()"])
 }
 
-func (r *Runtime) BindingsFor(name []common.Symbol) (map[common.Symbol]common.Binding, error) {
+func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingSet, error) {
 	prov, err := r.provisionFor(name)
 	if err != nil {
 		return nil, err
@@ -105,35 +105,30 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	env := common.NewEnvironment(make(map[common.Symbol]common.Binding))
+	env := common.EmptyEnvironment
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
 			return err
 		}
-		for external, binding := range subProvs[i].bindings {
-			internal, ok := resolutions[i].identifierSpec.resolve(external)
-			if !ok {
-				continue
-			}
-			var levels []int
-			for _, importLevel := range resolutions[i].levels {
-				for _, exportLevel := range binding.Levels {
-					exists := false
-					for _, level := range levels {
-						if level == importLevel+exportLevel {
-							exists = true
-							break
-						}
-					}
-					if !exists {
-						levels = append(levels, importLevel+exportLevel)
-					}
+		for exportLevel, locations := range subProvs[i].bindings {
+			for external, location := range locations {
+				internal, ok := resolutions[i].identifierSpec.resolve(external)
+				if !ok {
+					continue
 				}
-			}
-			env, err = env.Define(internal, levels, binding.Location)
-			if err != nil {
-				return err
+				var levelSet map[int]bool
+				for _, importLevel := range resolutions[i].levels {
+					levelSet[importLevel+exportLevel] = true
+				}
+				var levels []int
+				for level := range levels {
+					levels = append(levels, level)
+				}
+				env, err = env.Define(internal, levels, location)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -141,19 +136,26 @@ func (r *Runtime) instantiate(prov *provision) error {
 	if err != nil {
 		return err
 	}
-	prov.bindings = make(map[common.Symbol]common.Binding)
+	prov.bindings = make(common.BindingSet)
 	for _, exportSpec := range prov.library.exportSpecs {
-		binding, ok := definitions[exportSpec.internal]
-		if !ok {
+		exported := false
+		for exportLevel, locations := range definitions {
+			location, ok := locations[exportSpec.internal]
+			if !ok {
+				continue
+			}
+			exported = true
+			if _, ok := prov.bindings[exportLevel]; !ok {
+				prov.bindings[exportLevel] = make(map[common.Symbol]common.Location)
+			}
+			prov.bindings[exportLevel][exportSpec.external] = location
+		}
+		if !exported {
 			return fmt.Errorf("runtime: can't export unbound identifier %v", exportSpec.internal)
 		}
-		prov.bindings[exportSpec.external] = binding
 	}
 	_, err = eval.EvaluateExpressionOnce(expression)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func nameString(name []common.Symbol) string {
@@ -178,7 +180,7 @@ func versionString(version []subVersion) string {
 
 type provision struct {
 	library  *Library
-	bindings map[common.Symbol]common.Binding
+	bindings common.BindingSet
 	visited  bool
 }
 
