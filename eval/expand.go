@@ -18,16 +18,18 @@ var (
 
 func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet); ok || err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet, map[common.Symbol]common.Location{
+		common.Symbol("set!"): nil,
+	}); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier); ok || err != nil {
+	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
 	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
@@ -53,9 +55,9 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 	return nil, false, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum) (common.Datum, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := util.Match(syntax, pattern, nil)
+	result, ok, err := util.Match(syntax, pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
@@ -69,7 +71,7 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	if binding == nil {
 		return nil, false, nil
 	}
-	keyword, ok := binding.(common.Keyword)
+	keyword, ok := binding.(*common.Keyword)
 	if !ok {
 		return nil, false, nil
 	}

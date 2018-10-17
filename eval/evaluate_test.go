@@ -6,8 +6,10 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/eval"
+	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/runtime"
 )
 
 func TestEvaluateExpression(t *testing.T) {
@@ -185,19 +187,28 @@ func TestEvaluateExpression(t *testing.T) {
 		},
 		{
 			"cannot reference identifer before its definition",
-			"(define (foo) bar) (define baz (foo)) (define bar 'id)",
+			"(define (foo) bar) (define baz (foo)) (define bar 'id) baz",
 			"",
-			"placeholder",
+			"evaluate: cannot reference identifier before its definition",
 		},
 		{
 			"cannot set identifer before its definition",
-			"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id)",
+			"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id) baz",
 			"",
-			"placeholder",
+			"evaluate: cannot set identifier before its definition",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			rt := runtime.NewRuntime()
+			rt.Provide(core.Library)
+			rt.Bind(core.Library.Name(), core.Bindings)
+			rt.Provide(base.Library)
+			bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("base")})
+			if err != nil {
+				t.Fatal(err)
+			}
+			environment := common.NewEnvironment(bindings)
 			data, err := read.ReadString(test.val)
 			if err != nil {
 				t.Fatal(err)
@@ -209,7 +220,6 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			environment := common.NewEnvironment(core.Bindings)
 			expression, _, err := CompileBody(environment, body)
 			if err != nil {
 				t.Fatal(err)

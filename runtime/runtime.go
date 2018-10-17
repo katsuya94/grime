@@ -117,12 +117,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 				if !ok {
 					continue
 				}
-				var levelSet map[int]bool
+				levelSet := make(map[int]bool)
 				for _, importLevel := range resolutions[i].levels {
 					levelSet[importLevel+exportLevel] = true
 				}
 				var levels []int
-				for level := range levels {
+				for level := range levelSet {
 					levels = append(levels, level)
 				}
 				env, err = env.Define(internal, levels, location)

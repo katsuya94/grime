@@ -20,8 +20,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 		for !processed {
 			switch v := form.(type) {
 			case common.DefineSyntaxForm:
-				transformerEnv := env.Next()
-				expression, err := Compile(transformerEnv, v.Form)
+				expression, err := Compile(env.Next().Clear(), v.Form)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -33,7 +32,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				if !ok {
 					return nil, nil, fmt.Errorf("compile: define-syntax: bad syntax")
 				}
-				env, err = env.Define(v.Name, nil, common.Keyword{procedure})
+				env, err = env.Define(v.Name, nil, &common.Keyword{procedure})
 				if err != nil {
 					return nil, nil, err
 				}
@@ -81,7 +80,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 	// Compile define expressions for the definitions.
 	var expressions []common.Expression
 	for i := range definitionVariables {
-		expression, err := Compile(env, definitionForms[i])
+		expression, err := Compile(env.Clear(), definitionForms[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -92,7 +91,7 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 		return nil, nil, fmt.Errorf("compile: no expressions in body")
 	}
 	for _, form := range forms[i:] {
-		expression, err := Compile(env, form)
+		expression, err := Compile(env.Clear(), form)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -100,9 +99,9 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 	}
 	var expression common.Expression
 	if len(expressions) > 1 {
-		expression = expressions[0]
-	} else {
 		expression = common.Begin{expressions}
+	} else {
+		expression = expressions[0]
 	}
 	return expression, env.Bindings(), nil
 }
@@ -113,7 +112,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		return nil, err
 	}
 	switch form := form.(type) {
-	case common.Boolean, common.Number, common.Character, common.String:
+	case common.Boolean, common.Number, common.Character, common.String, common.Syntax:
 		return form.(common.Expression), nil
 	case common.QuoteForm:
 		if form.Datum == nil {
@@ -208,6 +207,8 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, err
 		}
 		return common.Set{variable, expression}, nil
+	case common.DefineForm, common.DefineSyntaxForm:
+		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	default:
 		if form == common.Void {
 			return common.Void, nil

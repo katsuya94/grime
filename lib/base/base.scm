@@ -18,7 +18,7 @@
     error
     eqv?
     equal?)
-  (import (core) (for (core) expand))
+  (import (for (core) run expand))
 
   (define (eq? l r)
     (eqv? l r))

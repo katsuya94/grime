@@ -33,11 +33,15 @@ func NewEnvironment(init BindingSet) Environment {
 var EmptyEnvironment = NewEnvironment(make(BindingSet))
 
 func (env Environment) Get(name Symbol) Location {
-	location, _ := env.lexical[name]
-	if location != nil {
+	location, ok := env.lexical[name]
+	if ok {
 		return location
 	}
-	location, _ = env.leveled[env.level][name]
+	locations, ok := env.leveled[env.level]
+	if !ok {
+		return nil
+	}
+	location, _ = locations[name]
 	return location
 }
 
@@ -49,7 +53,7 @@ func (env Environment) Set(name Symbol, location Location) Environment {
 
 func (env Environment) Define(name Symbol, levels []int, location Location) (Environment, error) {
 	if levels == nil {
-		if env.definitions[name] {
+		if env.definitions[name] && location != env.Get(name) {
 			return Environment{}, fmt.Errorf("previously defined: %v", name)
 		}
 		env = env.Set(name, location)
@@ -59,7 +63,11 @@ func (env Environment) Define(name Symbol, levels []int, location Location) (Env
 	}
 	leveled := cloneBindingSet(env.leveled)
 	for _, level := range levels {
-		existing, ok := env.leveled[level][name]
+		_, ok := leveled[level]
+		if !ok {
+			leveled[level] = make(map[Symbol]Location)
+		}
+		existing, ok := leveled[level][name]
 		if ok && location != existing {
 			return Environment{}, fmt.Errorf("previously defined at level %v: %v", level, name)
 		}
@@ -78,6 +86,10 @@ func (env Environment) MustDefine(name Symbol, levels []int, location Location) 
 
 func (env Environment) Bindings() BindingSet {
 	bindingSet := cloneBindingSet(env.leveled)
+	_, ok := bindingSet[0]
+	if !ok {
+		bindingSet[0] = make(map[Symbol]Location)
+	}
 	for name, location := range env.lexical {
 		bindingSet[0][name] = location
 	}
