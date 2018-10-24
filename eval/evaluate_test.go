@@ -197,6 +197,12 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 			"evaluate: cannot set identifier before its definition",
 		},
+		{
+			"define-syntax",
+			"(define-syntax id (lambda (stx) #''foo)) (id)",
+			"foo",
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

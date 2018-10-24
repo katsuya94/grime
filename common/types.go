@@ -112,16 +112,18 @@ func (p Pair) Debug() string {
 	return fmt.Sprintf("'%v", Write(p))
 }
 
-type Syntax struct {
-	Datum Datum
+type WrappedSyntax struct {
+	substitutions map[identifier]Location
+	marks         int
+	datum         Datum
 }
 
-func (s Syntax) Write() string {
-	return fmt.Sprintf("#<syntax: %v>", Write(s.Datum))
+func (w WrappedSyntax) Write() string {
+	return fmt.Sprintf("#<syntax: %v>", Write(w.datum))
 }
 
-func (s Syntax) Debug() string {
-	return fmt.Sprintf("#'%v", Write(s.Datum))
+func (w WrappedSyntax) Debug() string {
+	return fmt.Sprintf("#'%v", Write(w.datum))
 }
 
 type Function func(Continuation, ...Datum) (EvaluationResult, error)
