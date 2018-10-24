@@ -166,15 +166,15 @@ func TestEvaluateExpression(t *testing.T) {
 		{
 			"call/cc and set! used to loop",
 			`
-			(define x '(foo bar baz))
-			(define y '())
-			(define c (call/cc (lambda (c) c)))
-			(if (null? x)
-				y
+			(define in '(foo bar baz))
+			(define continue #f)
+			(define out (call/cc (lambda (c) (set! continue c) '())))
+			(if (null? in)
+				out
 				(begin
-				(set! y (cons (car x) y))
-				(set! x (cdr x))
-				(c c)))
+					(define new (cons (car in) out))
+					(set! in (cdr in))
+					(continue new)))
 			`,
 			"(baz bar foo)",
 			"",

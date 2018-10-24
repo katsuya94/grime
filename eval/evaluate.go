@@ -61,7 +61,7 @@ func (escapeEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	return nil, fmt.Errorf("evaluate: escape continuation called without escaping context")
 }
 
-// perform further evaluation or call continuations as necessary until the nil continuation is called.
+// perform further evaluation or call continuations as necessary until the escape continuation is called.
 func CallWithEscape(evaluationResultFactory func(common.Continuation) (common.EvaluationResult, error)) (common.Datum, error) {
 	escape := escapeEvaluated{}
 	evaluationResult, err := evaluationResultFactory(&escape)

@@ -129,7 +129,7 @@ type Function func(Continuation, ...Datum) (EvaluationResult, error)
 func (f Function) Write() string {
 	var i interface{} = f
 	name := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-	return fmt.Sprintf("#<func: %v>", name)
+	return fmt.Sprintf("#<function: %v>", name)
 }
 
 func (f Function) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
@@ -148,7 +148,7 @@ func (Lambda) Write() string {
 func (l Lambda) Debug() string {
 	var formals []string
 	for _, variable := range l.Variables {
-		formals = append(formals, fmt.Sprintf("%v", variable))
+		formals = append(formals, fmt.Sprintf("%p", variable.Value))
 	}
 	return fmt.Sprintf("(lambda (%v) %v)", strings.Join(formals, " "), l.Body.Debug())
 }
@@ -175,7 +175,7 @@ func (c ContinuationProcedure) Call(_ Continuation, args ...Datum) (EvaluationRe
 	if len(args) != 1 {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for continuation", len(args)))
 	}
-	return c.Continuation.Call(args[0])
+	return CallC(c.Continuation, args[0])
 }
 
 type Application struct {
@@ -208,7 +208,7 @@ type Let struct {
 }
 
 func (l Let) Debug() string {
-	return fmt.Sprintf("(let ((%v %v)) %v)", l.Variable, l.Init.Debug(), l.Body.Debug())
+	return fmt.Sprintf("(let ((%p %v)) %v)", l.Variable.Value, l.Init.Debug(), l.Body.Debug())
 }
 
 type Begin struct {
@@ -229,7 +229,7 @@ type Define struct {
 }
 
 func (d Define) Debug() string {
-	return fmt.Sprintf("(define %v %v)", d.Variable, d.Expression.Debug())
+	return fmt.Sprintf("(define %p %v)", d.Variable.Value, d.Expression.Debug())
 }
 
 type Set struct {
@@ -238,7 +238,7 @@ type Set struct {
 }
 
 func (s Set) Debug() string {
-	return fmt.Sprintf("(set! %v %v)", s.Variable, s.Expression.Debug())
+	return fmt.Sprintf("(set! %p %v)", s.Variable.Value, s.Expression.Debug())
 }
 
 type Reference struct {
@@ -246,5 +246,5 @@ type Reference struct {
 }
 
 func (r Reference) Debug() string {
-	return fmt.Sprintf("%v", r.Variable)
+	return fmt.Sprintf("%p", r.Variable.Value)
 }
