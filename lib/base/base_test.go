@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
@@ -30,7 +31,11 @@ func TestBase(t *testing.T) {
 	runtime.Provide(core.Library)
 	runtime.Bind(core.Library.Name(), core.Bindings)
 	runtime.Provide(Library)
-	err = runtime.Execute(data)
+	var topLevelProgram []common.WrappedSyntax
+	for _, d := range data {
+		topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
+	}
+	err = runtime.Execute(topLevelProgram)
 	if err != nil {
 		t.Fatal(err)
 	}

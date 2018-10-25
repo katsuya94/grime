@@ -10,7 +10,7 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-var PatternTopLevelProgramImportForm = read.MustReadString("(import import-spec ...)")[0]
+var PatternTopLevelProgramImportForm = util.Pattern(read.MustReadString("(import import-spec ...)")[0])
 
 type Runtime struct {
 	provisions map[string]*provision
@@ -39,8 +39,8 @@ func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
 	return nil
 }
 
-func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
-	result, ok, err := util.Match(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
+func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
+	result, ok, err := util.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
 	if err != nil {
@@ -50,7 +50,7 @@ func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	}
 	var library Library
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
-		importSpec, err := newImportSpec(d)
+		importSpec, err := newImportSpec(d.(common.WrappedSyntax))
 		if err != nil {
 			return nil
 		}
@@ -132,7 +132,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 			}
 		}
 	}
-	expression, definitions, err := eval.CompileBody(env, append(prov.library.body, common.Void))
+	wrappedBody := append(prov.library.body, common.NewWrappedSyntax(common.Void))
+	var body []common.Datum
+	for _, syntax := range wrappedBody {
+		body = append(body, syntax.Datum())
+	}
+	expression, definitions, err := eval.CompileBody(env, body)
 	if err != nil {
 		return err
 	}

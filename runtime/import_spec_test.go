@@ -298,7 +298,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			} else if len(data) != 1 {
 				t.Fatalf("encountered %v data in pattern", len(data))
 			}
-			spec, err := newImportSpec(data[0])
+			spec, err := newImportSpec(common.NewWrappedSyntax(data[0]))
 			if err != nil {
 				t.Fatal(err)
 			}

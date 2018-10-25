@@ -62,7 +62,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export) (import) 'id)",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				body: []common.Datum{common.QuoteForm{common.Symbol("id")}},
+				body: []common.WrappedSyntax{common.NewWrappedSyntax(common.QuoteForm{common.Symbol("id")})},
 			},
 			"",
 		},
@@ -456,7 +456,7 @@ func TestNewLibrary(t *testing.T) {
 			} else if len(data) != 1 {
 				t.Fatalf("encountered %v data in source", len(data))
 			}
-			actual, err := NewLibrary(data[0])
+			actual, err := NewLibrary(common.NewWrappedSyntax(data[0]))
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

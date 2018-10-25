@@ -3,6 +3,7 @@ package runtime_test
 import (
 	"testing"
 
+	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
 	. "github.com/katsuya94/grime/runtime"
@@ -128,7 +129,7 @@ func TestRuntime_Execute(t *testing.T) {
 				} else if len(data) != 1 {
 					t.Fatalf("encountered %v data in pattern", len(data))
 				}
-				library, err := NewLibrary(data[0])
+				library, err := NewLibrary(common.NewWrappedSyntax(data[0]))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -141,7 +142,11 @@ func TestRuntime_Execute(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = runtime.Execute(data)
+			var program []common.WrappedSyntax
+			for _, d := range data {
+				program = append(program, common.NewWrappedSyntax(d))
+			}
+			err = runtime.Execute(program)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

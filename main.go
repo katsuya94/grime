@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/runtime"
@@ -30,15 +31,21 @@ func repl() {
 	r := runtime.NewRuntime()
 	r.Provide(core.Library)
 	r.Bind(core.Library.Name(), core.Bindings)
+	r.Provide(base.Library)
 	for {
 		fmt.Print("grime> ")
-		body, err := readReplData()
+		data, err := readReplData()
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		err = r.Execute(append(read.MustReadString("(import (core))"), body...))
+		data = append(read.MustReadString("(import (base))"), data...)
+		var topLevelProgram []common.WrappedSyntax
+		for _, d := range data {
+			topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
+		}
+		err = r.Execute(topLevelProgram)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
@@ -89,14 +96,14 @@ func run() error {
 	r.Provide(core.Library)
 	r.Bind(core.Library.Name(), core.Bindings)
 	reader := read.NewDatumReader(os.Stdin)
-	var topLevelProgram []common.Datum
+	var topLevelProgram []common.WrappedSyntax
 	for {
 		if datum, err := reader.ReadDatum(); err == io.EOF {
 			break
 		} else if err != nil {
 			return err
 		} else {
-			topLevelProgram = append(topLevelProgram, datum)
+			topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(datum))
 		}
 	}
 	return r.Execute(topLevelProgram)

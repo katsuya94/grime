@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 	grime "github.com/katsuya94/grime/runtime"
 )
@@ -26,5 +27,5 @@ func init() {
 	if len(data) != 1 {
 		panic(fmt.Sprintf("failed to load base: found %v data", len(data)))
 	}
-	Library = grime.MustNewLibrary(data[0])
+	Library = grime.MustNewLibrary(common.NewWrappedSyntax(data[0]))
 }
