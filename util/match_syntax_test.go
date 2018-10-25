@@ -314,7 +314,7 @@ func TestMatchSyntax(t *testing.T) {
 			} else if len(data) != 1 {
 				t.Fatalf("encountered %v data in pattern", len(data))
 			}
-			pattern := data[0]
+			pattern := Pattern(data[0])
 			result, ok, err := MatchSyntax(input, pattern, test.literals)
 			if test.error == "" && err != nil {
 				t.Fatal(err)

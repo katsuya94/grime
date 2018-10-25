@@ -112,7 +112,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		return nil, err
 	}
 	switch form := form.(type) {
-	case common.Boolean, common.Number, common.Character, common.String, common.Syntax:
+	case common.Boolean, common.Number, common.Character, common.String, common.WrappedSyntax:
 		return form.(common.Expression), nil
 	case common.QuoteForm:
 		if form.Datum == nil {
@@ -124,7 +124,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return expression, nil
 	case common.SyntaxForm:
-		return common.Syntax{form.Datum}, nil
+		return common.NewWrappedSyntax(form.Datum), nil
 	case common.BeginForm:
 		expression, _, err := CompileBody(env, form.Forms)
 		if err != nil {

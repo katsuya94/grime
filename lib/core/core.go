@@ -25,6 +25,8 @@ func init() {
 	env = env.MustDefine(common.Symbol("define"), []int{0}, &common.Keyword{common.Function(transformDefine)})
 	env = env.MustDefine(common.Symbol("define-syntax"), []int{0}, &common.Keyword{common.Function(transformDefineSyntax)})
 	env = env.MustDefine(common.Symbol("set!"), []int{0}, &common.Keyword{common.Function(transformSet)})
+	env = env.MustDefine(common.Symbol("_"), []int{0}, &common.Keyword{common.Function(transformWildcard)})
+	env = env.MustDefine(common.Symbol("..."), []int{0}, &common.Keyword{common.Function(transformEllipsis)})
 	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons), true})
 	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car), true})
 	env = env.MustDefine(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr), true})
@@ -295,4 +297,12 @@ func eqv(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 		return common.ErrorC(fmt.Errorf("eqv?: wrong arity"))
 	}
 	return common.CallC(c, common.Boolean(args[0] == args[1]))
+}
+
+func transformWildcard(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
+	return nil, fmt.Errorf("cannot expand wildcard")
+}
+
+func transformEllipsis(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
+	return nil, fmt.Errorf("cannot expand ellipsis")
 }

@@ -10,7 +10,7 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 	switch v := expression.(type) {
 	case nil:
 		return common.CallC(c, nil)
-	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.Syntax, common.Lambda:
+	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.WrappedSyntax, common.Lambda:
 		return common.CallC(c, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(

@@ -34,6 +34,14 @@ func (v voidType) Debug() string {
 
 var Void = &voidType{}
 
+type wildcardType struct{}
+
+var Wildcard = &wildcardType{}
+
+type ellipsisType struct{}
+
+var Ellipsis = &ellipsisType{}
+
 type Boolean bool
 
 func (b Boolean) Write() string {
