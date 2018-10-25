@@ -1,7 +1,6 @@
 package util_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -10,31 +9,6 @@ import (
 	. "github.com/katsuya94/grime/util"
 )
 
-func readMatchSyntaxResult(shorthand interface{}) (interface{}, error) {
-	switch v := shorthand.(type) {
-	case []interface{}:
-		subresults := []interface{}{}
-		for _, subshorthand := range v {
-			if subresult, err := readMatchResult(subshorthand); err != nil {
-				return nil, err
-			} else {
-				subresults = append(subresults, subresult)
-			}
-		}
-		return subresults, nil
-	case string:
-		if data, err := read.ReadString(v); err != nil {
-			return nil, err
-		} else if len(data) != 1 {
-			return nil, fmt.Errorf("encountered %v data in expected result shorthand", len(data))
-		} else {
-			return data[0], nil
-		}
-	default:
-		return nil, fmt.Errorf("unhandled shorthand: %#v", v)
-	}
-}
-
 func TestMatchSyntax(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -42,7 +16,7 @@ func TestMatchSyntax(t *testing.T) {
 		pattern  string
 		input    string
 		ok       bool
-		result   map[string]interface{}
+		result   map[common.Symbol]interface{}
 		error    string
 	}{
 		{
@@ -51,17 +25,17 @@ func TestMatchSyntax(t *testing.T) {
 			"_",
 			"foo",
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
-			"pattern variable matching symbol",
+			"pattern variable matching identifier",
 			map[common.Symbol]common.Location{},
 			"id",
 			"foo",
 			true,
-			map[string]interface{}{
-				"id": "foo",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): common.NewWrappedSyntax(common.Symbol("foo")),
 			},
 			"",
 		},
@@ -71,8 +45,8 @@ func TestMatchSyntax(t *testing.T) {
 			"id",
 			"(foo)",
 			true,
-			map[string]interface{}{
-				"id": "(foo)",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): common.NewWrappedSyntax(common.Pair{common.Symbol("foo"), nil}),
 			},
 			"",
 		},
@@ -82,9 +56,9 @@ func TestMatchSyntax(t *testing.T) {
 			"(id name)",
 			"(foo bar)",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": "bar",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"):   common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("bar")),
 			},
 			"",
 		},
@@ -94,9 +68,9 @@ func TestMatchSyntax(t *testing.T) {
 			"(id . name)",
 			"(foo . bar)",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": "bar",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"):   common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("bar")),
 			},
 			"",
 		},
@@ -106,9 +80,9 @@ func TestMatchSyntax(t *testing.T) {
 			"(id . name)",
 			"(foo bar)",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": "(bar)",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"):   common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): common.NewWrappedSyntax(common.Pair{common.Symbol("bar"), nil}),
 			},
 			"",
 		},
@@ -118,9 +92,9 @@ func TestMatchSyntax(t *testing.T) {
 			"(id (name))",
 			"(foo (bar))",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": "bar",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"):   common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("bar")),
 			},
 			"",
 		},
@@ -130,8 +104,11 @@ func TestMatchSyntax(t *testing.T) {
 			"(id ...)",
 			"(foo bar)",
 			true,
-			map[string]interface{}{
-				"id": []interface{}{"foo", "bar"},
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("foo")),
+					common.NewWrappedSyntax(common.Symbol("bar")),
+				},
 			},
 			"",
 		},
@@ -141,9 +118,12 @@ func TestMatchSyntax(t *testing.T) {
 			"(id ... . name)",
 			"(foo bar . baz)",
 			true,
-			map[string]interface{}{
-				"id":   []interface{}{"foo", "bar"},
-				"name": "baz",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("foo")),
+					common.NewWrappedSyntax(common.Symbol("bar")),
+				},
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("baz")),
 			},
 			"",
 		},
@@ -153,9 +133,12 @@ func TestMatchSyntax(t *testing.T) {
 			"(id ... name)",
 			"(foo bar baz)",
 			true,
-			map[string]interface{}{
-				"id":   []interface{}{"foo", "bar"},
-				"name": "baz",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("foo")),
+					common.NewWrappedSyntax(common.Symbol("bar")),
+				},
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("baz")),
 			},
 			"",
 		},
@@ -165,10 +148,13 @@ func TestMatchSyntax(t *testing.T) {
 			"(id ... name . key)",
 			"(foo bar baz . qux)",
 			true,
-			map[string]interface{}{
-				"id":   []interface{}{"foo", "bar"},
-				"name": "baz",
-				"key":  "qux",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("foo")),
+					common.NewWrappedSyntax(common.Symbol("bar")),
+				},
+				common.Symbol("name"): common.NewWrappedSyntax(common.Symbol("baz")),
+				common.Symbol("key"):  common.NewWrappedSyntax(common.Symbol("qux")),
 			},
 			"",
 		},
@@ -178,9 +164,12 @@ func TestMatchSyntax(t *testing.T) {
 			"(id name ...)",
 			"(foo bar baz)",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": []interface{}{"bar", "baz"},
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("bar")),
+					common.NewWrappedSyntax(common.Symbol("baz")),
+				},
 			},
 			"",
 		},
@@ -190,10 +179,13 @@ func TestMatchSyntax(t *testing.T) {
 			"(id name ... . key)",
 			"(foo bar baz . qux)",
 			true,
-			map[string]interface{}{
-				"id":   "foo",
-				"name": []interface{}{"bar", "baz"},
-				"key":  "qux",
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): common.NewWrappedSyntax(common.Symbol("foo")),
+				common.Symbol("name"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("bar")),
+					common.NewWrappedSyntax(common.Symbol("baz")),
+				},
+				common.Symbol("key"): common.NewWrappedSyntax(common.Symbol("qux")),
 			},
 			"",
 		},
@@ -203,8 +195,14 @@ func TestMatchSyntax(t *testing.T) {
 			"((id ...) ...)",
 			"((foo) (bar baz))",
 			true,
-			map[string]interface{}{
-				"id": []interface{}{[]interface{}{"foo"}, []interface{}{"bar", "baz"}},
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					[]interface{}{common.NewWrappedSyntax(common.Symbol("foo"))},
+					[]interface{}{
+						common.NewWrappedSyntax(common.Symbol("bar")),
+						common.NewWrappedSyntax(common.Symbol("baz")),
+					},
+				},
 			},
 			"",
 		},
@@ -214,8 +212,8 @@ func TestMatchSyntax(t *testing.T) {
 			"(id ...)",
 			"()",
 			true,
-			map[string]interface{}{
-				"id": []interface{}{},
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{},
 			},
 			"",
 		},
@@ -225,9 +223,15 @@ func TestMatchSyntax(t *testing.T) {
 			"((id name) ...)",
 			"((foo bar) (baz qux))",
 			true,
-			map[string]interface{}{
-				"id":   []interface{}{"foo", "baz"},
-				"name": []interface{}{"bar", "qux"},
+			map[common.Symbol]interface{}{
+				common.Symbol("id"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("foo")),
+					common.NewWrappedSyntax(common.Symbol("baz")),
+				},
+				common.Symbol("name"): []interface{}{
+					common.NewWrappedSyntax(common.Symbol("bar")),
+					common.NewWrappedSyntax(common.Symbol("qux")),
+				},
 			},
 			"",
 		},
@@ -237,7 +241,7 @@ func TestMatchSyntax(t *testing.T) {
 			"#f",
 			"#f",
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -246,7 +250,7 @@ func TestMatchSyntax(t *testing.T) {
 			"123",
 			"123",
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -255,7 +259,7 @@ func TestMatchSyntax(t *testing.T) {
 			`#\x`,
 			`#\x`,
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -264,7 +268,7 @@ func TestMatchSyntax(t *testing.T) {
 			`"name"`,
 			`"name"`,
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -273,7 +277,7 @@ func TestMatchSyntax(t *testing.T) {
 			"()",
 			"()",
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -282,7 +286,7 @@ func TestMatchSyntax(t *testing.T) {
 			"id",
 			"id",
 			true,
-			map[string]interface{}{},
+			map[common.Symbol]interface{}{},
 			"",
 		},
 		{
@@ -303,7 +307,7 @@ func TestMatchSyntax(t *testing.T) {
 			} else if len(data) != 1 {
 				t.Fatalf("encountered %v data in input", len(data))
 			}
-			input := data[0]
+			input := common.NewWrappedSyntax(data[0])
 			data, err = read.ReadString(test.pattern)
 			if err != nil {
 				t.Fatal(err)
@@ -311,17 +315,6 @@ func TestMatchSyntax(t *testing.T) {
 				t.Fatalf("encountered %v data in pattern", len(data))
 			}
 			pattern := data[0]
-			var expected map[common.Symbol]interface{}
-			if test.result != nil {
-				expected = map[common.Symbol]interface{}{}
-				for name, shorthand := range test.result {
-					if result, err := readMatchSyntaxResult(shorthand); err != nil {
-						t.Fatal(err)
-					} else {
-						expected[common.Symbol(name)] = result
-					}
-				}
-			}
 			result, ok, err := MatchSyntax(input, pattern, test.literals)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
@@ -331,8 +324,8 @@ func TestMatchSyntax(t *testing.T) {
 				}
 			} else if ok != test.ok {
 				t.Fatalf("\nexpected ok: %v\n     got ok: %v\n", test.ok, ok)
-			} else if !reflect.DeepEqual(result, expected) {
-				t.Fatalf("\nexpected: %#v\n     got: %#v", expected, result)
+			} else if !reflect.DeepEqual(result, test.result) {
+				t.Fatalf("\nexpected: %#v\n     got: %#v", test.result, result)
 			}
 		})
 	}

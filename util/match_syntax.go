@@ -14,10 +14,10 @@ func newSyntaxMatcher(literals map[common.Symbol]common.Location) *syntaxMatcher
 	return &syntaxMatcher{literals}
 }
 
-func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum, ellipsis bool) (map[common.Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) match(input common.WrappedSyntax, pattern common.Datum, ellipsis bool) (map[common.Symbol]interface{}, bool, error) {
 	switch p := pattern.(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
-		if input == p {
+		if input.Datum() == p {
 			return map[common.Symbol]interface{}{}, true, nil
 		} else {
 			return nil, false, nil
@@ -25,7 +25,7 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum, ellipsis
 	case common.Symbol:
 		if _, ok := m.literals[p]; ok {
 			// TODO implement lexical literal matching
-			if s, ok := input.(common.Symbol); !ok {
+			if s, ok := input.Datum().(common.Symbol); !ok {
 				return nil, false, nil
 			} else if s == p {
 				return map[common.Symbol]interface{}{}, true, nil
@@ -46,14 +46,14 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum, ellipsis
 				return m.matchEllipsis(input, p.First, rest.Rest)
 			}
 		}
-		if i, ok := input.(common.Pair); ok {
-			firstResult, match, err := m.match(i.First, p.First, true)
+		if i, ok := input.Datum().(common.Pair); ok {
+			firstResult, match, err := m.match(input.PushDown(i.First), p.First, true)
 			if err != nil {
 				return nil, false, err
 			} else if !match {
 				return nil, false, nil
 			}
-			restResult, match, err := m.match(i.Rest, p.Rest, ellipsis)
+			restResult, match, err := m.match(input.PushDown(i.Rest), p.Rest, ellipsis)
 			if err != nil {
 				return nil, false, err
 			} else if !match {
@@ -75,45 +75,43 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum, ellipsis
 	}
 }
 
-func (m *syntaxMatcher) matchEllipsis(input common.Datum, subpattern common.Datum, restpattern common.Datum) (map[common.Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) matchEllipsis(input common.WrappedSyntax, subpattern common.Datum, restpattern common.Datum) (map[common.Symbol]interface{}, bool, error) {
 	var (
 		result     map[common.Symbol]interface{}
 		subresults []map[common.Symbol]interface{}
 	)
 	for {
-		if i, ok := input.(common.Pair); ok {
-			if subresult, ok, err := m.match(i.First, subpattern, true); err != nil {
+		if i, ok := input.Datum().(common.Pair); ok {
+			subresult, ok, err := m.match(input.PushDown(i.First), subpattern, true)
+			if err != nil {
 				return nil, false, err
 			} else if !ok {
-				restResult, ok, err := m.match(i, restpattern, false)
+				restResult, ok, err := m.match(input, restpattern, false)
 				if err != nil {
 					return nil, false, err
 				} else if !ok {
 					return nil, false, nil
-				} else {
-					// If the first does not match subpattern, but the pair matches restpattern, we are done.
-					result = restResult
-					break
 				}
-			} else {
-				subresults = append(subresults, subresult)
-				restResult, ok, err := m.match(i.Rest, restpattern, false)
+				// If the first does not match subpattern, but the pair matches restpattern, we are done.
+				result = restResult
+				break
+			}
+			subresults = append(subresults, subresult)
+			restResult, ok, err := m.match(input.PushDown(i.Rest), restpattern, false)
+			if err != nil {
+				return nil, false, nil
+			} else if ok {
+				_, ok, err := m.matchEllipsis(input.PushDown(i.Rest), subpattern, restpattern)
 				if err != nil {
-					return nil, false, nil
-				} else if !ok {
-					// If the rest does not yet match restpattern, continue.
-					input = i.Rest
-				} else if _, ok, err := m.matchEllipsis(i.Rest, subpattern, restpattern); err != nil {
 					return nil, false, err
-				} else if ok {
-					// If the rest still matches subpattern and restpattern, continue.
-					input = i.Rest
-				} else {
-					// If the rest does not match subpattern and restpattern, we are done.
+				} else if !ok {
+					// If the rest matches the restpattern, but does not match the ellipsis, we are done.
 					result = restResult
 					break
 				}
 			}
+			// Otherwise continue.
+			input = input.PushDown(i.Rest)
 		} else {
 			restResult, ok, err := m.match(input, restpattern, false)
 			if err != nil {
@@ -127,12 +125,12 @@ func (m *syntaxMatcher) matchEllipsis(input common.Datum, subpattern common.Datu
 			}
 		}
 	}
-	if patternVariables, err := m.patternVariables(subpattern); err != nil {
+	patternVariables, err := m.patternVariables(subpattern)
+	if err != nil {
 		return nil, false, err
-	} else {
-		for _, patternVariable := range patternVariables {
-			result[patternVariable] = []interface{}{}
-		}
+	}
+	for _, patternVariable := range patternVariables {
+		result[patternVariable] = []interface{}{}
 	}
 	for _, subresult := range subresults {
 		for k, v := range subresult {
@@ -169,6 +167,6 @@ func (m *syntaxMatcher) patternVariables(pattern common.Datum) ([]common.Symbol,
 	}
 }
 
-func MatchSyntax(input common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]interface{}, bool, error) {
+func MatchSyntax(input common.WrappedSyntax, pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]interface{}, bool, error) {
 	return newSyntaxMatcher(literals).match(input, pattern, true)
 }
