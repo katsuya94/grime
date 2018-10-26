@@ -226,7 +226,11 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			expression, _, err := CompileBody(environment, body)
+			var forms []common.Form
+			for _, d := range body {
+				forms = append(forms, common.NewWrappedSyntax(d))
+			}
+			expression, _, err := CompileBody(environment, forms)
 			if err != nil {
 				t.Fatal(err)
 			}

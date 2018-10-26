@@ -103,7 +103,11 @@ func TestCompileBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, _, err = CompileBody(environment, sourceBody)
+			var forms []common.Form
+			for _, d := range sourceBody {
+				forms = append(forms, common.NewWrappedSyntax(d))
+			}
+			_, _, err = CompileBody(environment, forms)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

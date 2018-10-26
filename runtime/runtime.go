@@ -132,12 +132,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 			}
 		}
 	}
-	wrappedBody := append(prov.library.body, common.NewWrappedSyntax(common.Void))
-	var body []common.Datum
-	for _, syntax := range wrappedBody {
-		body = append(body, syntax.Datum())
+	body := append(prov.library.body, common.NewWrappedSyntax(common.Void))
+	var forms []common.Form
+	for _, syntax := range body {
+		forms = append(forms, syntax)
 	}
-	expression, definitions, err := eval.CompileBody(env, body)
+	expression, definitions, err := eval.CompileBody(env, forms)
 	if err != nil {
 		return err
 	}

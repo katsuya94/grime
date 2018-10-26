@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func CompileBody(env common.Environment, forms []common.Datum) (common.Expression, common.BindingSet, error) {
+func CompileBody(env common.Environment, forms []common.Form) (common.Expression, common.BindingSet, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -62,15 +62,17 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 			case common.LetSyntaxForm:
 				return nil, nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
-				s, ok, err := Expand(env, v)
-				if err != nil {
-					return nil, nil, err
-				} else if ok {
-					form = s
-				} else {
-					processed = true
-					expression = true
+				if syntax, ok := v.(common.WrappedSyntax); ok {
+					v, ok, err := Expand(env, syntax)
+					if err != nil {
+						return nil, nil, err
+					} else if ok {
+						form = v
+						continue
+					}
 				}
+				processed = true
+				expression = true
 			}
 		}
 		if expression {
@@ -106,10 +108,13 @@ func CompileBody(env common.Environment, forms []common.Datum) (common.Expressio
 	return expression, env.Bindings(), nil
 }
 
-func Compile(env common.Environment, form common.Datum) (common.Expression, error) {
-	form, err := ExpandCompletely(env, form)
-	if err != nil {
-		return nil, err
+func Compile(env common.Environment, form common.Form) (common.Expression, error) {
+	if syntax, ok := form.(common.WrappedSyntax); ok {
+		var err error
+		form, err = ExpandCompletely(env, syntax)
+		if err != nil {
+			return nil, err
+		}
 	}
 	switch form := form.(type) {
 	case common.Boolean, common.Number, common.Character, common.String, common.WrappedSyntax:

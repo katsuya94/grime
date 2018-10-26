@@ -1,22 +1,20 @@
 package eval
 
 import (
-	"fmt"
-
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/util"
 )
 
 var (
-	PatternMacroUseList                = read.MustReadString("(keyword _ ...)")[0]
-	PatternMacroUseImproperList        = read.MustReadString("(keyword _ ... . _)")[0]
-	PatternMacroUseSingletonIdentifier = read.MustReadString("keyword")[0]
-	PatternMacroUseSet                 = read.MustReadString("(set! keyword _)")[0]
-	PatternApplication                 = read.MustReadString("(procedure arguments ...)")[0]
+	PatternMacroUseList                = util.Pattern(read.MustReadString("(keyword _ ...)")[0])
+	PatternMacroUseImproperList        = util.Pattern(read.MustReadString("(keyword _ ... . _)")[0])
+	PatternMacroUseSingletonIdentifier = util.Pattern(read.MustReadString("keyword")[0])
+	PatternMacroUseSet                 = util.Pattern(read.MustReadString("(set! keyword _)")[0])
+	PatternApplication                 = util.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
+func Expand(env common.Environment, syntax common.WrappedSyntax) (common.Form, bool, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): nil,
@@ -32,38 +30,32 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok, err := util.Match(syntax, PatternApplication, nil); err != nil {
+	if result, ok, err := util.MatchSyntax(syntax, PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
-		procedure, ok := result[common.Symbol("procedure")].(common.Datum)
-		if !ok {
-			return nil, false, fmt.Errorf("application: bad syntax")
-		}
-		var arguments []common.Datum
+		procedure := result[common.Symbol("procedure")].(common.WrappedSyntax).Datum()
+		var arguments []common.Form
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
-			if argument, ok := argument.(common.Datum); !ok {
-				return nil, false, fmt.Errorf("application: bad syntax")
-			} else {
-				arguments = append(arguments, argument)
-			}
+			argument := argument.(common.WrappedSyntax).Datum
+			arguments = append(arguments, argument)
 		}
 		return common.ApplicationForm{procedure, arguments}, true, nil
 	}
-	if name, ok := syntax.(common.Symbol); ok {
+	if name, _, ok := syntax.Identifier(); ok {
 		return common.ReferenceForm{name}, true, nil
 	}
 	return nil, false, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.WrappedSyntax, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Form, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := util.Match(syntax, pattern, literals)
+	result, ok, err := util.MatchSyntax(syntax, pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
 		return nil, false, nil
 	}
-	name, ok := result[common.Symbol("keyword")].(common.Symbol)
+	name, _, ok := result[common.Symbol("keyword")].(common.WrappedSyntax).Identifier()
 	if !ok {
 		return nil, false, nil
 	}
@@ -84,14 +76,19 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	return output, true, nil
 }
 
-func ExpandCompletely(env common.Environment, syntax common.Datum) (common.Datum, error) {
+func ExpandCompletely(env common.Environment, syntax common.WrappedSyntax) (common.Form, error) {
+	var form common.Form = syntax
 	for {
-		s, ok, err := Expand(env, syntax)
-		if err != nil {
-			return nil, err
-		} else if !ok {
-			return syntax, nil
+		syntax, ok := form.(common.WrappedSyntax)
+		if ok {
+			f, ok, err := Expand(env, syntax)
+			if err != nil {
+				return nil, err
+			} else if ok {
+				form = f
+				continue
+			}
 		}
-		syntax = s
+		return form, nil
 	}
 }

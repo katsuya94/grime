@@ -39,20 +39,20 @@ func init() {
 }
 
 var (
-	PatternQuote        = read.MustReadString("(quote datum)")[0]
-	PatternSyntax       = read.MustReadString("(syntax datum)")[0]
-	PatternIf           = read.MustReadString("(if condition then else)")[0]
-	PatternLetStar      = read.MustReadString("(let* ((name init) ...) body ...)")[0]
-	PatternBegin        = read.MustReadString("(begin body ...)")[0]
-	PatternLambda       = read.MustReadString("(lambda (formals ...) body ...)")[0]
-	PatternDefineLambda = read.MustReadString("(define (name formals ...) body ...)")[0]
-	PatternDefine       = read.MustReadString("(define name value)")[0]
-	PatternDefineSyntax = read.MustReadString("(define-syntax name value)")[0]
-	PatternSet          = read.MustReadString("(set! name expression)")[0]
+	PatternQuote        = util.Pattern(read.MustReadString("(quote datum)")[0])
+	PatternSyntax       = util.Pattern(read.MustReadString("(syntax datum)")[0])
+	PatternIf           = util.Pattern(read.MustReadString("(if condition then else)")[0])
+	PatternLetStar      = util.Pattern(read.MustReadString("(let* ((name init) ...) body ...)")[0])
+	PatternBegin        = util.Pattern(read.MustReadString("(begin body ...)")[0])
+	PatternLambda       = util.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
+	PatternDefineLambda = util.Pattern(read.MustReadString("(define (name formals ...) body ...)")[0])
+	PatternDefine       = util.Pattern(read.MustReadString("(define name value)")[0])
+	PatternDefineSyntax = util.Pattern(read.MustReadString("(define-syntax name value)")[0])
+	PatternSet          = util.Pattern(read.MustReadString("(set! name expression)")[0])
 )
 
 func transformQuote(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternQuote, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternQuote, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -62,7 +62,7 @@ func transformQuote(c common.Continuation, args ...common.Datum) (common.Evaluat
 }
 
 func transformSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternQuote, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternQuote, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -72,7 +72,7 @@ func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evalua
 }
 
 func transformIf(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternIf, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternIf, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -87,7 +87,7 @@ func transformIf(c common.Continuation, args ...common.Datum) (common.Evaluation
 }
 
 func transformLetStar(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternLetStar, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternLetStar, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -101,11 +101,11 @@ func transformLetStar(c common.Continuation, args ...common.Datum) (common.Evalu
 			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
 		}
 	}
-	var inits []common.Datum
+	var inits []common.Form
 	for _, init := range result[common.Symbol("init")].([]interface{}) {
 		inits = append(inits, init)
 	}
-	var forms []common.Datum
+	var forms []common.Form
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -117,13 +117,13 @@ func transformLetStar(c common.Continuation, args ...common.Datum) (common.Evalu
 }
 
 func transformBegin(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternBegin, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternBegin, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
 	}
-	var forms []common.Datum
+	var forms []common.Form
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -131,7 +131,7 @@ func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluat
 }
 
 func transformLambda(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternLambda, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternLambda, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -151,10 +151,10 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	)
 	// TODO implement other define forms
 	// TODO implement define procedure with syntax transformation
-	if result, ok, err := util.Match(args[0], PatternDefineLambda, nil); err != nil {
+	if result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternDefineLambda, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
-		name, ok = result[common.Symbol("name")].(common.Symbol)
+		name, _, ok = result[common.Symbol("name")].(common.WrappedSyntax).Identifier()
 		if !ok {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
@@ -163,10 +163,10 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 			return common.ErrorC(err)
 		}
 		form = lambda
-	} else if result, ok, err := util.Match(args[0], PatternDefine, nil); err != nil {
+	} else if result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternDefine, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
-		name, ok = result[common.Symbol("name")].(common.Symbol)
+		name, _, ok = result[common.Symbol("name")].(common.WrappedSyntax).Identifier()
 		if !ok {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
@@ -180,13 +180,13 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaForm, error) {
 	var formals []common.Symbol
 	for _, s := range result[common.Symbol("formals")].([]interface{}) {
-		if formal, ok := s.(common.Symbol); ok {
+		if formal, _, ok := s.(common.WrappedSyntax).Identifier(); ok {
 			formals = append(formals, formal)
 		} else {
 			return common.LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 	}
-	var forms []common.Datum
+	var forms []common.Form
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -195,7 +195,7 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 }
 
 func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternDefineSyntax, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternDefineSyntax, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
@@ -210,7 +210,7 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 }
 
 func transformSet(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.Match(args[0], PatternSet, nil)
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternSet, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
