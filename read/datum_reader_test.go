@@ -77,7 +77,7 @@ func TestRead(t *testing.T) {
 		{
 			"quote",
 			"'id",
-			[]common.Datum{common.QuoteForm{common.Symbol("id")}},
+			[]common.Datum{common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{
@@ -101,7 +101,7 @@ func TestRead(t *testing.T) {
 		{
 			"syntax",
 			"#'id",
-			[]common.Datum{common.SyntaxForm{common.Symbol("id")}},
+			[]common.Datum{common.Pair{common.Symbol("syntax"), common.Pair{common.Symbol("id"), nil}}},
 			"",
 		},
 		{

@@ -67,7 +67,7 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 					if err != nil {
 						return nil, nil, err
 					} else if ok {
-						form = v
+						form = v // TODO: try forms[i] = v to prevent repeated expands
 						continue
 					}
 				}
@@ -117,8 +117,6 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 	}
 	switch form := form.(type) {
-	case common.Boolean, common.Number, common.Character, common.String, common.WrappedSyntax:
-		return form.(common.Expression), nil
 	case common.QuoteForm:
 		if form.Datum == nil {
 			return nil, nil
@@ -214,10 +212,17 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		return common.Set{variable, expression}, nil
 	case common.DefineForm, common.DefineSyntaxForm:
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
-	default:
-		if form == common.Void {
-			return common.Void, nil
+	case common.WrappedSyntax:
+		switch datum := form.Datum().(type) {
+		case common.Boolean, common.Number, common.Character, common.String:
+			return datum.(common.Expression), nil
+		default:
+			if datum == common.Void {
+				return common.Void, nil
+			}
+			return nil, fmt.Errorf("compile: unhandled literal %#v", datum)
 		}
+	default:
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)
 	}
 }

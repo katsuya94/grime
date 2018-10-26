@@ -58,7 +58,7 @@ func transformQuote(c common.Continuation, args ...common.Datum) (common.Evaluat
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
-	return common.CallC(c, common.QuoteForm{result[common.Symbol("datum")]})
+	return common.CallC(c, common.QuoteForm{result[common.Symbol("datum")].(common.WrappedSyntax).Datum()})
 }
 
 func transformSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -68,7 +68,7 @@ func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("syntax: bad syntax"))
 	}
-	return common.CallC(c, common.SyntaxForm{result[common.Symbol("datum")]})
+	return common.CallC(c, common.SyntaxForm{result[common.Symbol("datum")].(common.WrappedSyntax).Datum()})
 }
 
 func transformIf(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -95,11 +95,11 @@ func transformLetStar(c common.Continuation, args ...common.Datum) (common.Evalu
 	}
 	var names []common.Symbol
 	for _, name := range result[common.Symbol("name")].([]interface{}) {
-		if name, ok := name.(common.Symbol); ok {
-			names = append(names, name)
-		} else {
+		name, _, ok := name.(common.WrappedSyntax).Identifier()
+		if !ok {
 			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
 		}
+		names = append(names, name)
 	}
 	var inits []common.Form
 	for _, init := range result[common.Symbol("init")].([]interface{}) {
@@ -201,7 +201,7 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
-	name, ok := result[common.Symbol("name")].(common.Symbol)
+	name, _, ok := result[common.Symbol("name")].(common.WrappedSyntax).Identifier()
 	if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
@@ -216,7 +216,7 @@ func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
-	name, ok := result[common.Symbol("name")].(common.Symbol)
+	name, _, ok := result[common.Symbol("name")].(common.WrappedSyntax).Identifier()
 	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}

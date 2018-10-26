@@ -33,10 +33,10 @@ func Expand(env common.Environment, syntax common.WrappedSyntax) (common.Form, b
 	if result, ok, err := util.MatchSyntax(syntax, PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
-		procedure := result[common.Symbol("procedure")].(common.WrappedSyntax).Datum()
+		procedure := result[common.Symbol("procedure")].(common.WrappedSyntax)
 		var arguments []common.Form
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
-			argument := argument.(common.WrappedSyntax).Datum
+			argument := argument.(common.WrappedSyntax)
 			arguments = append(arguments, argument)
 		}
 		return common.ApplicationForm{procedure, arguments}, true, nil
