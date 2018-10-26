@@ -210,11 +210,50 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 			return nil, err
 		}
 		return common.Set{variable, expression}, nil
+	case common.SyntaxCaseForm:
+		inputExpression, err := Compile(env, form.Input)
+		if err != nil {
+			return nil, err
+		}
+		literals := make(map[common.Symbol]common.Location)
+		for _, literal := range form.Literals {
+			binding := env.Get(literal)
+			if binding == common.WildcardKeyword {
+				return nil, fmt.Errorf("compile: wildcard cannot appear in literals")
+			}
+			if binding == common.EllipsisKeyword {
+				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
+			}
+			literals[literal] = binding
+		}
+		var (
+			patterns          []common.Datum
+			fenderExpressions []common.Expression
+			outputExpressions []common.Expression
+		)
+		for i := range form.Patterns {
+			pattern, err := compilePattern(env, form.Patterns[i])
+			if err != nil {
+				return nil, err
+			}
+			fenderExpression, err := Compile(env, form.Fenders[i])
+			if err != nil {
+				return nil, err
+			}
+			outputExpression, err := Compile(env, form.Outputs[i])
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, pattern)
+			fenderExpressions = append(fenderExpressions, fenderExpression)
+			outputExpressions = append(outputExpressions, outputExpression)
+		}
+		return common.SyntaxCase{inputExpression, literals, patterns, fenderExpressions, outputExpressions}, nil
 	case common.DefineForm, common.DefineSyntaxForm:
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	case common.WrappedSyntax:
 		switch datum := form.Datum().(type) {
-		case common.Boolean, common.Number, common.Character, common.String:
+		case common.Boolean, common.Number, common.Character, common.String, nil:
 			return datum.(common.Expression), nil
 		default:
 			if datum == common.Void {
@@ -224,5 +263,34 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 	default:
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)
+	}
+}
+
+func compilePattern(env common.Environment, form common.Form) (common.Datum, error) {
+	syntax := form.(common.WrappedSyntax)
+	switch datum := syntax.Datum().(type) {
+	case common.Boolean, common.Number, common.Character, common.String, nil:
+		return datum, nil
+	case common.Symbol:
+		binding := env.Get(datum)
+		if binding == common.WildcardKeyword {
+			return common.Wildcard, nil
+		}
+		if binding == common.EllipsisKeyword {
+			return common.Ellipsis, nil
+		}
+		return datum, nil
+	case common.Pair:
+		first, err := compilePattern(env, syntax.PushOnto(datum.First))
+		if err != nil {
+			return nil, err
+		}
+		rest, err := compilePattern(env, syntax.PushOnto(datum.Rest))
+		if err != nil {
+			return nil, err
+		}
+		return common.Pair{first, rest}, nil
+	default:
+		return nil, fmt.Errorf("compile: unhandled pattern %#v", datum)
 	}
 }

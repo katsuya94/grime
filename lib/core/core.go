@@ -24,9 +24,10 @@ func init() {
 	env = env.MustDefine(common.Symbol("lambda"), []int{0}, &common.Keyword{common.Function(transformLambda)})
 	env = env.MustDefine(common.Symbol("define"), []int{0}, &common.Keyword{common.Function(transformDefine)})
 	env = env.MustDefine(common.Symbol("define-syntax"), []int{0}, &common.Keyword{common.Function(transformDefineSyntax)})
+	env = env.MustDefine(common.Symbol("syntax-case"), []int{0}, &common.Keyword{common.Function(transformSyntaxCase)})
 	env = env.MustDefine(common.Symbol("set!"), []int{0}, &common.Keyword{common.Function(transformSet)})
-	env = env.MustDefine(common.Symbol("_"), []int{0}, &common.Keyword{common.Function(transformWildcard)})
-	env = env.MustDefine(common.Symbol("..."), []int{0}, &common.Keyword{common.Function(transformEllipsis)})
+	env = env.MustDefine(common.Symbol("_"), []int{0}, common.WildcardKeyword)
+	env = env.MustDefine(common.Symbol("..."), []int{0}, common.EllipsisKeyword)
 	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons), true})
 	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car), true})
 	env = env.MustDefine(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr), true})
@@ -35,20 +36,24 @@ func init() {
 	env = env.MustDefine(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation), true})
 	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err), true})
 	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
+	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum), true})
 	Bindings = env.Bindings()
 }
 
 var (
-	PatternQuote        = util.Pattern(read.MustReadString("(quote datum)")[0])
-	PatternSyntax       = util.Pattern(read.MustReadString("(syntax datum)")[0])
-	PatternIf           = util.Pattern(read.MustReadString("(if condition then else)")[0])
-	PatternLetStar      = util.Pattern(read.MustReadString("(let* ((name init) ...) body ...)")[0])
-	PatternBegin        = util.Pattern(read.MustReadString("(begin body ...)")[0])
-	PatternLambda       = util.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
-	PatternDefineLambda = util.Pattern(read.MustReadString("(define (name formals ...) body ...)")[0])
-	PatternDefine       = util.Pattern(read.MustReadString("(define name value)")[0])
-	PatternDefineSyntax = util.Pattern(read.MustReadString("(define-syntax name value)")[0])
-	PatternSet          = util.Pattern(read.MustReadString("(set! name expression)")[0])
+	PatternQuote                      = util.Pattern(read.MustReadString("(quote datum)")[0])
+	PatternSyntax                     = util.Pattern(read.MustReadString("(syntax datum)")[0])
+	PatternIf                         = util.Pattern(read.MustReadString("(if condition then else)")[0])
+	PatternLetStar                    = util.Pattern(read.MustReadString("(let* ((name init) ...) body ...)")[0])
+	PatternBegin                      = util.Pattern(read.MustReadString("(begin body ...)")[0])
+	PatternLambda                     = util.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
+	PatternDefineLambda               = util.Pattern(read.MustReadString("(define (name formals ...) body ...)")[0])
+	PatternDefine                     = util.Pattern(read.MustReadString("(define name value)")[0])
+	PatternDefineSyntax               = util.Pattern(read.MustReadString("(define-syntax name value)")[0])
+	PatternSyntaxCase                 = util.Pattern(read.MustReadString("(syntax-case input (literal ...) clause ...)")[0])
+	PatternSyntaxCaseClause           = util.Pattern(read.MustReadString("(pattern output)")[0])
+	PatternSyntaxCaseClauseWithFender = util.Pattern(read.MustReadString("(pattern fender output)")[0])
+	PatternSet                        = util.Pattern(read.MustReadString("(set! name expression)")[0])
 )
 
 func transformQuote(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -209,6 +214,55 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 	return common.CallC(c, common.DefineSyntaxForm{name, form})
 }
 
+func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternSyntaxCase, nil)
+	if err != nil {
+		return common.ErrorC(err)
+	} else if !ok {
+		return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
+	}
+	input := result[common.Symbol("input")]
+	var literals []common.Symbol
+	for _, literal := range result[common.Symbol("literal")].([]interface{}) {
+		name, _, ok := literal.(common.WrappedSyntax).Identifier()
+		if !ok {
+			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
+		}
+		literals = append(literals, name)
+	}
+	var (
+		patterns []common.Form
+		fenders  []common.Form
+		outputs  []common.Form
+	)
+	for _, clause := range result[common.Symbol("clause")].([]interface{}) {
+		var (
+			pattern common.Form
+			fender  common.Form
+			output  common.Form
+		)
+		if result, ok, err := util.MatchSyntax(clause.(common.WrappedSyntax), PatternSyntaxCaseClause, nil); err != nil {
+			return common.ErrorC(err)
+		} else if ok {
+			pattern = result[common.Symbol("pattern")]
+			fender = common.NewWrappedSyntax(common.Boolean(true))
+			output = result[common.Symbol("output")]
+		} else if result, ok, err := util.MatchSyntax(clause.(common.WrappedSyntax), PatternSyntaxCaseClauseWithFender, nil); err != nil {
+			return common.ErrorC(err)
+		} else if ok {
+			pattern = result[common.Symbol("pattern")]
+			fender = result[common.Symbol("fender")]
+			output = result[common.Symbol("output")]
+		} else {
+			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
+		}
+		patterns = append(patterns, pattern)
+		fenders = append(fenders, fender)
+		outputs = append(outputs, output)
+	}
+	return common.CallC(c, common.SyntaxCaseForm{input, literals, patterns, fenders, outputs})
+}
+
 func transformSet(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternSet, nil)
 	if err != nil {
@@ -299,10 +353,13 @@ func eqv(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 	return common.CallC(c, common.Boolean(args[0] == args[1]))
 }
 
-func transformWildcard(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
-	return nil, fmt.Errorf("cannot expand wildcard")
-}
-
-func transformEllipsis(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
-	return nil, fmt.Errorf("cannot expand ellipsis")
+func syntaxDatum(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("syntax->datum: wrong arity"))
+	}
+	syntax, ok := args[0].(common.WrappedSyntax)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("syntax->datum: expected syntax"))
+	}
+	return common.CallC(c, syntax.Datum())
 }

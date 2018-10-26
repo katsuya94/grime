@@ -36,11 +36,27 @@ var Void = &voidType{}
 
 type wildcardType struct{}
 
+func (wildcardType) Write() string {
+	return "_"
+}
+
 var Wildcard = &wildcardType{}
+
+var WildcardKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+	return nil, fmt.Errorf("cannot expand wildcard")
+})}
 
 type ellipsisType struct{}
 
+func (ellipsisType) Write() string {
+	return "..."
+}
+
 var Ellipsis = &ellipsisType{}
+
+var EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+	return nil, fmt.Errorf("cannot expand ellipsis")
+})}
 
 type Boolean bool
 
@@ -257,4 +273,24 @@ type Reference struct {
 
 func (r Reference) Debug() string {
 	return fmt.Sprintf("%p", r.Variable.Value)
+}
+
+type SyntaxCase struct {
+	Input    Expression
+	Literals map[Symbol]Location
+	Patterns []Datum
+	Fenders  []Expression
+	Outputs  []Expression
+}
+
+func (s SyntaxCase) Debug() string {
+	var literals []string
+	for literal := range s.Literals {
+		literals = append(literals, fmt.Sprintf("%v", literal))
+	}
+	var clauses []string
+	for i := range s.Patterns {
+		clauses = append(clauses, fmt.Sprintf("(%v %v %v)", Write(s.Patterns[i]), s.Fenders[i].Debug(), s.Outputs[i].Debug()))
+	}
+	return fmt.Sprintf("(syntax-case %v (%v) %v)", s.Input.Debug(), strings.Join(literals, " "), strings.Join(clauses, " "))
 }

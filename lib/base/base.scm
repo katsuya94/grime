@@ -8,6 +8,7 @@
     lambda
     define
     define-syntax
+    syntax-case
     set!
     cons
     car
@@ -17,6 +18,8 @@
     call/cc
     error
     eqv?
+    syntax->datum
+    eq?
     equal?)
   (import (for (core) run expand))
 

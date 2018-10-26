@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/util"
 )
 
 type applicationProcedureEvaluated struct {
@@ -127,4 +128,60 @@ func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, e
 	}
 	(*c.variable).Value = d
 	return common.CallC(c.continuation, common.Void)
+}
+
+type syntaxCaseInputEvaluated struct {
+	continuation common.Continuation
+	literals     map[common.Symbol]common.Location
+	patterns     []common.Datum
+	fenders      []common.Expression
+	outputs      []common.Expression
+}
+
+func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	syntax, ok := d.(common.WrappedSyntax)
+	if !ok {
+		return nil, fmt.Errorf("syntax-case: expected syntax")
+	}
+	return syntaxCaseMatch(c.continuation, syntax, c.literals, c.patterns, c.fenders, c.outputs)
+}
+
+type syntaxCaseFenderEvaluated struct {
+	continuation common.Continuation
+	input        common.WrappedSyntax
+	literals     map[common.Symbol]common.Location
+	output       common.Expression
+	patterns     []common.Datum
+	fenders      []common.Expression
+	outputs      []common.Expression
+}
+
+func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+	if d == common.Boolean(false) {
+		return syntaxCaseMatch(c.continuation, c.input, c.literals, c.patterns, c.fenders, c.outputs)
+	}
+	return common.EvalC(c.continuation, c.output)
+}
+
+func syntaxCaseMatch(continuation common.Continuation, input common.WrappedSyntax, literals map[common.Symbol]common.Location, patterns []common.Datum, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
+	for i := range patterns {
+		_, ok, err := util.MatchSyntax(input, patterns[i], literals)
+		if err != nil {
+			return nil, err
+		} else if ok {
+			return common.EvalC(
+				syntaxCaseFenderEvaluated{
+					continuation,
+					input,
+					literals,
+					outputs[i],
+					patterns[i+1:],
+					fenders[i+1:],
+					outputs[i+1:],
+				},
+				fenders[i],
+			)
+		}
+	}
+	return nil, fmt.Errorf("syntax-case: bad syntax")
 }

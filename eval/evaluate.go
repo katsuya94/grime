@@ -47,6 +47,11 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 			return nil, fmt.Errorf("evaluate: cannot reference identifier before its definition")
 		}
 		return common.CallC(c, v.Variable.Value)
+	case common.SyntaxCase:
+		return common.EvalC(
+			syntaxCaseInputEvaluated{c, v.Literals, v.Patterns, v.Fenders, v.Outputs},
+			v.Input,
+		)
 	default:
 		if v == common.Void {
 			return common.CallC(c, common.Void)

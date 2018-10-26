@@ -7,6 +7,14 @@ type DefineSyntaxForm struct {
 	Form Form
 }
 
+type SyntaxCaseForm struct {
+	Input    Form
+	Literals []Symbol
+	Patterns []Form
+	Fenders  []Form
+	Outputs  []Form
+}
+
 type DefineForm struct {
 	Name Symbol
 	Form Form
