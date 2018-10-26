@@ -276,11 +276,12 @@ func (r Reference) Debug() string {
 }
 
 type SyntaxCase struct {
-	Input    Expression
-	Literals map[Symbol]Location
-	Patterns []Datum
-	Fenders  []Expression
-	Outputs  []Expression
+	Input                   Expression
+	Literals                map[Symbol]Location
+	Patterns                []Datum
+	PatternVariableBindings []map[Symbol]*PatternVariable
+	Fenders                 []Expression
+	Outputs                 []Expression
 }
 
 func (s SyntaxCase) Debug() string {

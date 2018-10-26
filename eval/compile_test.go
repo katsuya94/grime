@@ -87,6 +87,16 @@ func TestCompileBody(t *testing.T) {
 			"(define id 'foo) (let* () (define id 'bar) id)",
 			"",
 		},
+		{
+			"cannot expand wildcard",
+			"_",
+			"cannot expand wildcard",
+		},
+		{
+			"cannot expand ellipsis",
+			"...",
+			"cannot expand ellipsis",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

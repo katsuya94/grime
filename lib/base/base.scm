@@ -10,6 +10,8 @@
     define-syntax
     syntax-case
     set!
+    _
+    ...
     cons
     car
     cdr

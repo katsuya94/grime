@@ -10,7 +10,7 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 	switch v := expression.(type) {
 	case nil:
 		return common.CallC(c, nil)
-	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.WrappedSyntax, common.Lambda:
+	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, common.Pair, common.Lambda:
 		return common.CallC(c, v.(common.Datum))
 	case common.Application:
 		return common.EvalC(
@@ -44,19 +44,48 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 		)
 	case common.Reference:
 		if !v.Variable.Defined {
-			return nil, fmt.Errorf("evaluate: cannot reference identifier before its definition")
+			return common.ErrorC(fmt.Errorf("evaluate: cannot reference identifier before its definition"))
 		}
 		return common.CallC(c, v.Variable.Value)
 	case common.SyntaxCase:
 		return common.EvalC(
-			syntaxCaseInputEvaluated{c, v.Literals, v.Patterns, v.Fenders, v.Outputs},
+			syntaxCaseInputEvaluated{c, v.Literals, v.Patterns, v.PatternVariableBindings, v.Fenders, v.Outputs},
 			v.Input,
 		)
+	case common.WrappedSyntax:
+		datum, err := evaluateSyntax(v.Datum())
+		if err != nil {
+			return common.ErrorC(err)
+		}
+		return common.CallC(c, v.PushOnto(datum))
 	default:
 		if v == common.Void {
 			return common.CallC(c, common.Void)
 		}
-		return nil, fmt.Errorf("evaluate: unhandled expression %#v", v)
+		return common.ErrorC(fmt.Errorf("evaluate: unhandled expression %#v", v))
+	}
+}
+
+func evaluateSyntax(datum common.Datum) (common.Datum, error) {
+	switch datum := datum.(type) {
+	case common.Boolean, common.Number, common.Character, common.String, common.Symbol, nil:
+		return datum, nil
+	case common.PatternVariableReference:
+		syntax, ok := datum.PatternVariable.Match.(common.WrappedSyntax)
+	case common.PatternVariableSplicing:
+		evaluateSyntax(datum.Datum)
+	case common.Pair:
+		first, err := evaluateSyntax(datum.First)
+		if err != nil {
+			return nil, err
+		}
+		rest, err := evaluateSyntax(datum.Rest)
+		if err != nil {
+			return nil, err
+		}
+		return common.Pair{first, rest}, nil
+	default:
+		return nil, fmt.Errorf("evaluate: unhandled syntax %#v", datum)
 	}
 }
 

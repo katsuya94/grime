@@ -21,5 +21,5 @@ func CallC(c Continuation, value Datum) (EvaluationResult, error) {
 }
 
 func ErrorC(err error) (EvaluationResult, error) {
-	return ContinuationCall{}, err
+	return nil, err
 }

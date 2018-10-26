@@ -12,6 +12,10 @@ type Variable struct {
 	Defined bool
 }
 
+type PatternVariable struct {
+	Match interface{}
+}
+
 type BindingSet map[int]map[Symbol]Location
 
 type Environment struct {

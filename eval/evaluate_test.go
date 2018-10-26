@@ -215,12 +215,24 @@ func TestEvaluateExpression(t *testing.T) {
 			"foo",
 			"",
 		},
-		// {
-		// 	"syntax-case ellipsis",
-		// 	"(syntax->datum (syntax-case #'(foo bar) () ((id ...) #''(cons id ...))))",
-		// 	"(foo . bar)",
-		// 	"",
-		// },
+		{
+			"syntax-case ellipsis",
+			"(syntax->datum (syntax-case #'(foo bar) () ((id ...) #'(id ...))))",
+			"(foo bar)",
+			"",
+		},
+		{
+			"syntax-case nested ellipsis",
+			"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'((id ...) ...)))",
+			"(foo (bar baz))",
+			"",
+		},
+		{
+			"syntax-case nested ellipsis flattened",
+			"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'(id ... ...))))",
+			"(foo bar baz)",
+			"",
+		},
 		{
 			"syntax-case failure",
 			"(syntax-case #'bar () ((id) #'foo))",

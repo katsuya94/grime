@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/util"
 )
 
 func CompileBody(env common.Environment, forms []common.Form) (common.Expression, common.BindingSet, error) {
@@ -127,7 +128,11 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 		return expression, nil
 	case common.SyntaxForm:
-		return common.NewWrappedSyntax(form.Datum), nil
+		datum, err := compileSyntax(env, form.Datum)
+		if err != nil {
+			return nil, err
+		}
+		return common.NewWrappedSyntax(datum), nil
 	case common.BeginForm:
 		expression, _, err := CompileBody(env, form.Forms)
 		if err != nil {
@@ -227,28 +232,41 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 			literals[literal] = binding
 		}
 		var (
-			patterns          []common.Datum
-			fenderExpressions []common.Expression
-			outputExpressions []common.Expression
+			patterns                []common.Datum
+			patternVariableBindings []map[common.Symbol]*common.PatternVariable
+			fenderExpressions       []common.Expression
+			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
 			pattern, err := compilePattern(env, form.Patterns[i])
 			if err != nil {
 				return nil, err
 			}
-			fenderExpression, err := Compile(env, form.Fenders[i])
+			patternVariables, err := util.PatternVariables(pattern, literals)
 			if err != nil {
 				return nil, err
 			}
-			outputExpression, err := Compile(env, form.Outputs[i])
+			bindings := make(map[common.Symbol]*common.PatternVariable)
+			clauseEnv := env
+			for _, name := range patternVariables {
+				patternVariable := &common.PatternVariable{common.NewWrappedSyntax(common.Void)}
+				bindings[name] = patternVariable
+				clauseEnv = clauseEnv.Set(name, patternVariable)
+			}
+			fenderExpression, err := Compile(clauseEnv, form.Fenders[i])
+			if err != nil {
+				return nil, err
+			}
+			outputExpression, err := Compile(clauseEnv, form.Outputs[i])
 			if err != nil {
 				return nil, err
 			}
 			patterns = append(patterns, pattern)
+			patternVariableBindings = append(patternVariableBindings, bindings)
 			fenderExpressions = append(fenderExpressions, fenderExpression)
 			outputExpressions = append(outputExpressions, outputExpression)
 		}
-		return common.SyntaxCase{inputExpression, literals, patterns, fenderExpressions, outputExpressions}, nil
+		return common.SyntaxCase{inputExpression, literals, patterns, patternVariableBindings, fenderExpressions, outputExpressions}, nil
 	case common.DefineForm, common.DefineSyntaxForm:
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	case common.WrappedSyntax:
@@ -263,6 +281,43 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 	default:
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)
+	}
+}
+
+func compileSyntax(env common.Environment, datum common.Datum) (common.Datum, error) {
+	switch datum := datum.(type) {
+	case common.Boolean, common.Number, common.Character, common.String, nil:
+		return datum, nil
+	case common.Symbol:
+		binding := env.Get(datum)
+		if patternVariable, ok := binding.(*common.PatternVariable); ok {
+			return common.PatternVariableReference{patternVariable}, nil
+		}
+		if binding == common.EllipsisKeyword {
+			return nil, fmt.Errorf("compile: malformed syntax template", datum)
+		}
+		return datum, nil
+	case common.Pair:
+		if rest, ok := datum.Rest.(common.Pair); ok {
+			if name, ok := rest.First.(common.Symbol); ok && env.Get(name) == common.Ellipsis {
+				first, err := compileSyntax(env, datum.First)
+				if err != nil {
+					return nil, err
+				}
+				return common.PatternVariableSplicing{first}, nil
+			}
+		}
+		first, err := compileSyntax(env, datum.First)
+		if err != nil {
+			return nil, err
+		}
+		rest, err := compileSyntax(env, datum.Rest)
+		if err != nil {
+			return nil, err
+		}
+		return common.Pair{first, rest}, nil
+	default:
+		return nil, fmt.Errorf("compile: unhandled syntax %#v", datum)
 	}
 }
 
