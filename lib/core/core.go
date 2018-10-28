@@ -73,7 +73,7 @@ func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("syntax: bad syntax"))
 	}
-	return common.CallC(c, common.SyntaxForm{result[common.Symbol("datum")].(common.WrappedSyntax).Datum()})
+	return common.CallC(c, common.SyntaxForm{result[common.Symbol("datum")].(common.WrappedSyntax)})
 }
 
 func transformIf(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

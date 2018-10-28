@@ -1,17 +1,25 @@
 package common
 
-type Template interface{}
+import "fmt"
+
+type Template interface {
+	Expression
+}
 
 type TemplatePair struct {
-	First Template
-	Rest  Template
+	First    Template
+	Ellipsis int
+	Rest     Template
+}
+
+func (TemplatePair t) Debug() string {
+
 }
 
 type PatternVariableReference struct {
 	PatternVariable *PatternVariable
 }
 
-type Subtemplate struct {
-	Template Template
-	Nesting  int
+func (PatternVariableReference t) Debug() string {
+	fmt.Printf("%p", t.PatternVariable)
 }

@@ -62,5 +62,5 @@ type QuoteForm struct {
 }
 
 type SyntaxForm struct {
-	Datum Datum
+	Syntax WrappedSyntax
 }
