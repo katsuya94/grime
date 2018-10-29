@@ -203,48 +203,48 @@ func TestEvaluateExpression(t *testing.T) {
 		// 	"foo",
 		// 	"",
 		// },
-		{
-			"syntax-case wildcard",
-			"(syntax->datum (syntax-case #'bar () (_ #'foo)))",
-			"foo",
-			"",
-		},
-		{
-			"syntax-case capture",
-			"(syntax->datum (syntax-case #'foo () (id #'id)))",
-			"foo",
-			"",
-		},
+		// {
+		// 	"syntax-case wildcard",
+		// 	"(syntax->datum (syntax-case #'bar () (_ #'foo)))",
+		// 	"foo",
+		// 	"",
+		// },
+		// {
+		// 	"syntax-case capture",
+		// 	"(syntax->datum (syntax-case #'foo () (id #'id)))",
+		// 	"foo",
+		// 	"",
+		// },
 		{
 			"syntax-case ellipsis",
 			"(syntax->datum (syntax-case #'(foo bar) () ((id ...) #'(id ...))))",
 			"(foo bar)",
 			"",
 		},
-		{
-			"syntax-case nested ellipsis",
-			"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'((id ...) ...)))",
-			"(foo (bar baz))",
-			"",
-		},
-		{
-			"syntax-case nested ellipsis flattened",
-			"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'(id ... ...))))",
-			"(foo bar baz)",
-			"",
-		},
-		{
-			"syntax-case failure",
-			"(syntax-case #'bar () ((id) #'foo))",
-			"",
-			"syntax-case: bad syntax",
-		},
-		{
-			"syntax-case fender",
-			"(syntax-case #'bar () (_ #f #'foo))",
-			"",
-			"syntax-case: bad syntax",
-		},
+		// {
+		// 	"syntax-case nested ellipsis",
+		// 	"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'((id ...) ...)))",
+		// 	"(foo (bar baz))",
+		// 	"",
+		// },
+		// {
+		// 	"syntax-case nested ellipsis flattened",
+		// 	"(syntax->datum (syntax-case #'(foo (bar baz)) () (((id ...) ...) #'(id ... ...))))",
+		// 	"(foo bar baz)",
+		// 	"",
+		// },
+		// {
+		// 	"syntax-case failure",
+		// 	"(syntax-case #'bar () ((id) #'foo))",
+		// 	"",
+		// 	"syntax-case: bad syntax",
+		// },
+		// {
+		// 	"syntax-case fender",
+		// 	"(syntax-case #'bar () (_ #f #'foo))",
+		// 	"",
+		// 	"syntax-case: bad syntax",
+		// },
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

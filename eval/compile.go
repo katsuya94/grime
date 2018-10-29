@@ -128,7 +128,11 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 		return expression, nil
 	case common.SyntaxForm:
-		return compileTemplate(env, form.Syntax)
+		template, err := compileTemplate(env, form.Syntax)
+		if err != nil {
+			return nil, err
+		}
+		return common.SyntaxTemplate{template}, nil
 	case common.BeginForm:
 		expression, _, err := CompileBody(env, form.Forms)
 		if err != nil {
@@ -280,42 +284,68 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 	}
 }
 
-func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Template, error) {
+func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Datum, error) {
 	switch datum := syntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
-		return syntax.PushOnto(datum), nil
+		return syntax, nil
 	case common.Symbol:
 		binding := env.Get(datum)
 		if patternVariable, ok := binding.(*common.PatternVariable); ok {
 			return common.PatternVariableReference{patternVariable}, nil
 		}
 		if binding == common.EllipsisKeyword {
-			return nil, fmt.Errorf("compile: malformed template", datum)
+			return nil, fmt.Errorf("compile: malformed template")
 		}
-		return datum, nil
+		return syntax, nil
 	case common.Pair:
 		first, err := compileTemplate(env, syntax.PushOnto(datum.First))
 		if err != nil {
 			return nil, err
 		}
 		n, rest, err := compileTemplateEllipsis(env, syntax.PushOnto(datum.Rest))
+		if err != nil {
+			return nil, err
+		}
+		_, firstWrapped := first.(common.WrappedSyntax)
+		_, restWrapped := rest.(common.WrappedSyntax)
 		return common.TemplatePair{first, n, rest}, nil
 	default:
-		return nil, fmt.Errorf("compile: unhandled syntax %#v", datum)
+		return nil, fmt.Errorf("compile: unhandled syntax template form %#v", datum)
 	}
 }
 
-func compileTemplateEllipsis(env common.Environment, rest common.WrappedSyntax) (int, common.Template, error) {
-	pair, ok := rest.Datum().(common.Pair)
-	if ok {
-		name, ok := pair.First.(common.Symbol)
-		if ok && env.Get(name) == common.Ellipsis {
-			n, template, err := compileTemplateEllipsis(env, rest.PushOnto(pair.Rest))
-			return n + 1, template, err
+// func compileTemplateEllipsis(env common.Environment, rest common.WrappedSyntax) (int, common.Datum, error) {
+// 	pair, ok := rest.Datum().(common.Pair)
+// 	if ok {
+// 		name, ok := pair.First.(common.Symbol)
+// 		if ok && env.Get(name) == common.EllipsisKeyword {
+// 			n, template, err := compileTemplateEllipsis(env, rest.PushOnto(pair.Rest))
+// 			return n + 1, template, err
+// 		}
+// 	}
+// 	template, err := compileTemplate(env, rest)
+// 	return 0, template, err
+// }
+
+func containsPatternVariable(template common.Datum) (bool, error) {
+	switch template := template.(type) {
+	case common.PatternVariableReference:
+		return true, nil
+	case common.TemplatePair:
+		first, err := containsPatternVariable(template.First)
+		if err != nil {
+			return false, err
 		}
+		rest, err := containsPatternVariable(template.Rest)
+		if err != nil {
+			return false, err
+		}
+		return first || rest, nil
+	case common.WrappedSyntax:
+		return false, nil
+	default:
+		return false, fmt.Errorf("compile: unhandled syntax template %#v", template)
 	}
-	template, err := compileTemplate(env, rest)
-	return 0, template, err
 }
 
 func compilePattern(env common.Environment, form common.Form) (common.Datum, error) {
