@@ -284,19 +284,19 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 	}
 }
 
-func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Datum, error) {
+func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Datum, map[*common.PatternVariable]int, error) {
 	switch datum := syntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
-		return syntax, nil
+		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Symbol:
 		binding := env.Get(datum)
 		if patternVariable, ok := binding.(*common.PatternVariable); ok {
-			return common.PatternVariableReference{patternVariable}, nil
+			return common.PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: 0}, nil
 		}
 		if binding == common.EllipsisKeyword {
-			return nil, fmt.Errorf("compile: malformed template")
+			return nil, nil, fmt.Errorf("compile: malformed template")
 		}
-		return syntax, nil
+		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Pair:
 		first, err := compileTemplate(env, syntax.PushOnto(datum.First))
 		if err != nil {
@@ -314,20 +314,20 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (commo
 	}
 }
 
-// func compileTemplateEllipsis(env common.Environment, rest common.WrappedSyntax) (int, common.Datum, error) {
-// 	pair, ok := rest.Datum().(common.Pair)
-// 	if ok {
-// 		name, ok := pair.First.(common.Symbol)
-// 		if ok && env.Get(name) == common.EllipsisKeyword {
-// 			n, template, err := compileTemplateEllipsis(env, rest.PushOnto(pair.Rest))
-// 			return n + 1, template, err
-// 		}
-// 	}
-// 	template, err := compileTemplate(env, rest)
-// 	return 0, template, err
-// }
+func compileTemplateEllipsis(env common.Environment, rest common.WrappedSyntax) (int, common.Datum, error) {
+	pair, ok := rest.Datum().(common.Pair)
+	if ok {
+		name, ok := pair.First.(common.Symbol)
+		if ok && env.Get(name) == common.EllipsisKeyword {
+			n, template, err := compileTemplateEllipsis(env, rest.PushOnto(pair.Rest))
+			return n + 1, template, err
+		}
+	}
+	template, err := compileTemplate(env, rest)
+	return 0, template, err
+}
 
-func containsPatternVariable(template common.Datum) (bool, error) {
+func patternVariableNesting(template common.Datum) (bool, error) {
 	switch template := template.(type) {
 	case common.PatternVariableReference:
 		return true, nil

@@ -152,7 +152,10 @@ func (m *syntaxMatcher) matchEllipsis(input common.WrappedSyntax, subpattern com
 	return result, true, nil
 }
 
-func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Location) ([]common.Symbol, error) {
+func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]int, error) {
+}
+
+func patternVariables(pattern common.Datum, literals map[common.Symbol]commpp.Location) (map[common.Symbol]int, error) {
 	switch p := pattern.(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return nil, nil
@@ -160,9 +163,14 @@ func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Lo
 		if _, ok := literals[p]; ok {
 			return nil, nil
 		} else {
-			return []common.Symbol{p}, nil
+			return map[common.Symbol]int{p: 0}, nil
 		}
 	case common.Pair:
+		if rest, ok := p.Rest.(common.Pair); ok {
+			if rest.First == common.Ellipsis && ellipsis {
+				return m.matchEllipsis(input, p.First, rest.Rest)
+			}
+		}
 		firstPatternVariables, err := PatternVariables(p.First, literals)
 		if err != nil {
 			return nil, err
