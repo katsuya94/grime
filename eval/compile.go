@@ -248,8 +248,8 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 			}
 			bindings := make(map[common.Symbol]*common.PatternVariable)
 			clauseEnv := env
-			for _, name := range patternVariables {
-				patternVariable := &common.PatternVariable{common.NewWrappedSyntax(common.Void)}
+			for name, n := range patternVariables {
+				patternVariable := &common.PatternVariable{common.NewWrappedSyntax(common.Void), n}
 				bindings[name] = patternVariable
 				clauseEnv = clauseEnv.Set(name, patternVariable)
 			}

@@ -13,7 +13,8 @@ type Variable struct {
 }
 
 type PatternVariable struct {
-	Match interface{}
+	Match   interface{}
+	Nesting int
 }
 
 type BindingSet map[int]map[Symbol]Location
