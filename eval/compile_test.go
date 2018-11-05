@@ -97,6 +97,31 @@ func TestCompileBody(t *testing.T) {
 			"...",
 			"cannot expand ellipsis",
 		},
+		{
+			"ellipsis outside pair",
+			"(syntax-case #'foo () (_ #'...))",
+			"compile: malformed syntax template",
+		},
+		{
+			"ellipsis in first position",
+			"(syntax-case #'foo () (_ #'(...)))",
+			"compile: malformed syntax template",
+		},
+		{
+			"ellipsis in first position",
+			"(syntax-case #'foo () (id #'(id . ...)))",
+			"compile: malformed syntax template",
+		},
+		{
+			"not enough ellipsis",
+			"(syntax-case #'((foo)) () (((id ...) ...) #'(id ...)))",
+			"compile: pattern variable id must be nested within at least 2 ellipsis",
+		},
+		{
+			"not enough ellipsis nested",
+			"(syntax-case #'((foo)) () (((id ...) ...) #'((id) ...)))",
+			"compile: pattern variable id must be nested within at least 2 ellipsis",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

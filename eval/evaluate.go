@@ -53,7 +53,7 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 			v.Input,
 		)
 	case common.SyntaxTemplate:
-		datum, err := evaluateSyntaxTemplate(v.Template)
+		datum, err := evaluateSyntaxTemplate(v.Template, []int{})
 		if err != nil {
 			return common.ErrorC(err)
 		}
@@ -66,19 +66,22 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 	}
 }
 
-func evaluateSyntaxTemplate(datum common.Datum) (common.Datum, error) {
+func evaluateSyntaxTemplate(datum common.Datum, path []int) (common.Datum, error) {
 	switch datum := datum.(type) {
 	case common.WrappedSyntax:
 		return datum, nil
 	case common.PatternVariableReference:
 		syntax := datum.PatternVariable.Match.(common.WrappedSyntax)
 		return syntax, nil
-	case common.TemplatePair:
-		first, err := evaluateSyntaxTemplate(datum.First)
+	case common.Pair:
+		if first, ok := datum.First.(common.Subtemplate); ok {
+
+		}
+		first, err := evaluateSyntaxTemplate(datum.First, path)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := evaluateSyntaxTemplate(datum.Rest)
+		rest, err := evaluateSyntaxTemplate(datum.Rest, path)
 		if err != nil {
 			return nil, err
 		}

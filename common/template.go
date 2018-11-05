@@ -13,18 +13,17 @@ func (s SyntaxTemplate) Debug() string {
 	return fmt.Sprintf("#'%v", Write(s.Template))
 }
 
-type TemplatePair struct {
-	First    Datum
-	Ellipsis int
-	Rest     Datum
+type Subtemplate struct {
+	Subtemplate Datum
+	Nesting     int
 }
 
-func (t TemplatePair) Write() string {
+func (s Subtemplate) Write() string {
 	var ellipsis []string
-	for i := 0; i < t.Ellipsis; i++ {
+	for i := 0; i < s.Nesting; i++ {
 		ellipsis = append(ellipsis, "...")
 	}
-	return fmt.Sprintf("(%v %v . %v)", Write(t.First), strings.Join(ellipsis, " "), Write(t.Rest))
+	return fmt.Sprintf("%v %v", s.Subtemplate, strings.Join(ellipsis, " "))
 }
 
 type PatternVariableReference struct {
