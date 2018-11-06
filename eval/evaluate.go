@@ -53,7 +53,7 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 			v.Input,
 		)
 	case common.SyntaxTemplate:
-		var bindings map[*common.PatternVariable]interface{}
+		bindings := make(map[*common.PatternVariable]interface{}, len(v.PatternVariables))
 		for _, patternVariable := range v.PatternVariables {
 			bindings[patternVariable] = patternVariable.Match
 		}
@@ -78,32 +78,25 @@ func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVari
 		return bindings[datum.PatternVariable].(common.Datum), nil
 	case common.Pair:
 		if first, ok := datum.First.(common.Subtemplate); ok {
-			for i := 0; i < first.Nesting; i++ {
-				n := len(bindings[first.PatternVariables[0]].([]interface{}))
-				for _, patternVariable := range first.PatternVariables {
-					if len(bindings[patternVariable].([]interface{})) != n {
-						return nil, fmt.Errorf("evaluate: differing match counts for syntax template")
-					}
-				}
-				for _, patternVariable := range first.PatternVariables {
-					if len(bindings[patternVariable].([]interface{})) != n {
-						return nil, fmt.Errorf("evaluate: differing match counts for syntax template")
-					}
-				}
-				for j := 0; j > n; j++ {
-
-				}
-				nestedBindings := make(map[*common.PatternVariable]interface{}, len(bindings))
-				for patternVariable, match := range bindings {
-					nestedBindings[patternVariable] = match
-				}
+			data, err := evaluateSubtemplate(first, bindings)
+			if err != nil {
+				return nil, err
 			}
+			rest, err := evaluateSyntaxTemplate(datum.Rest, bindings)
+			if err != nil {
+				return nil, err
+			}
+			result := rest
+			for i := len(data) - 1; i >= 0; i-- {
+				result = common.Pair{data[i], result}
+			}
+			return result, nil
 		}
-		first, err := evaluateSyntaxTemplate(datum.First, path)
+		first, err := evaluateSyntaxTemplate(datum.First, bindings)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := evaluateSyntaxTemplate(datum.Rest, path)
+		rest, err := evaluateSyntaxTemplate(datum.Rest, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +106,37 @@ func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVari
 	}
 }
 
-func evaluateSubtemplate()
+func evaluateSubtemplate(subtemplate common.Subtemplate, bindings map[*common.PatternVariable]interface{}) ([]common.Datum, error) {
+	if subtemplate.Nesting == 0 {
+		datum, err := evaluateSyntaxTemplate(subtemplate.Subtemplate, bindings)
+		if err != nil {
+			return nil, err
+		}
+		return []common.Datum{datum}, nil
+	}
+	n := len(bindings[subtemplate.PatternVariables[0]].([]interface{}))
+	for _, patternVariable := range subtemplate.PatternVariables {
+		if len(bindings[patternVariable].([]interface{})) != n {
+			return nil, fmt.Errorf("evaluate: differing number of matches for syntax template")
+		}
+	}
+	var data []common.Datum
+	for j := 0; j > n; j++ {
+		nestedBindings := make(map[*common.PatternVariable]interface{}, len(bindings))
+		for patternVariable, match := range bindings {
+			nestedBindings[patternVariable] = match
+		}
+		for _, patternVariable := range subtemplate.PatternVariables {
+			nestedBindings[patternVariable] = nestedBindings[patternVariable].([]interface{})[j]
+		}
+		nestedData, err := evaluateSubtemplate(common.Subtemplate{subtemplate.Subtemplate, subtemplate.Nesting - 1, subtemplate.PatternVariables}, nestedBindings)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, nestedData...)
+	}
+	return data, nil
+}
 
 type escapeEvaluated struct{}
 
