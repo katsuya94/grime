@@ -128,11 +128,15 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 		return expression, nil
 	case common.SyntaxForm:
-		template, err := compileTemplate(env, form.Syntax, 0)
+		template, patternVariableNesting, err := compileTemplate(env, form.Syntax, 0)
 		if err != nil {
 			return nil, err
 		}
-		return common.SyntaxTemplate{template}, nil
+		var patternVariables []*common.PatternVariable
+		for patternVariable := range patternVariableNesting {
+			patternVariables = append(patternVariables, patternVariable)
+		}
+		return common.SyntaxTemplate{template, patternVariables}, nil
 	case common.BeginForm:
 		expression, _, err := CompileBody(env, form.Forms)
 		if err != nil {
@@ -284,22 +288,22 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 	}
 }
 
-func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nesting int) (common.Datum, error) {
+func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nesting int) (common.Datum, map[*common.PatternVariable]int, error) {
 	switch datum := syntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
-		return syntax, nil
+		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Symbol:
 		binding := env.Get(datum)
 		if patternVariable, ok := binding.(*common.PatternVariable); ok {
 			if nesting < patternVariable.Nesting {
-				return nil, fmt.Errorf("compile: pattern variable %v must be nested within at least %v ellipsis", datum, patternVariable.Nesting)
+				return nil, nil, fmt.Errorf("compile: pattern variable %v must be nested within at least %v ellipsis", datum, patternVariable.Nesting)
 			}
-			return common.PatternVariableReference{patternVariable}, nil
+			return common.PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: nesting}, nil
 		}
 		if binding == common.EllipsisKeyword {
-			return nil, fmt.Errorf("compile: malformed syntax template")
+			return nil, nil, fmt.Errorf("compile: malformed syntax template")
 		}
-		return syntax, nil
+		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Pair:
 		ellipsis := 0
 		rest := datum.Rest
@@ -318,28 +322,44 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nestin
 			ellipsis++
 			rest = pair.Rest
 		}
-		firstCompiled, err := compileTemplate(env, syntax.PushOnto(datum.First), nesting+ellipsis)
+		firstCompiled, firstPatternVariables, err := compileTemplate(env, syntax.PushOnto(datum.First), nesting+ellipsis)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		_, firstStatic := firstCompiled.(common.WrappedSyntax)
-		if firstStatic && ellipsis > 0 {
-			return nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
-		}
-		if ellipsis > 0 {
-			firstCompiled = common.Subtemplate{firstCompiled, ellipsis}
-		}
-		restCompiled, err := compileTemplate(env, syntax.PushOnto(rest), nesting)
+		restCompiled, restPatternVariables, err := compileTemplate(env, syntax.PushOnto(rest), nesting)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		_, restStatic := restCompiled.(common.WrappedSyntax)
 		if firstStatic && restStatic {
-			return syntax, nil
+			return syntax, map[*common.PatternVariable]int{}, nil
 		}
-		return common.Pair{firstCompiled, restCompiled}, nil
+		if firstStatic && ellipsis > 0 {
+			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
+		}
+		if ellipsis > 0 {
+			var matchingPatternVariables []*common.PatternVariable
+			for patternVariable, n := range firstPatternVariables {
+				if n == nesting+ellipsis {
+					matchingPatternVariables = append(matchingPatternVariables, patternVariable)
+				}
+			}
+			if len(matchingPatternVariables) == 0 {
+				return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain pattern variable followed by %v ellipsis", nesting+ellipsis)
+			}
+			firstCompiled = common.Subtemplate{firstCompiled, ellipsis, matchingPatternVariables}
+		}
+		patternVariables := make(map[*common.PatternVariable]int)
+		for patternVariable, n := range firstPatternVariables {
+			patternVariables[patternVariable] = n
+		}
+		for patternVariable, n := range restPatternVariables {
+			patternVariables[patternVariable] = n
+		}
+		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil
 	default:
-		return nil, fmt.Errorf("compile: unhandled syntax template form %#v", datum)
+		return nil, nil, fmt.Errorf("compile: unhandled syntax template form %#v", datum)
 	}
 }
 

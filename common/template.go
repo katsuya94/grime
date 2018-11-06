@@ -6,7 +6,8 @@ import (
 )
 
 type SyntaxTemplate struct {
-	Template Datum
+	Template         Datum
+	PatternVariables []*PatternVariable
 }
 
 func (s SyntaxTemplate) Debug() string {
@@ -14,8 +15,9 @@ func (s SyntaxTemplate) Debug() string {
 }
 
 type Subtemplate struct {
-	Subtemplate Datum
-	Nesting     int
+	Subtemplate      Datum
+	Nesting          int
+	PatternVariables []*PatternVariable
 }
 
 func (s Subtemplate) Write() string {

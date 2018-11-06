@@ -53,7 +53,11 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 			v.Input,
 		)
 	case common.SyntaxTemplate:
-		datum, err := evaluateSyntaxTemplate(v.Template, []int{})
+		var bindings map[*common.PatternVariable]interface{}
+		for _, patternVariable := range v.PatternVariables {
+			bindings[patternVariable] = patternVariable.Match
+		}
+		datum, err := evaluateSyntaxTemplate(v.Template, bindings)
 		if err != nil {
 			return common.ErrorC(err)
 		}
@@ -66,41 +70,34 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 	}
 }
 
-func getTemplatePatternVariables(datum common.Datum) (map[*common.PatternVariable]interface{}, error) {
-	switch datum := datum.(type) {
-	case common.WrappedSyntax:
-		return map[*common.PatternVariable]interface{}{}, nil
-	case common.PatternVariableReference:
-		return map[*common.PatternVariable]interface{}{datum.PatternVariable: datum.PatternVariable.Match}, nil
-	case common.Pair:
-		if first, ok := datum.First.(common.Subtemplate); ok {
-
-		}
-		first, err := getTemplatePatternVariables(datum.First, path)
-		if err != nil {
-			return nil, err
-		}
-		rest, err := getTemplatePatternVariables(datum.Rest, path)
-		if err != nil {
-			return nil, err
-		}
-		return common.Pair{first, rest}, nil
-	default:
-		return nil, fmt.Errorf("evaluate: unhandled syntax template %#v", datum)
-	}
-}
-
-// New approach: calculate which pattern variables will determine the number at compile time. Then it will be easy to ensure that they match.
-func evaluateSyntaxTemplate(datum common.Datum, path []int) (common.Datum, error) {
+func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVariable]interface{}) (common.Datum, error) {
 	switch datum := datum.(type) {
 	case common.WrappedSyntax:
 		return datum, nil
 	case common.PatternVariableReference:
-		syntax := datum.PatternVariable.Match.(common.WrappedSyntax)
-		return syntax, nil
+		return bindings[datum.PatternVariable].(common.Datum), nil
 	case common.Pair:
 		if first, ok := datum.First.(common.Subtemplate); ok {
+			for i := 0; i < first.Nesting; i++ {
+				n := len(bindings[first.PatternVariables[0]].([]interface{}))
+				for _, patternVariable := range first.PatternVariables {
+					if len(bindings[patternVariable].([]interface{})) != n {
+						return nil, fmt.Errorf("evaluate: differing match counts for syntax template")
+					}
+				}
+				for _, patternVariable := range first.PatternVariables {
+					if len(bindings[patternVariable].([]interface{})) != n {
+						return nil, fmt.Errorf("evaluate: differing match counts for syntax template")
+					}
+				}
+				for j := 0; j > n; j++ {
 
+				}
+				nestedBindings := make(map[*common.PatternVariable]interface{}, len(bindings))
+				for patternVariable, match := range bindings {
+					nestedBindings[patternVariable] = match
+				}
+			}
 		}
 		first, err := evaluateSyntaxTemplate(datum.First, path)
 		if err != nil {
@@ -115,6 +112,8 @@ func evaluateSyntaxTemplate(datum common.Datum, path []int) (common.Datum, error
 		return nil, fmt.Errorf("evaluate: unhandled syntax template %#v", datum)
 	}
 }
+
+func evaluateSubtemplate()
 
 type escapeEvaluated struct{}
 
