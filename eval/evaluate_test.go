@@ -19,238 +19,238 @@ func TestEvaluateExpression(t *testing.T) {
 		val    string
 		error  string
 	}{
-		// {
-		// 	"boolean literal",
-		// 	"#f",
-		// 	"#f",
-		// 	"",
-		// },
-		// {
-		// 	"number literal",
-		// 	"123",
-		// 	"123",
-		// 	"",
-		// },
-		// {
-		// 	"character literal",
-		// 	`#\x`,
-		// 	`#\x`,
-		// 	"",
-		// },
-		// {
-		// 	"string literal",
-		// 	`"name"`,
-		// 	`"name"`,
-		// 	"",
-		// },
-		// {
-		// 	"symbol literal",
-		// 	"'id",
-		// 	"id",
-		// 	"",
-		// },
-		// {
-		// 	"list literal",
-		// 	"'(id)",
-		// 	"(id)",
-		// 	"",
-		// },
-		// {
-		// 	"if then",
-		// 	"(if #t 'foo 'bar)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"if else",
-		// 	"(if #f 'foo 'bar)",
-		// 	"bar",
-		// 	"",
-		// },
-		// {
-		// 	"if non-boolean",
-		// 	"(if 'id 'foo 'bar)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"let*",
-		// 	"(let* ((x 'id)) x)",
-		// 	"id",
-		// 	"",
-		// },
-		// {
-		// 	"let* multiple",
-		// 	"(let* ((x 'id) (y 'name)) (cons x y))",
-		// 	"(id . name)",
-		// 	"",
-		// },
-		// {
-		// 	"define",
-		// 	"(define x 'foo) x",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"define procedure",
-		// 	"(define (id) 'foo) (id)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"define procedure with argument",
-		// 	"(define (id x) x) (id 'foo)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"begin in splicing context",
-		// 	"(begin 'foo 'bar)",
-		// 	"bar",
-		// 	"",
-		// },
-		// {
-		// 	"begin in expression context",
-		// 	"(cons (begin 'foo 'bar) '())",
-		// 	"(bar)",
-		// 	"",
-		// },
-		// {
-		// 	"begin with one subform",
-		// 	"(begin 'foo)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"begin with multiple subforms",
-		// 	"(begin 'bar 'foo)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"begin with body forms",
-		// 	"(begin (define x 'foo) x)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"lambda",
-		// 	"((lambda () 'foo))",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"lambda with argument",
-		// 	"((lambda (x) x) 'foo)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"lambda using enclosing context",
-		// 	"((let* ((x 'foo)) (lambda () x)))",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"call/cc used to escape early",
-		// 	"(call/cc (lambda (c) (c 'foo) 'bar))",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"set! used to set a defined variable",
-		// 	"(define x 'bar) (set! x 'foo) x",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"call/cc and set! used to loop",
-		// 	`
-		// 	(define in '(foo bar baz))
-		// 	(define continue #f)
-		// 	(define out (call/cc (lambda (c) (set! continue c) '())))
-		// 	(if (null? in)
-		// 		out
-		// 		(begin
-		// 			(define new (cons (car in) out))
-		// 			(set! in (cdr in))
-		// 			(continue new)))
-		// 	`,
-		// 	"(baz bar foo)",
-		// 	"",
-		// },
-		// {
-		// 	"error raises errors",
-		// 	`(error "well that's too bad")`,
-		// 	"",
-		// 	"well that's too bad",
-		// },
-		// {
-		// 	"cannot reference identifer before its definition",
-		// 	"(define (foo) bar) (define baz (foo)) (define bar 'id) baz",
-		// 	"",
-		// 	"evaluate: cannot reference identifier before its definition",
-		// },
-		// {
-		// 	"cannot set identifer before its definition",
-		// 	"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id) baz",
-		// 	"",
-		// 	"evaluate: cannot set identifier before its definition",
-		// },
-		// {
-		// 	"define-syntax",
-		// 	"(define-syntax id (lambda (stx) #''foo)) (id)",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"syntax-case wildcard",
-		// 	"(syntax->datum (syntax-case #'bar () (_ #'foo)))",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"syntax-case capture",
-		// 	"(syntax->datum (syntax-case #'foo () (id #'id)))",
-		// 	"foo",
-		// 	"",
-		// },
-		// {
-		// 	"syntax-case ellipsis",
-		// 	"(syntax->datum (syntax-case #'(foo bar) () ((id ...) #'(id ...))))",
-		// 	"(foo bar)",
-		// 	"",
-		// },
+		{
+			"boolean literal",
+			"#f",
+			"#f",
+			"",
+		},
+		{
+			"number literal",
+			"123",
+			"123",
+			"",
+		},
+		{
+			"character literal",
+			`#\x`,
+			`#\x`,
+			"",
+		},
+		{
+			"string literal",
+			`"name"`,
+			`"name"`,
+			"",
+		},
+		{
+			"symbol literal",
+			"'id",
+			"id",
+			"",
+		},
+		{
+			"list literal",
+			"'(id)",
+			"(id)",
+			"",
+		},
+		{
+			"if then",
+			"(if #t 'foo 'bar)",
+			"foo",
+			"",
+		},
+		{
+			"if else",
+			"(if #f 'foo 'bar)",
+			"bar",
+			"",
+		},
+		{
+			"if non-boolean",
+			"(if 'id 'foo 'bar)",
+			"foo",
+			"",
+		},
+		{
+			"let*",
+			"(let* ((x 'id)) x)",
+			"id",
+			"",
+		},
+		{
+			"let* multiple",
+			"(let* ((x 'id) (y 'name)) (cons x y))",
+			"(id . name)",
+			"",
+		},
+		{
+			"define",
+			"(define x 'foo) x",
+			"foo",
+			"",
+		},
+		{
+			"define procedure",
+			"(define (id) 'foo) (id)",
+			"foo",
+			"",
+		},
+		{
+			"define procedure with argument",
+			"(define (id x) x) (id 'foo)",
+			"foo",
+			"",
+		},
+		{
+			"begin in splicing context",
+			"(begin 'foo 'bar)",
+			"bar",
+			"",
+		},
+		{
+			"begin in expression context",
+			"(cons (begin 'foo 'bar) '())",
+			"(bar)",
+			"",
+		},
+		{
+			"begin with one subform",
+			"(begin 'foo)",
+			"foo",
+			"",
+		},
+		{
+			"begin with multiple subforms",
+			"(begin 'bar 'foo)",
+			"foo",
+			"",
+		},
+		{
+			"begin with body forms",
+			"(begin (define x 'foo) x)",
+			"foo",
+			"",
+		},
+		{
+			"lambda",
+			"((lambda () 'foo))",
+			"foo",
+			"",
+		},
+		{
+			"lambda with argument",
+			"((lambda (x) x) 'foo)",
+			"foo",
+			"",
+		},
+		{
+			"lambda using enclosing context",
+			"((let* ((x 'foo)) (lambda () x)))",
+			"foo",
+			"",
+		},
+		{
+			"call/cc used to escape early",
+			"(call/cc (lambda (c) (c 'foo) 'bar))",
+			"foo",
+			"",
+		},
+		{
+			"set! used to set a defined variable",
+			"(define x 'bar) (set! x 'foo) x",
+			"foo",
+			"",
+		},
+		{
+			"call/cc and set! used to loop",
+			`
+			(define in '(foo bar baz))
+			(define continue #f)
+			(define out (call/cc (lambda (c) (set! continue c) '())))
+			(if (null? in)
+				out
+				(begin
+					(define new (cons (car in) out))
+					(set! in (cdr in))
+					(continue new)))
+			`,
+			"(baz bar foo)",
+			"",
+		},
+		{
+			"error raises errors",
+			`(error "well that's too bad")`,
+			"",
+			"well that's too bad",
+		},
+		{
+			"cannot reference identifer before its definition",
+			"(define (foo) bar) (define baz (foo)) (define bar 'id) baz",
+			"",
+			"evaluate: cannot reference identifier before its definition",
+		},
+		{
+			"cannot set identifer before its definition",
+			"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id) baz",
+			"",
+			"evaluate: cannot set identifier before its definition",
+		},
+		{
+			"define-syntax",
+			"(define-syntax id (lambda (stx) #''foo)) (id)",
+			"foo",
+			"",
+		},
+		{
+			"syntax-case wildcard",
+			"(syntax->datum (syntax-case #'bar () (_ #'foo)))",
+			"foo",
+			"",
+		},
+		{
+			"syntax-case capture",
+			"(syntax->datum (syntax-case #'foo () (id #'id)))",
+			"foo",
+			"",
+		},
+		{
+			"syntax-case ellipsis",
+			"(syntax->datum (syntax-case #'(foo bar) () ((id ...) #'(id ...))))",
+			"(foo bar)",
+			"",
+		},
 		{
 			"syntax-case nested ellipsis",
 			"(syntax->datum (syntax-case #'((foo) (bar baz)) () (((id ...) ...) #'((id ...) ...))))",
 			"((foo) (bar baz))",
 			"",
 		},
-		// {
-		// 	"syntax-case nested ellipsis flattened",
-		// 	"(syntax->datum (syntax-case #'((foo) (bar baz)) () (((id ...) ...) #'(id ... ...))))",
-		// 	"(foo bar baz)",
-		// 	"",
-		// },
-		// {
-		// 	"syntax-case ellipsis repeated",
-		// 	"(syntax->datum (syntax-case #'((foo bar) (baz qux)) () (((id ...) (thing ...)) #'((id thing ...) ...))))",
-		// 	"((foo baz qux) (bar baz qux))",
-		// 	"",
-		// },
-		// {
-		// 	"syntax-case failure",
-		// 	"(syntax-case #'bar () ((id) #'foo))",
-		// 	"",
-		// 	"syntax-case: bad syntax",
-		// },
-		// {
-		// 	"syntax-case fender",
-		// 	"(syntax-case #'bar () (_ #f #'foo))",
-		// 	"",
-		// 	"syntax-case: bad syntax",
-		// },
+		{
+			"syntax-case nested ellipsis flattened",
+			"(syntax->datum (syntax-case #'((foo) (bar baz)) () (((id ...) ...) #'(id ... ...))))",
+			"(foo bar baz)",
+			"",
+		},
+		{
+			"syntax-case ellipsis repeated",
+			"(syntax->datum (syntax-case #'((foo bar) (baz qux)) () (((id ...) (thing ...)) #'((id thing ...) ...))))",
+			"((foo baz qux) (bar baz qux))",
+			"",
+		},
+		{
+			"syntax-case failure",
+			"(syntax-case #'bar () ((id) #'foo))",
+			"",
+			"syntax-case: bad syntax",
+		},
+		{
+			"syntax-case fender",
+			"(syntax-case #'bar () (_ #f #'foo))",
+			"",
+			"syntax-case: bad syntax",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

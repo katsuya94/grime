@@ -54,7 +54,7 @@ func EvaluateExpression(c common.Continuation, expression common.Expression) (co
 		)
 	case common.SyntaxTemplate:
 		bindings := make(map[*common.PatternVariable]interface{}, len(v.PatternVariables))
-		for _, patternVariable := range v.PatternVariables {
+		for patternVariable, _ := range v.PatternVariables {
 			bindings[patternVariable] = patternVariable.Match
 		}
 		datum, err := evaluateSyntaxTemplate(v.Template, bindings)
@@ -108,7 +108,7 @@ func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVari
 
 func evaluateSubtemplate(subtemplate common.Subtemplate, bindings map[*common.PatternVariable]interface{}) ([]common.Datum, error) {
 	if subtemplate.Nesting == 0 {
-		datum, err := evaluateSyntaxTemplate(subtemplate.Subtemplate, bindings)
+		datum, err := evaluateSyntaxTemplate(subtemplate.Subtemplate.Template, bindings)
 		if err != nil {
 			return nil, err
 		}
