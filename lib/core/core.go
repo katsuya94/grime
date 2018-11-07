@@ -357,9 +357,28 @@ func syntaxDatum(c common.Continuation, args ...common.Datum) (common.Evaluation
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("syntax->datum: wrong arity"))
 	}
-	syntax, ok := args[0].(common.WrappedSyntax)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("syntax->datum: expected syntax"))
+	datum, err := syntaxDatumRecursive(args[0])
+	if err != nil {
+		return common.ErrorC(err)
 	}
-	return common.CallC(c, syntax.Datum())
+	return common.CallC(c, datum)
+}
+
+func syntaxDatumRecursive(syntax common.Datum) (common.Datum, error) {
+	switch syntax := syntax.(type) {
+	case common.WrappedSyntax:
+		return syntax.Datum(), nil
+	case common.Pair:
+		first, err := syntaxDatumRecursive(syntax.First)
+		if err != nil {
+			return nil, err
+		}
+		rest, err := syntaxDatumRecursive(syntax.Rest)
+		if err != nil {
+			return nil, err
+		}
+		return common.Pair{first, rest}, nil
+	default:
+		return nil, fmt.Errorf("syntax->datum: expected syntax")
+	}
 }

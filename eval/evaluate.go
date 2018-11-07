@@ -121,7 +121,7 @@ func evaluateSubtemplate(subtemplate common.Subtemplate, bindings map[*common.Pa
 		}
 	}
 	var data []common.Datum
-	for j := 0; j > n; j++ {
+	for j := 0; j < n; j++ {
 		nestedBindings := make(map[*common.PatternVariable]interface{}, len(bindings))
 		for patternVariable, match := range bindings {
 			nestedBindings[patternVariable] = match

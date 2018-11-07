@@ -140,7 +140,6 @@ type syntaxCaseInputEvaluated struct {
 }
 
 func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	fmt.Printf("%#v\n", d)
 	syntax, ok := d.(common.WrappedSyntax)
 	if !ok {
 		return nil, fmt.Errorf("syntax-case: expected syntax")
