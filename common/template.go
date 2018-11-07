@@ -7,7 +7,7 @@ import (
 
 type SyntaxTemplate struct {
 	Template         Datum
-	PatternVariables map[*PatternVariable]int
+	PatternVariables []*PatternVariable
 }
 
 func (s SyntaxTemplate) Debug() string {

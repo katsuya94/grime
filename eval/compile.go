@@ -128,14 +128,16 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		}
 		return expression, nil
 	case common.SyntaxForm:
-		template, patternVariables, err := compileTemplate(env, form.Syntax, 0)
+		template, patternVariablesUnexpanded, err := compileTemplate(env, form.Syntax)
 		if err != nil {
 			return nil, err
 		}
-		for _, n := range patternVariables {
+		var patternVariables []*common.PatternVariable
+		for patternVariable, n := range patternVariablesUnexpanded {
 			if n > 0 {
 				return nil, fmt.Errorf("compile: pattern variable not fully expanded")
 			}
+			patternVariables = append(patternVariables, patternVariable)
 		}
 		return common.SyntaxTemplate{template, patternVariables}, nil
 	case common.BeginForm:
@@ -289,7 +291,7 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 	}
 }
 
-func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nesting int) (common.Datum, map[*common.PatternVariable]int, error) {
+func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Datum, map[*common.PatternVariable]int, error) {
 	switch datum := syntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return syntax, map[*common.PatternVariable]int{}, nil
@@ -320,12 +322,15 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nestin
 			ellipsis++
 			rest = pair.Rest
 		}
-		firstCompiled, firstPatternVariables, err := compileTemplate(env, syntax.PushOnto(datum.First), nesting+ellipsis)
+		firstCompiled, firstPatternVariables, err := compileTemplate(env, syntax.PushOnto(datum.First))
 		if err != nil {
 			return nil, nil, err
 		}
 		_, firstStatic := firstCompiled.(common.WrappedSyntax)
-		restCompiled, restPatternVariables, err := compileTemplate(env, syntax.PushOnto(rest), nesting)
+		if firstStatic && ellipsis > 0 {
+			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
+		}
+		restCompiled, restPatternVariables, err := compileTemplate(env, syntax.PushOnto(rest))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -333,27 +338,31 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax, nestin
 		if firstStatic && restStatic {
 			return syntax, map[*common.PatternVariable]int{}, nil
 		}
-		if firstStatic && ellipsis > 0 {
-			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
-		}
 		if ellipsis > 0 {
 			var expansionPatternVariables []*common.PatternVariable
+			var patternVariables []*common.PatternVariable
 			for patternVariable, n := range firstPatternVariables {
-				if nesting+ellipsis-n == 0 {
-					firstPatternVariables[patternVariable] = n - ellipsis
+				if n >= ellipsis {
+					firstPatternVariables[patternVariable] -= ellipsis
 					expansionPatternVariables = append(expansionPatternVariables, patternVariable)
 				}
+				patternVariables = append(patternVariables, patternVariable)
 			}
 			if len(expansionPatternVariables) == 0 {
 				return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable determining expansion count")
 			}
-			firstCompiled = common.Subtemplate{common.SyntaxTemplate{firstCompiled, firstPatternVariables}, ellipsis, expansionPatternVariables}
+			firstCompiled = common.Subtemplate{common.SyntaxTemplate{firstCompiled, patternVariables}, ellipsis, expansionPatternVariables}
 		}
 		patternVariables := make(map[*common.PatternVariable]int)
 		for patternVariable, n := range firstPatternVariables {
 			patternVariables[patternVariable] = n
 		}
 		for patternVariable, n := range restPatternVariables {
+			if first, ok := patternVariables[patternVariable]; ok {
+				if n != first {
+					return nil, nil, fmt.Errorf("compile: nested expansion of a single pattern variable")
+				}
+			}
 			patternVariables[patternVariable] = n
 		}
 		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil

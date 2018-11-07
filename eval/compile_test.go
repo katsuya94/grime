@@ -115,12 +115,22 @@ func TestCompileBody(t *testing.T) {
 		{
 			"not enough ellipsis",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'(id ...)))",
-			"compile: pattern variable id must be nested within at least 2 ellipsis",
+			"compile: pattern variable not fully expanded",
 		},
 		{
 			"not enough ellipsis nested",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'((id) ...)))",
-			"compile: pattern variable id must be nested within at least 2 ellipsis",
+			"compile: pattern variable not fully expanded",
+		},
+		{
+			"no pattern variable",
+			"(syntax-case #'(foo) () ((_ ...) #'(bar ...)))",
+			"compile: syntax subtemplate must contain a pattern variable",
+		},
+		{
+			"no pattern variable determining expansion count",
+			"(syntax-case #'(foo) () ((id ...) #'(id ... ...)))",
+			"compile: syntax subtemplate must contain a pattern variable determining expansion count",
 		},
 	}
 	for _, test := range tests {
