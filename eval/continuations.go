@@ -140,16 +140,15 @@ type syntaxCaseInputEvaluated struct {
 }
 
 func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	syntax, ok := d.(common.WrappedSyntax)
-	if !ok {
+	if !common.IsSyntax(d) {
 		return nil, fmt.Errorf("syntax-case: expected syntax")
 	}
-	return syntaxCaseMatch(c.continuation, syntax, c.literals, c.patterns, c.patternVariableBindings, c.fenders, c.outputs)
+	return syntaxCaseMatch(c.continuation, d, c.literals, c.patterns, c.patternVariableBindings, c.fenders, c.outputs)
 }
 
 type syntaxCaseFenderEvaluated struct {
 	continuation            common.Continuation
-	input                   common.WrappedSyntax
+	input                   common.Datum
 	literals                map[common.Symbol]common.Location
 	result                  map[common.Symbol]interface{}
 	bindings                map[common.Symbol]*common.PatternVariable
@@ -170,7 +169,7 @@ func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult
 	return common.EvalC(c.continuation, c.output)
 }
 
-func syntaxCaseMatch(continuation common.Continuation, input common.WrappedSyntax, literals map[common.Symbol]common.Location, patterns []common.Datum, patternVariableBindings []map[common.Symbol]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
+func syntaxCaseMatch(continuation common.Continuation, input common.Datum, literals map[common.Symbol]common.Location, patterns []common.Datum, patternVariableBindings []map[common.Symbol]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
 	for i := range patterns {
 		result, ok, err := util.MatchSyntax(input, patterns[i], literals)
 		if err != nil {

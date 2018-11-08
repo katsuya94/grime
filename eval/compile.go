@@ -110,12 +110,10 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 }
 
 func Compile(env common.Environment, form common.Form) (common.Expression, error) {
-	if syntax, ok := form.(common.WrappedSyntax); ok {
-		var err error
-		form, err = ExpandCompletely(env, syntax)
-		if err != nil {
-			return nil, err
-		}
+	var err error
+	form, err = ExpandCompletely(env, form)
+	if err != nil {
+		return nil, err
 	}
 	switch form := form.(type) {
 	case common.QuoteForm:

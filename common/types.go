@@ -150,6 +150,17 @@ func (w WrappedSyntax) Debug() string {
 	return fmt.Sprintf("#'%v", Write(w.datum))
 }
 
+func IsSyntax(d Datum) bool {
+	switch d := d.(type) {
+	case WrappedSyntax:
+		return true
+	case Pair:
+		return IsSyntax(d.First) && IsSyntax(d.Rest)
+	default:
+		return false
+	}
+}
+
 type Function func(Continuation, ...Datum) (EvaluationResult, error)
 
 func (f Function) Write() string {

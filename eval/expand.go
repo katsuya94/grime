@@ -14,7 +14,7 @@ var (
 	PatternApplication                 = util.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-func Expand(env common.Environment, syntax common.WrappedSyntax) (common.Form, bool, error) {
+func Expand(env common.Environment, syntax common.Datum) (common.Form, bool, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): nil,
@@ -41,13 +41,15 @@ func Expand(env common.Environment, syntax common.WrappedSyntax) (common.Form, b
 		}
 		return common.ApplicationForm{procedure, arguments}, true, nil
 	}
-	if name, _, ok := syntax.Identifier(); ok {
-		return common.ReferenceForm{name}, true, nil
+	if syntax, ok := syntax.(common.WrappedSyntax); ok {
+		if name, _, ok := syntax.Identifier(); ok {
+			return common.ReferenceForm{name}, true, nil
+		}
 	}
 	return nil, false, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.WrappedSyntax, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Form, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Form, bool, error) {
 	// TODO identifiers are actually wrapped
 	result, ok, err := util.MatchSyntax(syntax, pattern, literals)
 	if err != nil {
@@ -76,19 +78,18 @@ func expandMacroMatching(env common.Environment, syntax common.WrappedSyntax, pa
 	return output, true, nil
 }
 
-func ExpandCompletely(env common.Environment, syntax common.WrappedSyntax) (common.Form, error) {
-	var form common.Form = syntax
+// TODO form is really just datum
+func ExpandCompletely(env common.Environment, d common.Datum) (common.Form, error) {
 	for {
-		syntax, ok := form.(common.WrappedSyntax)
-		if ok {
-			f, ok, err := Expand(env, syntax)
-			if err != nil {
-				return nil, err
-			} else if ok {
-				form = f
-				continue
-			}
+		if !common.IsSyntax(d) {
+			return d, nil
 		}
-		return form, nil
+		expanded, ok, err := Expand(env, d)
+		if err != nil {
+			return nil, err
+		} else if !ok {
+			return d, nil
+		}
+		d = expanded
 	}
 }

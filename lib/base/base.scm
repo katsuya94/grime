@@ -47,6 +47,14 @@
       (syntax-case x ()
         [(_ test body ...) #'(when (not test) body ...)])))
 
+  (define-syntax let
+    (lambda (x)
+      (syntax-case x ()
+        [(_ () body ...) #'(let* () body ...)]
+        [(_ ((v e)) body ...) #'(let* ((v e)) body ...)]
+        [(_ ((v0 e0) ((v e) ...)) body ...)
+         #'(let* ((v0 e0) (r (let ((v e) ...) body ...))) r)])))
+
   (define-syntax or
     (lambda (x)
       (syntax-case x ()
@@ -54,7 +62,7 @@
         [(_ e) #'e]
         [(_ e1 e2 e3 ...)
          #'(let ([t e1])
-         (if t t (or e2 e3 ...)))])))
+             (if t t (or e2 e3 ...)))])))
   
   (define (list? x)
     (or (null? x) (pair? x)))
