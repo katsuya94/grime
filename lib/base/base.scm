@@ -21,6 +21,7 @@
     error
     eqv?
     syntax->datum
+    identifier?
     eq?
     equal?
     or
@@ -34,12 +35,12 @@
     (eqv? l r))
 
   (define (equal? l r)
-    (eqv? l r)))
+    (eqv? l r))
 
   (define-syntax when
     (lambda (x)
       (syntax-case x ()
-        [(_ test body ...) #'(if test (begin body ...) (void))])))
+        [(_ test body ...) #'(if test (begin body ...) #f)])))
 
   (define-syntax unless
     (lambda (x)
@@ -49,10 +50,10 @@
   (define-syntax or
     (lambda (x)
       (syntax-case x ()
-        [(_ ) #’#f]
-        [(_ e) #’e]
+        [(_ ) #'#f]
+        [(_ e) #'e]
         [(_ e1 e2 e3 ...)
-         #’(let ([t e1])
+         #'(let ([t e1])
          (if t t (or e2 e3 ...)))])))
   
   (define (list? x)
@@ -75,4 +76,4 @@
          (for-all identifier? #'(lit ... k ...))
          #'(lambda (x)
              (syntax-case x (lit ...)
-               [(_ . p) #'t] ...))])))
+               [(_ . p) #'t] ...))]))))

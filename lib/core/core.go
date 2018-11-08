@@ -37,6 +37,7 @@ func init() {
 	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err), true})
 	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
 	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum), true})
+	env = env.MustDefine(common.Symbol("identifier?"), []int{0}, &common.Variable{common.Function(identifier), true})
 	Bindings = env.Bindings()
 }
 
@@ -381,4 +382,16 @@ func syntaxDatumRecursive(syntax common.Datum) (common.Datum, error) {
 	default:
 		return nil, fmt.Errorf("syntax->datum: expected syntax")
 	}
+}
+
+func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("identifier?: wrong arity"))
+	}
+	syntax, ok := args[0].(common.WrappedSyntax)
+	if !ok {
+		return common.CallC(c, common.Boolean(false))
+	}
+	_, ok = syntax.Datum().(common.Symbol)
+	return common.CallC(c, common.Boolean(ok))
 }
