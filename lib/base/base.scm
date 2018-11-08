@@ -13,9 +13,11 @@
     _
     ...
     cons
+    not
     car
     cdr
     null?
+    pair?
     write
     call/cc
     error
@@ -52,8 +54,17 @@
       (syntax-case x ()
         [(_ () body ...) #'(let* () body ...)]
         [(_ ((v e)) body ...) #'(let* ((v e)) body ...)]
-        [(_ ((v0 e0) ((v e) ...)) body ...)
+        [(_ ((v0 e0) (v e) ...) body ...)
          #'(let* ((v0 e0) (r (let ((v e) ...) body ...))) r)])))
+
+  (define-syntax and
+    (lambda (x)
+      (syntax-case x ()
+        [(_ ) #'#t]
+        [(_ e) #'e]
+        [(_ e1 e2 e3 ...)
+         #'(let ([t e1])
+             (if t (and e2 e3 ...) t))])))
 
   (define-syntax or
     (lambda (x)

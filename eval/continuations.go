@@ -192,5 +192,5 @@ func syntaxCaseMatch(continuation common.Continuation, input common.Datum, liter
 			)
 		}
 	}
-	return nil, fmt.Errorf("syntax-case: bad syntax")
+	return nil, fmt.Errorf("bad syntax")
 }

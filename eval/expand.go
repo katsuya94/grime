@@ -57,7 +57,11 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	} else if !ok {
 		return nil, false, nil
 	}
-	name, _, ok := result[common.Symbol("keyword")].(common.WrappedSyntax).Identifier()
+	identifier, ok := result[common.Symbol("keyword")].(common.WrappedSyntax)
+	if !ok {
+		return nil, false, nil
+	}
+	name, _, ok := identifier.Identifier()
 	if !ok {
 		return nil, false, nil
 	}

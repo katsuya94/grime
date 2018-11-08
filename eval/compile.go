@@ -243,7 +243,7 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(env, form.Patterns[i])
+			pattern, err := compilePattern(env, form.Patterns[i].(common.WrappedSyntax))
 			if err != nil {
 				return nil, err
 			}
@@ -369,8 +369,7 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (commo
 	}
 }
 
-func compilePattern(env common.Environment, form common.Form) (common.Datum, error) {
-	syntax := form.(common.WrappedSyntax)
+func compilePattern(env common.Environment, syntax common.WrappedSyntax) (common.Datum, error) {
 	switch datum := syntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return datum, nil

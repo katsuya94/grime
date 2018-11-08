@@ -39,10 +39,10 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum) (map[com
 		}
 		return nil, false, nil
 	case common.Symbol:
-		if !isSyntax {
-			return nil, false, nil
-		}
 		if location, ok := m.literals[p]; ok {
+			if !isSyntax {
+				return nil, false, nil
+			}
 			name, l, ok := syntax.Identifier()
 			if !ok {
 				return nil, false, nil
