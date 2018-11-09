@@ -185,7 +185,7 @@ func (Lambda) Write() string {
 func (l Lambda) Debug() string {
 	var formals []string
 	for _, variable := range l.Variables {
-		formals = append(formals, fmt.Sprintf("%p", variable.Value))
+		formals = append(formals, fmt.Sprintf("%p", variable))
 	}
 	return fmt.Sprintf("(lambda (%v) %v)", strings.Join(formals, " "), l.Body.Debug())
 }
@@ -245,7 +245,7 @@ type Let struct {
 }
 
 func (l Let) Debug() string {
-	return fmt.Sprintf("(let ((%p %v)) %v)", l.Variable.Value, l.Init.Debug(), l.Body.Debug())
+	return fmt.Sprintf("(~let (%p %v) %v)", l.Variable, l.Init.Debug(), l.Body.Debug())
 }
 
 type Begin struct {
@@ -266,7 +266,7 @@ type Define struct {
 }
 
 func (d Define) Debug() string {
-	return fmt.Sprintf("(define %p %v)", d.Variable.Value, d.Expression.Debug())
+	return fmt.Sprintf("(define %p %v)", d.Variable, d.Expression.Debug())
 }
 
 type Set struct {
@@ -275,7 +275,7 @@ type Set struct {
 }
 
 func (s Set) Debug() string {
-	return fmt.Sprintf("(set! %p %v)", s.Variable.Value, s.Expression.Debug())
+	return fmt.Sprintf("(set! %p %v)", s.Variable, s.Expression.Debug())
 }
 
 type Reference struct {
@@ -283,7 +283,7 @@ type Reference struct {
 }
 
 func (r Reference) Debug() string {
-	return fmt.Sprintf("%p", r.Variable.Value)
+	return fmt.Sprintf("%p", r.Variable)
 }
 
 type SyntaxCase struct {

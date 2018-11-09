@@ -3,7 +3,7 @@
     quote
     syntax
     if
-    let*
+    ~let ; TODO remove after implementing syntax hygiene
     begin
     lambda
     define
@@ -28,6 +28,7 @@
     equal?
     when
     unless
+    let*
     let
     and
     or

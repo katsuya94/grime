@@ -105,12 +105,24 @@ func (r *Runtime) provisionFor(name []common.Symbol) (*provision, error) {
 	return prov, nil
 }
 
+type instantiationError struct {
+	libraryName []common.Symbol
+	err         error
+}
+
+func (err instantiationError) Error() string {
+	if len(err.libraryName) == 0 {
+		return fmt.Sprintf("runtime: %v", err.err)
+	}
+	return fmt.Sprintf("runtime: while instantiating %v: %v", nameString(err.libraryName), err.err)
+}
+
 func (r *Runtime) instantiate(prov *provision) error {
 	if prov.bindings != nil {
 		return nil
 	}
 	if prov.visited {
-		return fmt.Errorf("runtime: import cycle detected while attempting to instantiate %v", nameString(prov.library.name))
+		return instantiationError{prov.library.name, fmt.Errorf("import cycle detected")}
 	}
 	prov.visited = true
 	var (
@@ -124,7 +136,10 @@ func (r *Runtime) instantiate(prov *provision) error {
 		}
 		resolution, ok := importSpec.resolve(subProv.library)
 		if !ok {
-			return fmt.Errorf("runtime: version mismatch for library %v at version %v", nameString(importSpec.libraryName()), versionString(subProv.library.version))
+			return instantiationError{
+				prov.library.name,
+				fmt.Errorf("version mismatch for library %v at version %v", nameString(importSpec.libraryName()), versionString(subProv.library.version)),
+			}
 		}
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
@@ -137,7 +152,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		}
 		bindings, err := resolutions[i].identifierSpec.resolve(subProvs[i].bindings)
 		if err != nil {
-			return err
+			return instantiationError{prov.library.name, err}
 		}
 		for exportLevel, locations := range bindings {
 			for id, location := range locations {
@@ -151,7 +166,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 				}
 				env, err = env.Define(id, levels, location)
 				if err != nil {
-					return err
+					return instantiationError{prov.library.name, err}
 				}
 			}
 		}
@@ -163,7 +178,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	}
 	expression, definitions, err := eval.CompileBody(env, forms)
 	if err != nil {
-		return err
+		return instantiationError{prov.library.name, err}
 	}
 	prov.bindings = make(common.BindingSet)
 	for _, exportSpec := range prov.library.exportSpecs {
@@ -180,11 +195,14 @@ func (r *Runtime) instantiate(prov *provision) error {
 			prov.bindings[exportLevel][exportSpec.external] = location
 		}
 		if !exported {
-			return fmt.Errorf("runtime: can't export unbound identifier %v", exportSpec.internal)
+			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}
 		}
 	}
 	_, err = eval.EvaluateExpressionOnce(expression)
-	return err
+	if err != nil {
+		return instantiationError{prov.library.name, err}
+	}
+	return nil
 }
 
 func nameString(name []common.Symbol) string {

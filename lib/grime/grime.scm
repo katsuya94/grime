@@ -3,7 +3,7 @@
     quote
     syntax
     if
-    let*
+    ~let
     begin
     lambda
     define
@@ -24,17 +24,18 @@
     eqv?
     syntax->datum
     identifier?
-    eq?
-    equal?
     when
     unless
+    let*
     let
     and
     or
     list?
     fold-left
     for-all
-    syntax-rules)
+    syntax-rules
+    eq?
+    equal?)
   (import
     (for (except (base) syntax syntax-case set! _ ... syntax-rules) run expand)
     (for (only (base) syntax syntax-case syntax-case set! _ ... syntax-rules) run expand)))

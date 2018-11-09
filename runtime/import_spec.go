@@ -269,7 +269,7 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("only: unexported identifier %v", id)
+			return nil, fmt.Errorf("except: unexported identifier %v", id)
 		}
 	}
 	return bindings, nil
@@ -315,7 +315,7 @@ func (spec identifierSpecRename) resolve(bindings common.BindingSet) (common.Bin
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("only: unexported identifier %v", identifierBinding.external)
+			return nil, fmt.Errorf("rename: unexported identifier %v", identifierBinding.external)
 		}
 	}
 	renamedBindings := make(common.BindingSet)

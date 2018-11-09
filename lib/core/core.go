@@ -19,7 +19,7 @@ func init() {
 	env = env.MustDefine(common.Symbol("quote"), []int{0}, &common.Keyword{common.Function(transformQuote)})
 	env = env.MustDefine(common.Symbol("syntax"), []int{0}, &common.Keyword{common.Function(transformSyntax)})
 	env = env.MustDefine(common.Symbol("if"), []int{0}, &common.Keyword{common.Function(transformIf)})
-	env = env.MustDefine(common.Symbol("let*"), []int{0}, &common.Keyword{common.Function(transformLetStar)})
+	env = env.MustDefine(common.Symbol("~let"), []int{0}, &common.Keyword{common.Function(transformLet)})
 	env = env.MustDefine(common.Symbol("begin"), []int{0}, &common.Keyword{common.Function(transformBegin)})
 	env = env.MustDefine(common.Symbol("lambda"), []int{0}, &common.Keyword{common.Function(transformLambda)})
 	env = env.MustDefine(common.Symbol("define"), []int{0}, &common.Keyword{common.Function(transformDefine)})
@@ -48,7 +48,7 @@ var (
 	PatternQuote                      = util.Pattern(read.MustReadString("(quote datum)")[0])
 	PatternSyntax                     = util.Pattern(read.MustReadString("(syntax datum)")[0])
 	PatternIf                         = util.Pattern(read.MustReadString("(if condition then else)")[0])
-	PatternLetStar                    = util.Pattern(read.MustReadString("(let* ((name init) ...) body ...)")[0])
+	PatternLet                        = util.Pattern(read.MustReadString("(let (name init) body ...)")[0])
 	PatternBegin                      = util.Pattern(read.MustReadString("(begin body ...)")[0])
 	PatternLambda                     = util.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
 	PatternDefineLambda               = util.Pattern(read.MustReadString("(define (name formals ...) body ...)")[0])
@@ -95,34 +95,27 @@ func transformIf(c common.Continuation, args ...common.Datum) (common.Evaluation
 	return common.CallC(c, form)
 }
 
-func transformLetStar(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	result, ok, err := util.MatchSyntax(args[0], PatternLetStar, nil)
+func transformLet(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	result, ok, err := util.MatchSyntax(args[0], PatternLet, nil)
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
-		return common.ErrorC(fmt.Errorf("let*: bad syntax"))
+		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
-	var names []common.Symbol
-	for _, name := range result[common.Symbol("name")].([]interface{}) {
-		name, _, ok := name.(common.WrappedSyntax).Identifier()
-		if !ok {
-			return common.ErrorC(fmt.Errorf("let*: bad syntax"))
-		}
-		names = append(names, name)
+	syntax, ok := result[common.Symbol("name")].(common.WrappedSyntax)
+	if !ok {
+		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
-	var inits []common.Form
-	for _, init := range result[common.Symbol("init")].([]interface{}) {
-		inits = append(inits, init)
+	name, _, ok := syntax.Identifier()
+	if !ok {
+		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
+	init := result[common.Symbol("init")]
 	var forms []common.Form
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	var form common.Datum = common.BeginForm{forms}
-	for i := len(names) - 1; i >= 0; i-- {
-		form = common.LetForm{names[i], inits[i], form}
-	}
-	return common.CallC(c, form)
+	return common.CallC(c, common.LetForm{name, init, common.BeginForm{forms}})
 }
 
 func transformBegin(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

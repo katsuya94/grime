@@ -1,8 +1,9 @@
 (library (derived)
   (export
-    when unless let and or list? fold-left for-all syntax-rules)
+    when unless let* let and or list? fold-left for-all syntax-rules)
   (import
-    (for (core) run expand))
+    (core)
+    (for (only (core) ~let) expand))
 
   (define-syntax when
     (lambda (x)
@@ -14,13 +15,22 @@
       (syntax-case x ()
         [(_ test body ...) #'(when (not test) body ...)])))
 
+  (define-syntax let*
+    (lambda (x)
+      (syntax-case x ()
+        [(_ () body ...) #'(begin body ...)]
+        [(_ ((v0 e0) (v e) ...) body ...)
+         #'(~let (v0 e0) (let* ((v e) ...) body ...))])))
+
   (define-syntax let
     (lambda (x)
       (syntax-case x ()
         [(_ () body ...) #'(let* () body ...)]
         [(_ ((v e)) body ...) #'(let* ((v e)) body ...)]
         [(_ ((v0 e0) (v e) ...) body ...)
-         #'(let* ((v0 e0) (r (let ((v e) ...) body ...))) r)])))
+         #'(let*
+             ((x e0))
+             (let ((v e) ...) (let* ((v0 x)) body ...)))])))
 
   (define-syntax and
     (lambda (x)
