@@ -28,10 +28,10 @@ func main() {
 }
 
 func repl() {
-	r := runtime.NewRuntime()
-	r.Provide(core.Library)
-	r.Bind(core.Library.Name(), core.Bindings)
-	r.Provide(base.Library)
+	rt := runtime.NewRuntime()
+	rt.Provide(core.Library)
+	rt.Bind(core.Library.Name(), core.Bindings)
+	rt.Provide(base.Library)
 	for {
 		fmt.Print("grime> ")
 		data, err := readReplData()
@@ -45,7 +45,7 @@ func repl() {
 		for _, d := range data {
 			topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
 		}
-		err = r.Execute(topLevelProgram)
+		err = rt.Execute(topLevelProgram)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
