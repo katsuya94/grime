@@ -1,6 +1,17 @@
 (library (derived)
   (export
-    when unless let* let and or list? fold-left for-all syntax-rules cond)
+    when
+    unless
+    let*
+    with-syntax
+    let
+    and
+    or
+    list?
+    fold-left
+    for-all
+    syntax-rules
+    cond)
   (import
     (for (core) run)
     (for (only (core) ~let syntax lambda syntax-case ... _ identifier?) expand))
@@ -21,6 +32,13 @@
         [(_ () body ...) #'(begin body ...)]
         [(_ ((v0 e0) (v e) ...) body ...)
          #'(~let (v0 e0) (let* ((v e) ...) body ...))])))
+
+  (define-syntax with-syntax
+    (lambda (x)
+      (syntax-case x ()
+        [(_ ((p e0) ...) e1 e2 ...)
+         #'(syntax-case (list e0 ...) ()
+             ((p ...) (let () e1 e2 ...)))])))
 
   (define-syntax let
     (lambda (x)

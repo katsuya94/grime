@@ -27,6 +27,7 @@
     when
     unless
     let*
+    with-syntax
     let
     and
     or
@@ -34,6 +35,7 @@
     fold-left
     for-all
     syntax-rules
+    cond
     eq?
     equal?)
   (import
