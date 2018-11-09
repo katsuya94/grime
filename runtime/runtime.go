@@ -2,6 +2,9 @@ package runtime
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/katsuya94/grime/eval"
 
@@ -61,6 +64,27 @@ func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
 	return r.instantiate(r.provisions["()"])
 }
 
+func (r *Runtime) ExecuteFile(name string) error {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		fmt.Errorf("failed to determine source location")
+	}
+	sourcePath := filepath.Join(filepath.Dir(filename), fmt.Sprintf("%v.scm", name))
+	f, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	data, err := read.Read(f)
+	if err != nil {
+		return err
+	}
+	var topLevelProgram []common.WrappedSyntax
+	for _, d := range data {
+		topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
+	}
+	return r.Execute(topLevelProgram)
+}
+
 func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingSet, error) {
 	prov, err := r.provisionFor(name)
 	if err != nil {
@@ -111,12 +135,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 		if err != nil {
 			return err
 		}
-		for exportLevel, locations := range subProvs[i].bindings {
-			for external, location := range locations {
-				internal, ok := resolutions[i].identifierSpec.resolve(external)
-				if !ok {
-					continue
-				}
+		bindings, err := resolutions[i].identifierSpec.resolve(subProvs[i].bindings)
+		if err != nil {
+			return err
+		}
+		for exportLevel, locations := range bindings {
+			for id, location := range locations {
 				levelSet := make(map[int]bool)
 				for _, importLevel := range resolutions[i].levels {
 					levelSet[importLevel+exportLevel] = true
@@ -125,7 +149,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 				for level := range levelSet {
 					levels = append(levels, level)
 				}
-				env, err = env.Define(internal, levels, location)
+				env, err = env.Define(id, levels, location)
 				if err != nil {
 					return err
 				}

@@ -5,6 +5,7 @@
 * [ ] Implement syntax hygiene
 * [ ] Implement rnrs (6) library
 * [ ] Handle hex literals in ids
+* [ ] Handle comments
 * [ ] Improve error messaging
 * [ ] Track error line/col
 * [ ] 100% test coverage
@@ -14,14 +15,7 @@
 * [ ] Make command line utility for generating bindings for arbitrary go packages
 * [ ] Use consistent coding style with success cases in tail-position
 * [ ] Implement variadic lambdas
-* [ ] Consider removing error handling in match in favor of a panic
-* [ ] Consider adding match result type for easy result retrieval
 
 ## Notes
 
 * https://github.com/racket/r6rs is the only explicit implementation of r6rs found so far
-* Implementation plan
-  * Implement syntax-case style pattern matching
-  * Use pattern matching directly to implement core functionality
-  * Refactor into library implemenation
-  * Define syntax-rules in terms of syntax-case

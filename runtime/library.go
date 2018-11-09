@@ -2,6 +2,9 @@ package runtime
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
@@ -81,6 +84,23 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 		library.body = append(library.body, d.(common.WrappedSyntax))
 	}
 	return &library, nil
+}
+
+func MustNewLibraryFromFile(name string) *Library {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		panic(fmt.Sprintf("failed to load %v", name))
+	}
+	sourcePath := filepath.Join(filepath.Dir(filename), fmt.Sprintf("%v.scm", name))
+	f, err := os.Open(sourcePath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %v: %v", name, err))
+	}
+	data := read.MustRead(f)
+	if len(data) != 1 {
+		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
+	}
+	return MustNewLibrary(common.NewWrappedSyntax(data[0]))
 }
 
 func MustNewLibrary(source common.WrappedSyntax) *Library {

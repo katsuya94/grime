@@ -216,13 +216,13 @@ type importSetResolution struct {
 }
 
 type identifierSpec interface {
-	resolve(common.Symbol) (common.Symbol, bool)
+	resolve(bindings common.BindingSet) (common.BindingSet, error)
 }
 
 type identifierSpecAll struct{}
 
-func (identifierSpecAll) resolve(external common.Symbol) (common.Symbol, bool) {
-	return external, true
+func (spec identifierSpecAll) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+	return bindings, nil
 }
 
 type identifierSpecOnly struct {
@@ -230,13 +230,24 @@ type identifierSpecOnly struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecOnly) resolve(external common.Symbol) (common.Symbol, bool) {
+func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+	var err error
+	bindings, err = spec.identifierSpec.resolve(bindings)
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range spec.identifiers {
-		if external == id {
-			return external, true
+		found := false
+		for _, locations := range bindings {
+			if _, ok := locations[id]; ok {
+				found = true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("only: unexported identifier %v", id)
 		}
 	}
-	return external, false
+	return bindings, nil
 }
 
 type identifierSpecExcept struct {
@@ -244,13 +255,24 @@ type identifierSpecExcept struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecExcept) resolve(external common.Symbol) (common.Symbol, bool) {
+func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+	var err error
+	bindings, err = spec.identifierSpec.resolve(bindings)
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range spec.identifiers {
-		if external == id {
-			return external, false
+		found := false
+		for _, locations := range bindings {
+			if _, ok := locations[id]; ok {
+				found = true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("only: unexported identifier %v", id)
 		}
 	}
-	return external, true
+	return bindings, nil
 }
 
 type identifierSpecPrefix struct {
@@ -258,8 +280,20 @@ type identifierSpecPrefix struct {
 	identifier     common.Symbol
 }
 
-func (spec identifierSpecPrefix) resolve(external common.Symbol) (common.Symbol, bool) {
-	return common.Symbol(spec.identifier + external), true
+func (spec identifierSpecPrefix) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+	var err error
+	bindings, err = spec.identifierSpec.resolve(bindings)
+	if err != nil {
+		return nil, err
+	}
+	prefixedBindings := make(common.BindingSet)
+	for level, locations := range bindings {
+		prefixedBindings[level] = make(map[common.Symbol]common.Location)
+		for id, location := range locations {
+			prefixedBindings[level][common.Symbol(spec.identifier+id)] = location
+		}
+	}
+	return prefixedBindings, nil
 }
 
 type identifierSpecRename struct {
@@ -267,14 +301,36 @@ type identifierSpecRename struct {
 	identifierBindings []identifierBinding
 }
 
-func (spec identifierSpecRename) resolve(external common.Symbol) (common.Symbol, bool) {
-	internal := external
+func (spec identifierSpecRename) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+	var err error
+	bindings, err = spec.identifierSpec.resolve(bindings)
+	if err != nil {
+		return nil, err
+	}
 	for _, identifierBinding := range spec.identifierBindings {
-		if identifierBinding.external == external {
-			internal = identifierBinding.internal
+		found := false
+		for _, locations := range bindings {
+			if _, ok := locations[identifierBinding.external]; ok {
+				found = true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("only: unexported identifier %v", identifierBinding.external)
 		}
 	}
-	return internal, true
+	renamedBindings := make(common.BindingSet)
+	for level, locations := range bindings {
+		renamedBindings[level] = make(map[common.Symbol]common.Location)
+		for id, location := range locations {
+			for _, identifierBinding := range spec.identifierBindings {
+				if identifierBinding.external == id {
+					id = identifierBinding.internal
+				}
+			}
+			renamedBindings[level][id] = location
+		}
+	}
+	return renamedBindings, nil
 }
 
 type importSetOnly struct {
