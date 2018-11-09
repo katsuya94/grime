@@ -38,4 +38,5 @@
     equal?)
   (import
     (for (except (base) syntax syntax-case set! _ ... syntax-rules) run expand)
-    (for (only (base) syntax syntax-case syntax-case set! _ ... syntax-rules) run expand)))
+    (for (only (core) syntax syntax-case set! _ ...) run expand)
+    (for (only (derived) syntax-rules) run expand)))

@@ -24,8 +24,6 @@
     eqv?
     syntax->datum
     identifier?
-    eq?
-    equal?
     when
     unless
     let*
@@ -35,7 +33,9 @@
     list?
     fold-left
     for-all
-    syntax-rules)
+    syntax-rules
+    eq?
+    equal?)
   (import
     (for (only (derived) syntax-rules) expand)
     (for (except (derived) syntax-rules) run)

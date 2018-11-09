@@ -247,7 +247,22 @@ func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.Bindi
 			return nil, fmt.Errorf("only: unexported identifier %v", id)
 		}
 	}
-	return bindings, nil
+	filteredBindings := make(common.BindingSet)
+	for level, locations := range bindings {
+		filteredBindings[level] = make(map[common.Symbol]common.Location)
+		for id, location := range locations {
+			found := false
+			for _, included := range spec.identifiers {
+				if id == included {
+					found = true
+				}
+			}
+			if found {
+				filteredBindings[level][id] = location
+			}
+		}
+	}
+	return filteredBindings, nil
 }
 
 type identifierSpecExcept struct {
@@ -272,7 +287,22 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 			return nil, fmt.Errorf("except: unexported identifier %v", id)
 		}
 	}
-	return bindings, nil
+	filteredBindings := make(common.BindingSet)
+	for level, locations := range bindings {
+		filteredBindings[level] = make(map[common.Symbol]common.Location)
+		for id, location := range locations {
+			found := false
+			for _, excluded := range spec.identifiers {
+				if id == excluded {
+					found = true
+				}
+			}
+			if !found {
+				filteredBindings[level][id] = location
+			}
+		}
+	}
+	return filteredBindings, nil
 }
 
 type identifierSpecPrefix struct {

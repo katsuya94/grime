@@ -1,10 +1,10 @@
 (library (derived)
   (export
-    when unless let* let and or list? fold-left for-all syntax-rules)
+    when unless let* let and or list? fold-left for-all syntax-rules cond)
   (import
-    (core)
-    (for (only (core) ~let) expand))
-
+    (for (core) run)
+    (for (only (core) ~let syntax lambda syntax-case ... _ identifier?) expand))
+  
   (define-syntax when
     (lambda (x)
       (syntax-case x ()
@@ -70,4 +70,29 @@
          (for-all identifier? #'(lit ... k ...))
          #'(lambda (x)
              (syntax-case x (lit ...)
-               [(_ . p) #'t] ...))]))))
+               [(_ . p) #'t] ...))])))
+
+  (define-syntax cond
+    (lambda (x)
+      (syntax-case x ()
+        [(_ c1 c2 ...)
+        (let f ([c1 #'c1] [c2* #'(c2 ...)])
+          (syntax-case c2* ()
+            [()
+             (syntax-case c1 (else =>)
+               [(else e1 e2 ...) #'(begin e1 e2 ...)]
+               [(e0) #'e0]
+               [(e0 => e1)
+               #'(let ([t e0]) (if t (e1 t)))]
+               [(e0 e1 e2 ...)
+               #'(if e0 (begin e1 e2 ...))])]
+            [(c2 c3 ...)
+             (with-syntax ([rest (f #'c2 #'(c3 ...))])
+               (syntax-case c1 (=>)
+                 [(e0) #'(let ([t e0]) (if t t rest))]
+                 [(e0 => e1)
+                 #'(let ([t e0]) (if t (e1 t) rest))]
+                 [(e0 e1 e2 ...)
+                 #'(if e0 
+                     (begin e1 e2 ...)
+                     rest)]))]))]))))
