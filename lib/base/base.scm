@@ -26,6 +26,10 @@
     identifier?
     eq?
     equal?
+    when
+    unless
+    let
+    and
     or
     list?
     fold-left
