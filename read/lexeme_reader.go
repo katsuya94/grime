@@ -40,12 +40,100 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
 
 func (l *LexemeReader) readInterlexemeSpace() error {
 	for {
-		if r, err := l.reader.ReadRune(); (!whitespace(r) && err == nil) || err == io.EOF {
+		r, err := l.reader.ReadRune()
+		if err != nil {
+			return err
+		} else if whitespace(r) {
+			continue
+		} else if r == ';' {
+			for {
+				r, err := l.reader.ReadRune()
+				if err != nil {
+					return err
+				} else if paragraphSeparator(r) {
+					break
+				}
+				l.reader.UnreadRune()
+				ok, err := l.readLineEnding()
+				if err != nil {
+					return err
+				} else if ok {
+					break
+				}
+				l.reader.ReadRune()
+			}
+			continue
+		} else if r == '#' {
+			r, err := l.reader.ReadRune()
+			if err != nil {
+				return err
+			} else if r == ';' {
+				err := l.readInterlexemeSpace()
+				if err != nil {
+					return err
+				}
+				_, err = (&DatumReader{l}).expectDatum()
+				if err != nil {
+					return err
+				}
+				continue
+			}
 			l.reader.UnreadRune()
-			return err
-		} else if err != nil {
-			return err
 		}
+		l.reader.UnreadRune()
+		ok, err := l.readNestedComment()
+		if err != nil {
+			return err
+		} else if ok {
+			continue
+		}
+		return nil
+	}
+}
+
+func (l *LexemeReader) readNestedComment() (bool, error) {
+	r, ok, err := l.readNonEOF()
+	if err != nil {
+		return false, err
+	} else if !ok {
+		return false, nil
+	} else if r != '#' {
+		l.reader.UnreadRune()
+		return false, nil
+	}
+	r, ok, err = l.readNonEOF()
+	if err != nil {
+		return false, err
+	} else if !ok {
+		l.reader.UnreadRune()
+		return false, nil
+	} else if r != '|' {
+		l.reader.UnreadRune()
+		l.reader.UnreadRune()
+		return false, nil
+	}
+	for {
+		r, err = l.expectNonEOF()
+		if err != nil {
+			return false, err
+		} else if r == '|' {
+			r, err = l.expectNonEOF()
+			if err != nil {
+				return false, err
+			} else if r == '#' {
+				return true, nil
+			}
+			l.reader.UnreadRune()
+			continue
+		}
+		l.reader.UnreadRune()
+		ok, err := l.readNestedComment()
+		if err != nil {
+			return false, err
+		} else if !ok {
+			l.reader.ReadRune()
+		}
+		continue
 	}
 }
 
@@ -346,6 +434,7 @@ func (l *LexemeReader) readString() (Lexeme, bool, error) {
 				runes = append(runes, '\x0a')
 			} else {
 				runes = append(runes, r)
+				l.reader.ReadRune()
 			}
 		}
 	}
@@ -432,6 +521,7 @@ func (l *LexemeReader) readLineEnding() (bool, error) {
 	case '\u2028':
 		return true, nil
 	default:
+		l.reader.UnreadRune()
 		return false, nil
 	}
 }
@@ -460,7 +550,6 @@ func (l *LexemeReader) expectHex() (rune, error) {
 		r <<= 4
 		r += hexValue(hexDigit)
 	}
-	fmt.Printf("%#v\n", r)
 	if r < 0 || (0xd800 <= r && r <= 0xdfff) || 0x10ffff < r {
 		return 0, Errorf("invalid hex scalar value: %v", string(hexDigits))
 	}

@@ -13,6 +13,72 @@ func TestLex(t *testing.T) {
 		error   string
 	}{
 		{
+			"line comment",
+			"id ; comment\nname",
+			[]Lexeme{Identifier("id"), Identifier("name")},
+			"",
+		},
+		{
+			"line comment with whitespace after",
+			"id ; comment\nname",
+			[]Lexeme{Identifier("id"), Identifier("name")},
+			"",
+		},
+		{
+			"line comment at EOF",
+			"id ; comment",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"empty line comment at EOF",
+			"id ;",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"datum comment",
+			"#;id name",
+			[]Lexeme{Identifier("name")},
+			"",
+		},
+		{
+			"datum comment with interlexeme space",
+			"#; id name",
+			[]Lexeme{Identifier("name")},
+			"",
+		},
+		{
+			"datum comment at eof",
+			"id #;name",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"datum comment at eof",
+			"id #;name",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"nested comment",
+			"#| comment |# id",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"nested comment at eof",
+			"id #| comment |#",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
+			"doubly nested comment",
+			"#| comment #| note |# |# id",
+			[]Lexeme{Identifier("id")},
+			"",
+		},
+		{
 			"identifier",
 			"id",
 			[]Lexeme{Identifier("id")},

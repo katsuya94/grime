@@ -143,3 +143,7 @@ func subsequent(r rune) bool {
 func intralineWhitespace(r rune) bool {
 	return r == '\x09' || unicode.Is(unicode.Zs, r)
 }
+
+func paragraphSeparator(r rune) bool {
+	return r == '\u2029'
+}
