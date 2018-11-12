@@ -1,21 +1,40 @@
 # grime
 
+grime is a programming language for developing joyful developer experiences that wrap go.
+
+## Features
+
+* Hygienic macros for developing powerful, transparent DSLs
+* Functional tools for managing configuration with code
+* Go interoperability for leveraging every Go package
+
+## TODO for version 0.0
+
+* [ ] Implement hygiene
+* [ ] Implement REPL
+* [ ] Implement keywords
+* [ ] Implement struct operations
+* [ ] Implement map operations
+* [ ] Implement slice operations
+
 ## TODO
 
-* [ ] Implement syntax hygiene
-* [ ] Implement rnrs (6) library
-* [ ] Handle hex literals in ids
-* [ ] Handle comments
-* [ ] Improve error messaging
-* [ ] Track error line/col
-* [ ] 100% test coverage
-* [ ] Documentation
-* [ ] Implement Clojure-style keywords
-* [ ] Implement REPL with continuations
-* [ ] Make command line utility for generating bindings for arbitrary go packages
-* [ ] Use consistent coding style with success cases in tail-position
+* [ ] Implement multiple return values
 * [ ] Implement variadic lambdas
+* [ ] Implement reentrant lambdas
+* [ ] Handle hex literals in ids
+* [ ] Improve read error messaging with source location
+* [ ] Improve compile error messaging with source location
+* [ ] Achieve 100% test coverage
+* [ ] Write documentation
+* [ ] Generate bindings for arbitrary go packages
+* [ ] Comply with go lint
+* [ ] Compile to web assembly for use in the browser
 
-## Notes
+## Libraries
 
-* https://github.com/racket/r6rs is the only explicit implementation of r6rs found so far
+* [ ] Kubernetes
+* [ ] GraphQL
+* [ ] GRPC
+* [ ] Kafka
+* [ ] TensorFlow
