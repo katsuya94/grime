@@ -117,6 +117,14 @@ func (err instantiationError) Error() string {
 	return fmt.Sprintf("runtime: while instantiating %v: %v", nameString(err.libraryName), err.err)
 }
 
+func (r *Runtime) Instantiate(name []common.Symbol) error {
+	prov, err := r.provisionFor(name)
+	if err != nil {
+		return err
+	}
+	return r.instantiate(prov)
+}
+
 func (r *Runtime) instantiate(prov *provision) error {
 	if prov.bindings != nil {
 		return nil

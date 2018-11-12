@@ -55,11 +55,6 @@ func TestCompileBody(t *testing.T) {
 			"compile: unexpected body form in expression context",
 		},
 		{
-			"empty let*",
-			"(let* ())",
-			"compile: no expressions in body",
-		},
-		{
 			"empty lambda",
 			"(lambda ())",
 			"compile: no expressions in body",

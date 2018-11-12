@@ -7,6 +7,8 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
+var ErrNoExpressionsInBody = fmt.Errorf("compile: no expressions in body")
+
 func CompileBody(env common.Environment, forms []common.Form) (common.Expression, common.BindingSet, error) {
 	var (
 		i                   int
@@ -91,7 +93,7 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 	}
 	// Compile the remaining expressions.
 	if len(forms[i:]) == 0 {
-		return nil, nil, fmt.Errorf("compile: no expressions in body")
+		return nil, nil, ErrNoExpressionsInBody
 	}
 	for _, form := range forms[i:] {
 		expression, err := Compile(env.Clear(), form)
@@ -276,13 +278,17 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	case common.WrappedSyntax:
 		switch datum := form.Datum().(type) {
-		case common.Boolean, common.Number, common.Character, common.String, nil:
+		case common.Boolean, common.Number, common.Character, common.String:
 			return datum.(common.Expression), nil
 		default:
-			if datum == common.Void {
+			switch datum {
+			case common.Void:
 				return common.Void, nil
+			case nil:
+				return nil, nil
+			default:
+				return nil, fmt.Errorf("compile: unhandled literal %#v", datum)
 			}
-			return nil, fmt.Errorf("compile: unhandled literal %#v", datum)
 		}
 	default:
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)

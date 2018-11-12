@@ -8,9 +8,13 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/katsuya94/grime/eval"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
+	"github.com/katsuya94/grime/lib/derived"
+	"github.com/katsuya94/grime/lib/grime"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/runtime"
 	"golang.org/x/crypto/ssh/terminal"
@@ -27,28 +31,57 @@ func main() {
 	}
 }
 
+type replEvaluated struct{}
+
 func repl() {
 	rt := runtime.NewRuntime()
 	rt.Provide(core.Library)
 	rt.Bind(core.Library.Name(), core.Bindings)
+	rt.Provide(derived.Library)
 	rt.Provide(base.Library)
+	rt.Provide(grime.Library)
+	rt.Instantiate([]common.Symbol{common.Symbol("grime")})
+	bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("grime")})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	var forms []common.Form
 	for {
-		fmt.Print("grime> ")
+		fmt.Printf("grime:%v> ", len(forms))
+		eof := false
 		data, err := readReplData()
 		if err == io.EOF {
-			break
+			if len(forms) == 0 {
+				break
+			} else {
+				eof = true
+			}
 		} else if err != nil {
+			forms = nil
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			continue
 		}
-		data = append(read.MustReadString("(import (base))"), data...)
-		var topLevelProgram []common.WrappedSyntax
 		for _, d := range data {
-			topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
+			forms = append(forms, common.NewWrappedSyntax(d))
 		}
-		err = rt.Execute(topLevelProgram)
+		env := common.NewEnvironment(bindings)
+		expression, newBindings, err := eval.CompileBody(env, forms)
+		if err == eval.ErrNoExpressionsInBody && !eof {
+			continue
+		}
+		forms = nil
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			continue
 		}
+		bindings = newBindings
+		result, err := eval.EvaluateExpressionOnce(expression)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			continue
+		}
+		fmt.Println(common.Write(result))
 	}
 }
 
