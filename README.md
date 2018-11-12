@@ -11,7 +11,7 @@ grime is a programming language for developing joyful developer experiences that
 ## TODO for version 0.0
 
 * [ ] Implement hygiene
-* [ ] Implement REPL
+* [x] Implement REPL
 * [ ] Implement keywords
 * [ ] Implement struct operations
 * [ ] Implement map operations

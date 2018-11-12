@@ -75,12 +75,12 @@ func repl() {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			continue
 		}
-		bindings = newBindings
 		result, err := eval.EvaluateExpressionOnce(expression)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			continue
 		}
+		bindings = newBindings
 		fmt.Println(common.Write(result))
 	}
 }
