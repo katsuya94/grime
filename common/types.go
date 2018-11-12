@@ -156,6 +156,8 @@ func IsSyntax(d Datum) bool {
 		return true
 	case Pair:
 		return IsSyntax(d.First) && IsSyntax(d.Rest)
+	case nil:
+		return true
 	default:
 		return false
 	}

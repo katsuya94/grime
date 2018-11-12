@@ -24,6 +24,8 @@
     eqv?
     syntax->datum
     identifier?
+    generate-temporaries
+    list
     when
     unless
     let*

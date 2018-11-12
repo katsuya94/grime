@@ -41,6 +41,8 @@ func init() {
 	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
 	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum), true})
 	env = env.MustDefine(common.Symbol("identifier?"), []int{0}, &common.Variable{common.Function(identifier), true})
+	env = env.MustDefine(common.Symbol("generate-temporaries"), []int{0}, &common.Variable{common.Function(generateTemporaries), true})
+	env = env.MustDefine(common.Symbol("list"), []int{0}, &common.Variable{common.Function(list), true})
 	Bindings = env.Bindings()
 }
 
@@ -238,13 +240,13 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 			fender  common.Form
 			output  common.Form
 		)
-		if result, ok, err := util.MatchSyntax(clause.(common.WrappedSyntax), PatternSyntaxCaseClause, nil); err != nil {
+		if result, ok, err := util.MatchSyntax(clause, PatternSyntaxCaseClause, nil); err != nil {
 			return common.ErrorC(err)
 		} else if ok {
 			pattern = result[common.Symbol("pattern")]
 			fender = common.NewWrappedSyntax(common.Boolean(true))
 			output = result[common.Symbol("output")]
-		} else if result, ok, err := util.MatchSyntax(clause.(common.WrappedSyntax), PatternSyntaxCaseClauseWithFender, nil); err != nil {
+		} else if result, ok, err := util.MatchSyntax(clause, PatternSyntaxCaseClauseWithFender, nil); err != nil {
 			return common.ErrorC(err)
 		} else if ok {
 			pattern = result[common.Symbol("pattern")]
@@ -415,6 +417,47 @@ func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationR
 	if !ok {
 		return common.CallC(c, common.Boolean(false))
 	}
-	_, ok = syntax.Datum().(common.Symbol)
+	_, _, ok = syntax.Identifier()
 	return common.CallC(c, common.Boolean(ok))
+}
+
+var temporaryIdentifiers int
+
+func generateTemporaries(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("generate-temporaries: wrong arity"))
+	}
+	list := args[0]
+	n := 0
+	for {
+		syntax, ok := list.(common.WrappedSyntax)
+		if ok {
+			list = syntax.Datum()
+		}
+		switch datum := list.(type) {
+		case nil:
+		case common.Pair:
+			n++
+			list = datum.Rest
+			continue
+		default:
+			return common.ErrorC(fmt.Errorf("generate-temporaries: expected proper list"))
+		}
+		break
+	}
+	var temporaries common.Datum
+	for i := 0; i < n; i++ {
+		syntax := common.NewWrappedSyntax(common.Symbol(fmt.Sprintf(".%v", temporaryIdentifiers)))
+		temporaries = common.Pair{syntax, temporaries}
+		temporaryIdentifiers++
+	}
+	return common.CallC(c, temporaries)
+}
+
+func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	var list common.Datum
+	for i := len(args) - 1; i >= 0; i-- {
+		list = common.Pair{args[i], list}
+	}
+	return common.CallC(c, list)
 }

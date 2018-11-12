@@ -31,7 +31,7 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 				}
 				procedure, ok := value.(common.Procedure)
 				if !ok {
-					return nil, nil, fmt.Errorf("compile: define-syntax: bad syntax")
+					return nil, nil, fmt.Errorf("compile: define-syntax: expected procedure")
 				}
 				env, err = env.Define(v.Name, nil, &common.Keyword{procedure})
 				if err != nil {
@@ -243,7 +243,7 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(env, form.Patterns[i].(common.WrappedSyntax))
+			pattern, err := compilePattern(env, form.Patterns[i])
 			if err != nil {
 				return nil, err
 			}
@@ -289,8 +289,12 @@ func Compile(env common.Environment, form common.Form) (common.Expression, error
 	}
 }
 
-func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (common.Datum, map[*common.PatternVariable]int, error) {
-	switch datum := syntax.Datum().(type) {
+func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, map[*common.PatternVariable]int, error) {
+	syntax, isSyntax := datum.(common.WrappedSyntax)
+	if isSyntax {
+		datum = syntax.Datum()
+	}
+	switch datum := datum.(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Symbol:
@@ -320,7 +324,18 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (commo
 			ellipsis++
 			rest = pair.Rest
 		}
-		firstCompiled, firstPatternVariables, err := compileTemplate(env, syntax.PushOnto(datum.First))
+		var (
+			firstTemplate common.Datum
+			restTemplate  common.Datum
+		)
+		if isSyntax {
+			firstTemplate = syntax.PushOnto(datum.First)
+			restTemplate = syntax.PushOnto(rest)
+		} else {
+			firstTemplate = datum.First
+			restTemplate = datum.Rest
+		}
+		firstCompiled, firstPatternVariables, err := compileTemplate(env, firstTemplate)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -328,7 +343,7 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (commo
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
 		}
-		restCompiled, restPatternVariables, err := compileTemplate(env, syntax.PushOnto(rest))
+		restCompiled, restPatternVariables, err := compileTemplate(env, restTemplate)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -369,8 +384,12 @@ func compileTemplate(env common.Environment, syntax common.WrappedSyntax) (commo
 	}
 }
 
-func compilePattern(env common.Environment, syntax common.WrappedSyntax) (common.Datum, error) {
-	switch datum := syntax.Datum().(type) {
+func compilePattern(env common.Environment, datum common.Datum) (common.Datum, error) {
+	syntax, isSyntax := datum.(common.WrappedSyntax)
+	if isSyntax {
+		datum = syntax.Datum()
+	}
+	switch datum := datum.(type) {
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return datum, nil
 	case common.Symbol:
@@ -383,11 +402,22 @@ func compilePattern(env common.Environment, syntax common.WrappedSyntax) (common
 		}
 		return datum, nil
 	case common.Pair:
-		first, err := compilePattern(env, syntax.PushOnto(datum.First))
+		var (
+			firstPattern common.Datum
+			restPattern  common.Datum
+		)
+		if isSyntax {
+			firstPattern = syntax.PushOnto(datum.First)
+			restPattern = syntax.PushOnto(datum.Rest)
+		} else {
+			firstPattern = datum.First
+			restPattern = datum.Rest
+		}
+		first, err := compilePattern(env, firstPattern)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := compilePattern(env, syntax.PushOnto(datum.Rest))
+		rest, err := compilePattern(env, restPattern)
 		if err != nil {
 			return nil, err
 		}

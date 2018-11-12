@@ -47,9 +47,7 @@
   (assert-equal x 'foo)
   (assert-equal y 'bar))
 
-#| pending hygiene
 (set! x #f)
 (let [(x 'foo) (y x)]
   (assert-equal x 'foo)
   (assert-equal y #f))
-|#

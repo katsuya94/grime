@@ -14,7 +14,19 @@
     cond)
   (import
     (for (core) run)
-    (for (only (core) ~let syntax lambda syntax-case ... _ identifier?) expand))
+    (for (only (core)
+           syntax
+           begin
+           ~let
+           lambda
+           syntax-case
+           ...
+           _
+           write
+           identifier?
+           list
+           generate-temporaries)
+         expand))
   
   (define-syntax when
     (lambda (x)
@@ -29,26 +41,36 @@
   (define-syntax let*
     (lambda (x)
       (syntax-case x ()
-        [(_ () body ...) #'(begin body ...)]
-        [(_ ((v0 e0) (v e) ...) body ...)
-         #'(~let (v0 e0) (let* ((v e) ...) body ...))])))
+        [(_ () b1 b2 ...) #'(begin b1 b2 ...)]
+        [(_ ((i1 e1) (i2 e2) ...) b1 b2 ...)
+         #'(~let (i1 e1) (let* ((i2 e2) ...) b1 b2 ...))])))
 
   (define-syntax with-syntax
     (lambda (x)
       (syntax-case x ()
         [(_ ((p e0) ...) e1 e2 ...)
          #'(syntax-case (list e0 ...) ()
-             ((p ...) (let () e1 e2 ...)))])))
+             ((p ...) (begin e1 e2 ...)))])))
 
   (define-syntax let
     (lambda (x)
       (syntax-case x ()
-        [(_ () body ...) #'(let* () body ...)]
-        [(_ ((v e)) body ...) #'(let* ((v e)) body ...)]
-        [(_ ((v0 e0) (v e) ...) body ...)
-         #'(let*
-             ((x e0))
-             (let ((v e) ...) (let* ((v0 x)) body ...)))])))
+       [(_ ((i e) ...) b1 b2 ...)
+        (with-syntax
+          ([(t ...) (generate-temporaries #'(i ...))])
+          #'(let ((t e) ...)
+              (let ((i t) ...) b1 b2 ...)))])))
+  
+  (define-syntax letrec
+    (lambda (x)
+      (syntax-case x ()
+        [(_ ((i e) ...) b1 b2 ...)
+         (with-syntax
+           ([(t ...) (generate-temporaries #'(i ...))])
+           #'(let ((i #f) ...)
+               (let ((t e) ...)
+                 (set! i t) ...
+                 (let () b1 b2 ...))))])))
 
   (define-syntax and
     (lambda (x)
@@ -91,26 +113,27 @@
                [(_ . p) #'t] ...))])))
 
   (define-syntax cond
-    (lambda (x)
+    (lambda (x) #f) ; pending named let
+    #;(lambda (x)
       (syntax-case x ()
         [(_ c1 c2 ...)
-        (let f ([c1 #'c1] [c2* #'(c2 ...)])
-          (syntax-case c2* ()
-            [()
-             (syntax-case c1 (else =>)
-               [(else e1 e2 ...) #'(begin e1 e2 ...)]
-               [(e0) #'e0]
-               [(e0 => e1)
-               #'(let ([t e0]) (if t (e1 t)))]
-               [(e0 e1 e2 ...)
-               #'(if e0 (begin e1 e2 ...))])]
-            [(c2 c3 ...)
-             (with-syntax ([rest (f #'c2 #'(c3 ...))])
-               (syntax-case c1 (=>)
-                 [(e0) #'(let ([t e0]) (if t t rest))]
-                 [(e0 => e1)
-                 #'(let ([t e0]) (if t (e1 t) rest))]
-                 [(e0 e1 e2 ...)
-                 #'(if e0 
-                     (begin e1 e2 ...)
-                     rest)]))]))]))))
+         (let f ([c1 #'c1] [c2* #'(c2 ...)])
+           (syntax-case c2* ()
+             [()
+              (syntax-case c1 (else =>)
+                [(else e1 e2 ...) #'(begin e1 e2 ...)]
+                [(e0) #'e0]
+                [(e0 => e1)
+                #'(let ([t e0]) (if t (e1 t)))]
+                [(e0 e1 e2 ...)
+                #'(if e0 (begin e1 e2 ...))])]
+             [(c2 c3 ...)
+              (with-syntax ([rest (f #'c2 #'(c3 ...))])
+                (syntax-case c1 (=>)
+                  [(e0) #'(let ([t e0]) (if t t rest))]
+                  [(e0 => e1)
+                  #'(let ([t e0]) (if t (e1 t) rest))]
+                  [(e0 e1 e2 ...)
+                  #'(if e0 
+                      (begin e1 e2 ...)
+                      rest)]))]))]))))

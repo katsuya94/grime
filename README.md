@@ -16,12 +16,15 @@ grime is a programming language for developing joyful developer experiences that
 * [ ] Implement struct operations
 * [ ] Implement map operations
 * [ ] Implement slice operations
+* [ ] Implement minimal numeric operations
 
 ## TODO
 
 * [ ] Implement multiple return values
 * [ ] Implement variadic lambdas
 * [ ] Implement reentrant lambdas
+* [ ] Implement numeric tower
+* [ ] Implement a syntax formatting tool for the language
 * [ ] Handle hex literals in ids
 * [ ] Improve read error messaging with source location
 * [ ] Improve compile error messaging with source location
