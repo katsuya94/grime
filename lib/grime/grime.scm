@@ -29,8 +29,10 @@
     when
     unless
     let*
+    letrec*
     with-syntax
     let
+    letrec
     and
     or
     list?

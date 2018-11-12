@@ -3,8 +3,10 @@
     when
     unless
     let*
+    letrec*
     with-syntax
     let
+    letrec
     and
     or
     list?
@@ -45,6 +47,13 @@
         [(_ ((i1 e1) (i2 e2) ...) b1 b2 ...)
          #'(~let (i1 e1) (let* ((i2 e2) ...) b1 b2 ...))])))
 
+  (define-syntax letrec*
+    (lambda (x)
+      (syntax-case x ()
+        [(_ () b1 b2 ...) #'(begin b1 b2 ...)]
+        [(_ ((i1 e1) (i2 e2) ...) b1 b2 ...)
+         #'(~let (i1 #f) (set! i1 e1) (let* ((i2 e2) ...) b1 b2 ...))])))
+
   (define-syntax with-syntax
     (lambda (x)
       (syntax-case x ()
@@ -58,19 +67,19 @@
        [(_ ((i e) ...) b1 b2 ...)
         (with-syntax
           ([(t ...) (generate-temporaries #'(i ...))])
-          #'(let ((t e) ...)
-              (let ((i t) ...) b1 b2 ...)))])))
+          #'(let* ((t e) ...)
+              (let* ((i t) ...) b1 b2 ...)))])))
   
+  ; TODO letrec should detect usages of variables before definition
   (define-syntax letrec
     (lambda (x)
       (syntax-case x ()
         [(_ ((i e) ...) b1 b2 ...)
          (with-syntax
            ([(t ...) (generate-temporaries #'(i ...))])
-           #'(let ((i #f) ...)
-               (let ((t e) ...)
-                 (set! i t) ...
-                 (let () b1 b2 ...))))])))
+           #'(let* ((i #f) ...)
+               (let* ((t e) ...)
+                 (set! i t) ... b1 b2 ...)))])))
 
   (define-syntax and
     (lambda (x)

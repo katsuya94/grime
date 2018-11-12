@@ -1,7 +1,11 @@
 (import (grime))
 
+(define (assert-true condition)
+  (unless condition (error "assertion failed")))
+
 (define (assert-equal actual expected)
-  (unless (equal? actual expected) #t (error "assertion failed")))
+  (assert-true (equal? actual expected)))
+
 
 (define x #f)
 
@@ -37,6 +41,12 @@
 (let* [(x 'foo) (y x)]
   (assert-equal x 'foo)
   (assert-equal y 'foo))
+
+; letrec*
+
+(set! x #f)
+(letrec* [(x 'foo) (y (lambda () x))]
+  (assert-equal (y) 'foo))
 
 ; let
 
