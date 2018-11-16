@@ -14,12 +14,11 @@ import (
 )
 
 type DOMTerminal struct {
-	element js.Value
+	terminal js.Value
 }
 
 func NewDOMTerminal() *DOMTerminal {
-	element := js.Global().Get("document").Call("getElementById", "terminal")
-	return &DOMTerminal{element}
+	return &DOMTerminal{js.Global().Get("terminal")}
 }
 
 func (terminal *DOMTerminal) Read(p []byte) (int, error) {
@@ -28,7 +27,7 @@ func (terminal *DOMTerminal) Read(p []byte) (int, error) {
 }
 
 func (terminal *DOMTerminal) Write(p []byte) (int, error) {
-	terminal.element.Call("append", string(p))
+	terminal.terminal.Call("write", string(p))
 	return len(p), nil
 }
 
