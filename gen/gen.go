@@ -39,8 +39,9 @@ func generate(patterns ...string) error {
 	if err != nil {
 		return err
 	}
-	for _, name := range pkg.Types.Scope().Names() {
-		object := pkg.Types.Scope().Lookup(name)
+	scope := pkg.Types.Scope()
+	for _, name := range scope.Names() {
+		object := scope.Lookup(name)
 		if !object.Exported() {
 			continue
 		}
