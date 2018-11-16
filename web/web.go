@@ -5,50 +5,52 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
-	"syscall"
-
-	"github.com/katsuya94/grime/eval"
+	"syscall/js"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/lib/base"
+	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/lib/core"
-	"github.com/katsuya94/grime/lib/derived"
-	"github.com/katsuya94/grime/lib/grime"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/runtime"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
+type DOMTerminal struct {
+	element js.Value
+}
+
+func NewDOMTerminal() *DOMTerminal {
+	element := js.Global().Get("document").Call("getElementById", "terminal")
+	return &DOMTerminal{element}
+}
+
+func (terminal *DOMTerminal) Read(p []byte) (int, error) {
+	panic("HERE")
+	return 0, nil
+}
+
+func (terminal *DOMTerminal) Write(p []byte) (int, error) {
+	terminal.element.Call("append", string(p))
+	return len(p), nil
+}
+
 func main() {
-	if terminal.IsTerminal(syscall.Stdin) {
-		repl()
-	} else {
-		if err := run(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+	err := run()
+	if err != nil {
+		panic(err)
 	}
 }
 
-func repl() {
-	rt := runtime.NewRuntime()
-	rt.Provide(core.Library)
-	rt.Bind(core.Library.Name(), core.Bindings)
-	rt.Provide(derived.Library)
-	rt.Provide(base.Library)
-	rt.Provide(grime.Library)
-	rt.Instantiate([]common.Symbol{common.Symbol("grime")})
-	bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("grime")})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+func run() error {
+	terminal := NewDOMTerminal()
+	REPL(core.Bindings, terminal)
+	return nil
+}
+
+func REPL(bindings common.BindingSet, terminal io.ReadWriter) {
 	var forms []common.Form
 	for {
-		fmt.Printf("grime:%v> ", len(forms))
+		fmt.Fprintf(terminal, "grime:%v> ", len(forms))
 		eof := false
-		data, err := readReplData()
+		data, err := readREPLData(terminal)
 		if err == io.EOF {
 			if len(forms) == 0 {
 				break
@@ -57,7 +59,7 @@ func repl() {
 			}
 		} else if err != nil {
 			forms = nil
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			fmt.Fprintf(terminal, "error: %v\n", err)
 			continue
 		}
 		for _, d := range data {
@@ -70,22 +72,22 @@ func repl() {
 		}
 		forms = nil
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			fmt.Fprintf(terminal, "error: %v\n", err)
 			continue
 		}
 		result, err := eval.EvaluateExpressionOnce(expression)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			fmt.Fprintf(terminal, "error: %v\n", err)
 			continue
 		}
 		bindings = newBindings
-		fmt.Println(common.Write(result))
+		fmt.Fprintln(terminal, common.Write(result))
 	}
 }
 
-func readReplData() ([]common.Datum, error) {
+func readREPLData(terminal io.Reader) ([]common.Datum, error) {
 	var source []byte
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(terminal)
 	scanner.Split(splitReplLines)
 	for {
 		if scanner.Scan() {
@@ -120,22 +122,4 @@ func splitReplLines(data []byte, atEOF bool) (int, []byte, error) {
 
 	}
 	return 0, nil, nil
-}
-
-func run() error {
-	r := runtime.NewRuntime()
-	r.Provide(core.Library)
-	r.Bind(core.Library.Name(), core.Bindings)
-	reader := read.NewDatumReader(os.Stdin)
-	var topLevelProgram []common.WrappedSyntax
-	for {
-		if datum, err := reader.ReadDatum(); err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		} else {
-			topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(datum))
-		}
-	}
-	return r.Execute(topLevelProgram)
 }
