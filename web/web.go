@@ -14,22 +14,33 @@ import (
 )
 
 type DOMTerminal struct {
-	terminal js.Value
+	object   js.Value
+	received chan js.Value
 }
 
 func NewDOMTerminal() *DOMTerminal {
-	return &DOMTerminal{js.Global().Get("terminal")}
+	object := js.Global().Get("terminal")
+	terminal := &DOMTerminal{object, make(chan js.Value)}
+	object.Set("notify", js.NewCallback(terminal.notify))
+	return terminal
+}
+
+func (terminal *DOMTerminal) notify(args []js.Value) {
+	terminal.received <- args[0]
 }
 
 func (terminal *DOMTerminal) Read(p []byte) (int, error) {
-	panic("HERE")
-	r := terminal.terminal.Call("read", len(p)).String()
-	copy(p, []byte(r))
-	return len(r), nil
+	terminal.object.Call("read", len(p))
+	value := <-terminal.received
+	n := value.Length()
+	for i := 0; i < n; i++ {
+		p[i] = byte(value.Index(i).Int())
+	}
+	return n, nil
 }
 
 func (terminal *DOMTerminal) Write(p []byte) (int, error) {
-	terminal.terminal.Call("write", string(p))
+	terminal.object.Call("write", string(p))
 	return len(p), nil
 }
 
@@ -112,6 +123,7 @@ func readREPLData(terminal io.Reader) ([]common.Datum, error) {
 }
 
 func splitReplLines(data []byte, atEOF bool) (int, []byte, error) {
+	fmt.Println(data, atEOF)
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}

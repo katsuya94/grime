@@ -6,6 +6,7 @@
     "build": "GOOS=js GOARCH=wasm go build -o web.wasm && env GOROOT=\"$(go env GOROOT)\" webpack"
   },
   "dependencies": {
+    "buffer": "^5.2.1",
     "xterm": "^3.8.0"
   },
   "devDependencies": {
