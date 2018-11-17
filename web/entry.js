@@ -19,27 +19,6 @@ class Terminal {
   }
 
   onData(data) {
-    for (let i = 0; i < data.length; i++) {
-      this.onChar(data[i]);
-    }
-  }
-
-  onChar(char) {
-    switch (char) {
-      case "\r":
-        this.write("\n");
-        this.send("\n");
-      case "\x7f":
-        this.write("\b \b");
-        this.send("\b");
-      default:
-        this.write(char);
-        this.send(char);
-    }
-  }
-
-  send(data) {
-    console.log(buffer.Buffer.from(data));
     this.buffer = buffer.Buffer.concat([this.buffer, buffer.Buffer.from(data)]);
   }
 
@@ -60,6 +39,8 @@ window.terminal.open(document.getElementById("terminal"));
 const go = new Go();
 WebAssembly.instantiateStreaming(fetch("web.wasm"), go.importObject).then(
   result => {
-    go.run(result.instance);
+    go.run(result.instance).then(() =>
+      window.terminal.write("\r\n[Process completed]")
+    );
   }
 );
