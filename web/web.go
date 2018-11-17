@@ -23,7 +23,9 @@ func NewDOMTerminal() *DOMTerminal {
 
 func (terminal *DOMTerminal) Read(p []byte) (int, error) {
 	panic("HERE")
-	return 0, nil
+	r := terminal.terminal.Call("read", len(p)).String()
+	copy(p, []byte(r))
+	return len(r), nil
 }
 
 func (terminal *DOMTerminal) Write(p []byte) (int, error) {
