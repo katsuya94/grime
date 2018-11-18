@@ -123,6 +123,9 @@ func NewVar(pkg *Package, v *types.Var) *Var {
 }
 
 func (v *Var) QualifiedType() string {
+	if v.Variadic {
+		return QualifiedName(v.Type().(*types.Slice).Elem().String())
+	}
 	return QualifiedName(v.Type().String())
 }
 
@@ -158,7 +161,7 @@ var Bindings common.BindingSet
 func init() {
 	env := common.EmptyEnvironment
 	{{range .Funcs -}}
-	env = env.MustDefine(common.Symbol("{{.Name}}"), []int{0}, &common.Keyword{common.Function({{.InternalName}})})
+	env = env.MustDefine(common.Symbol("{{.QualifiedName}}"), []int{0}, &common.Keyword{common.Function({{.InternalName}})})
 	{{end -}}
 	Bindings = env.Bindings()
 }
@@ -166,7 +169,6 @@ func init() {
 {{range .Funcs}}
 func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	{{if len .Params -}}
-	var ok bool
 	{{if .Type.Variadic -}}
 	valid := len(args) >= {{len .Params}} - 1
 	{{else -}}
@@ -185,7 +187,8 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 			valid = valid && ok
 			{{$param.Name}} = append({{$param.Name}}, elem)
 		}
-		{{else -}}
+	{{else -}}
+		var ok bool
 		{{$param.Name}}, ok = args[{{$i}}].({{$param.QualifiedType}})
 		valid = valid && ok
 	{{end -}}
@@ -196,14 +199,14 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		for _, arg := range args {
 			argTypes = append(argTypes, reflect.TypeOf(arg).String())
 		}
-		return common.ErrorC(fmt.Errorf("{{.Name}}: expected ({{.ParamTypes}}) got (%v)", strings.Join(argTypes, ", ")))
+		return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected ({{.ParamTypes}}) got (%v)", strings.Join(argTypes, ", ")))
 	}
 	{{end -}}
 	{{.QualifiedName}}(
 		{{range .Params -}}
 		{{if .Variadic -}}
 		{{.Name}}...,
-		{{else -}}
+	{{else -}}
 		{{.Name}},
 	{{end -}}
 	{{end -}}
