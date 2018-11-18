@@ -41,11 +41,11 @@ func NewPackage(pkg *packages.Package) *Package {
 	return &Package{pkg, nil}
 }
 
-func (pkg Package) PkgPathSegments() []string {
+func (pkg *Package) PkgPathSegments() []string {
 	return strings.Split(pkg.PkgPath, "/")
 }
 
-func (pkg Package) Funcs() []*Func {
+func (pkg *Package) Funcs() []*Func {
 	if pkg.funcs == nil {
 		pkg.funcs = []*Func{}
 		scope := pkg.Types.Scope()
@@ -58,7 +58,7 @@ func (pkg Package) Funcs() []*Func {
 				fmt.Printf("skipping %v because of receiver\n", f)
 				continue
 			}
-			pkg.funcs = append(pkg.funcs, NewFunc(f))
+			pkg.funcs = append(pkg.funcs, NewFunc(pkg, f))
 		}
 	}
 	return pkg.funcs
@@ -66,27 +66,28 @@ func (pkg Package) Funcs() []*Func {
 
 type Func struct {
 	*types.Func
+	pkg    *Package
 	params []*Var
 }
 
-func NewFunc(f *types.Func) *Func {
-	return &Func{f, nil}
+func NewFunc(pkg *Package, f *types.Func) *Func {
+	return &Func{f, pkg, nil}
 }
 
-func (f Func) InternalName() string {
+func (f *Func) InternalName() string {
 	internalName := f.Name()
 	internalName = string(regexp.MustCompile("[^a-zA-Z0-9]").ReplaceAll([]byte(internalName), []byte{}))
 	internalName = string(append([]rune{unicode.ToLower([]rune(internalName)[0])}, []rune(internalName)[1:]...))
 	return internalName
 }
 
-func (f Func) Params() []*Var {
+func (f *Func) Params() []*Var {
 	if f.params == nil {
 		f.params = []*Var{}
 		signature := f.Type().(*types.Signature)
 		params := signature.Params()
 		for i := 0; i < params.Len(); i++ {
-			f.params = append(f.params, &Var{params.At(i), false})
+			f.params = append(f.params, NewVar(f.pkg, params.At(i)))
 		}
 		if signature.Variadic() {
 			f.params[len(f.params)-1].Variadic = true
@@ -95,7 +96,7 @@ func (f Func) Params() []*Var {
 	return f.params
 }
 
-func (f Func) ParamTypes() string {
+func (f *Func) ParamTypes() string {
 	var paramTypes []string
 	for _, param := range f.Params() {
 		if param.Variadic {
@@ -107,9 +108,31 @@ func (f Func) ParamTypes() string {
 	return strings.Join(paramTypes, ", ")
 }
 
+func (f *Func) QualifiedName() string {
+	return QualifiedName(f.FullName())
+}
+
 type Var struct {
 	*types.Var
+	pkg      *Package
 	Variadic bool
+}
+
+func NewVar(pkg *Package, v *types.Var) *Var {
+	return &Var{v, pkg, false}
+}
+
+func (v *Var) QualifiedType() string {
+	return QualifiedName(v.Type().String())
+}
+
+func QualifiedName(name string) string {
+	a := strings.Split(name, ".")
+	if len(a) == 1 {
+		return a[0]
+	}
+	b := strings.Split(a[0], "/")
+	return fmt.Sprintf("%v.%v", b[len(b)-1], a[1])
 }
 
 var fileTemplate = template.Must(template.New("package").Parse(`
@@ -127,7 +150,7 @@ import (
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{
 	{{range .PkgPathSegments -}}
 	common.Symbol("{{.}}"),
-	{{end}}
+{{end -}}
 }, []int{})
 
 var Bindings common.BindingSet
@@ -143,19 +166,30 @@ func init() {
 {{range .Funcs}}
 func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	{{if len .Params -}}
-	valid := true
+	var ok bool
+	{{if .Type.Variadic -}}
+	valid := len(args) >= {{len .Params}} - 1
+	{{else -}}
+	valid := len(args) == {{len .Params}}
+	{{end -}}
 	{{range $i, $param := .Params -}}
 	{{if $param.Variadic -}}
-	var {{$param.Name}} {{$param.Type}}
-	for _, arg := range args[{{$i}}:] {
-		elem, ok := arg.({{$param.Type.Elem}})
-		valid = valid && ok
-		{{$param.Name}} = append({{$param.Name}}, elem)
-	}
+	var {{$param.Name}} []{{$param.QualifiedType}}
 	{{else -}}
-	{{$param.Name}}, ok := args[{{$i}}].({{$param.Type}})
-	valid = valid && ok
+	var {{$param.Name}} {{$param.QualifiedType}}
 	{{end -}}
+	if valid {
+		{{if $param.Variadic -}}
+		for _, arg := range args[{{$i}}:] {
+			elem, ok := arg.({{$param.QualifiedType}})
+			valid = valid && ok
+			{{$param.Name}} = append({{$param.Name}}, elem)
+		}
+		{{else -}}
+		{{$param.Name}}, ok = args[{{$i}}].({{$param.QualifiedType}})
+		valid = valid && ok
+	{{end -}}
+	}
 	{{end -}}
 	if !valid {
 		var argTypes []string
@@ -165,14 +199,14 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		return common.ErrorC(fmt.Errorf("{{.Name}}: expected ({{.ParamTypes}}) got (%v)", strings.Join(argTypes, ", ")))
 	}
 	{{end -}}
-	{{.FullName}}(
+	{{.QualifiedName}}(
 		{{range .Params -}}
 		{{if .Variadic -}}
 		{{.Name}}...,
 		{{else -}}
 		{{.Name}},
-		{{end -}}
-		{{end -}}
+	{{end -}}
+	{{end -}}
 	)
 	return common.CallC(c, common.Void)
 }
@@ -193,11 +227,13 @@ func generate(pattern string) error {
 	filename := fmt.Sprintf("%v.go", pkg.Name)
 	file, err := parser.ParseFile(fset, filename, buf.String(), 0)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, buf.String())
 		return err
 	}
 	conf := types.Config{Importer: importer.Default()}
 	_, err = conf.Check(fmt.Sprintf("github.com/katsuya94/grime/lib/%v", pkg.PkgPath), fset, []*ast.File{file}, nil)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, buf.String())
 		return err
 	}
 	filepath, err := goPath()
