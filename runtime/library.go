@@ -86,6 +86,14 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 	return &library, nil
 }
 
+func MustNewLibraryFromString(name string, src string) *Library {
+	data := read.MustReadString(src)
+	if len(data) != 1 {
+		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
+	}
+	return MustNewLibrary(common.NewWrappedSyntax(data[0]))
+}
+
 func MustNewLibraryFromFile(name string) *Library {
 	_, filename, _, ok := runtime.Caller(1)
 	if !ok {

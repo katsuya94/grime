@@ -5,8 +5,13 @@ import (
 	"io"
 	"syscall/js"
 
+	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
+	"github.com/katsuya94/grime/lib/derived"
+	"github.com/katsuya94/grime/lib/grime"
 	"github.com/katsuya94/grime/repl"
+	"github.com/katsuya94/grime/runtime"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -58,5 +63,16 @@ func main() {
 			}
 		}
 	}()
-	repl.REPL(core.Bindings, r, terminal)
+	rt := runtime.NewRuntime()
+	rt.Provide(core.Library)
+	rt.Bind(core.Library.Name(), core.Bindings)
+	rt.Provide(derived.Library)
+	rt.Provide(base.Library)
+	rt.Provide(grime.Library)
+	rt.Instantiate([]common.Symbol{common.Symbol("grime")})
+	bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("grime")})
+	if err != nil {
+		panic(err)
+	}
+	repl.REPL(bindings, r, terminal)
 }
