@@ -167,7 +167,7 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 			return common.ErrorC(err)
 		}
 		form = lambda
-	} else if result, ok, err := util.MatchSyntax(args[0].(common.WrappedSyntax), PatternDefine, nil); err != nil {
+	} else if result, ok, err := util.MatchSyntax(args[0], PatternDefine, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
 		name, _, ok = result[common.Symbol("name")].(common.WrappedSyntax).Identifier()
