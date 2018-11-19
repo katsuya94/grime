@@ -17,10 +17,10 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 	)
 	// Expand and handle definitions, deferring expansion of variable definitions.
 	for i = 0; i < len(forms); i++ {
-		form := forms[i]
 		processed := false
 		expression := false
 		for !processed {
+			form := forms[i]
 			switch v := form.(type) {
 			case common.DefineSyntaxForm:
 				expression, err := Compile(env.Next().Clear(), v.Form)
@@ -70,7 +70,7 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 					if err != nil {
 						return nil, nil, err
 					} else if ok {
-						form = v // TODO: try forms[i] = v to prevent repeated expands
+						forms[i] = v
 						continue
 					}
 				}
@@ -304,6 +304,9 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 	case common.Boolean, common.Number, common.Character, common.String, nil:
 		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Symbol:
+		if !isSyntax {
+			return nil, nil, fmt.Errorf("compile: encountered unwrapped symbol in syntax template")
+		}
 		binding := env.Get(datum)
 		if patternVariable, ok := binding.(*common.PatternVariable); ok {
 			return common.PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
