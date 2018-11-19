@@ -1,6 +1,6 @@
-# grime
+# Grime
 
-grime is a programming language for developing joyful developer experiences that wrap go.
+Grime is a programming language for developing joyful developer experiences that wrap Go.
 
 ## Features
 
