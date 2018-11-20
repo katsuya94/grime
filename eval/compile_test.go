@@ -147,7 +147,7 @@ func TestCompileBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var forms []common.Form
+			var forms []common.Datum
 			for _, d := range sourceBody {
 				forms = append(forms, common.NewWrappedSyntax(d))
 			}

@@ -1,56 +1,54 @@
 package common
 
-type Form interface{}
-
 type DefineSyntaxForm struct {
 	Name Symbol
-	Form Form
+	Form Datum
 }
 
 type SyntaxCaseForm struct {
-	Input    Form
+	Input    Datum
 	Literals []Symbol
-	Patterns []Form
-	Fenders  []Form
-	Outputs  []Form
+	Patterns []Datum
+	Fenders  []Datum
+	Outputs  []Datum
 }
 
 type DefineForm struct {
 	Name Symbol
-	Form Form
+	Form Datum
 }
 
 type IfForm struct {
-	Condition Form
-	Then      Form
-	Else      Form
+	Condition Datum
+	Then      Datum
+	Else      Datum
 }
 
 type LetForm struct {
 	Name Symbol
-	Init Form
-	Body Form
+	Init Datum
+	Body Datum
 }
 
 type LetSyntaxForm struct{}
 
 type BeginForm struct {
-	Forms []Form
+	Forms []Datum
 }
 
 type ApplicationForm struct {
-	Procedure Form
-	Arguments []Form
+	Procedure Datum
+	Arguments []Datum
 }
 
 type LambdaForm struct {
 	Formals []Symbol
-	Body    Form
+	Body    Datum
 }
 
 type SetForm struct {
 	Name Symbol
-	Form Form
+	Form Datum
 }
 
 type ReferenceForm struct {

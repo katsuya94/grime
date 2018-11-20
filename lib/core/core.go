@@ -113,7 +113,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
 	init := result[common.Symbol("init")]
-	var forms []common.Form
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -127,7 +127,7 @@ func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluat
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
 	}
-	var forms []common.Form
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -190,7 +190,7 @@ func makeLambdaFromResult(result map[common.Symbol]interface{}) (common.LambdaFo
 			return common.LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 	}
-	var forms []common.Form
+	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
@@ -230,15 +230,15 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 		literals = append(literals, name)
 	}
 	var (
-		patterns []common.Form
-		fenders  []common.Form
-		outputs  []common.Form
+		patterns []common.Datum
+		fenders  []common.Datum
+		outputs  []common.Datum
 	)
 	for _, clause := range result[common.Symbol("clause")].([]interface{}) {
 		var (
-			pattern common.Form
-			fender  common.Form
-			output  common.Form
+			pattern common.Datum
+			fender  common.Datum
+			output  common.Datum
 		)
 		if result, ok, err := util.MatchSyntax(clause, PatternSyntaxCaseClause, nil); err != nil {
 			return common.ErrorC(err)

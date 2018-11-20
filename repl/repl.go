@@ -12,7 +12,7 @@ import (
 )
 
 func REPL(bindings common.BindingSet, r io.Reader, w io.Writer) {
-	var forms []common.Form
+	var forms []common.Datum
 	for {
 		fmt.Fprintf(w, "grime:%v> ", len(forms))
 		eof := false

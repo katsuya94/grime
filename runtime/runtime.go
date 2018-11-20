@@ -180,7 +180,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		}
 	}
 	body := append(prov.library.body, common.NewWrappedSyntax(common.Void))
-	var forms []common.Form
+	var forms []common.Datum
 	for _, syntax := range body {
 		forms = append(forms, syntax)
 	}

@@ -14,7 +14,7 @@ var (
 	PatternApplication                 = util.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-func Expand(env common.Environment, syntax common.Datum) (common.Form, bool, error) {
+func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
 	// TODO use literals to ensure that set! would point at the keyword in base
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): nil,
@@ -34,7 +34,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Form, bool, err
 		return nil, false, err
 	} else if ok {
 		procedure := result[common.Symbol("procedure")]
-		var arguments []common.Form
+		var arguments []common.Datum
 		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
 			arguments = append(arguments, argument)
 		}
@@ -48,7 +48,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Form, bool, err
 	return nil, false, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Form, bool, error) {
+func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
 	result, ok, err := util.MatchSyntax(syntax, pattern, literals)
 	if err != nil {
@@ -81,8 +81,7 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	return output, true, nil
 }
 
-// TODO form is really just datum
-func ExpandCompletely(env common.Environment, d common.Datum) (common.Form, error) {
+func ExpandCompletely(env common.Environment, d common.Datum) (common.Datum, error) {
 	for {
 		if !common.IsSyntax(d) {
 			return d, nil

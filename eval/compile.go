@@ -9,7 +9,7 @@ import (
 
 var ErrNoExpressionsInBody = fmt.Errorf("compile: no expressions in body")
 
-func CompileBody(env common.Environment, forms []common.Form) (common.Expression, common.BindingSet, error) {
+func CompileBody(env common.Environment, forms []common.Datum) (common.Expression, common.BindingSet, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -111,7 +111,7 @@ func CompileBody(env common.Environment, forms []common.Form) (common.Expression
 	return expression, env.Bindings(), nil
 }
 
-func Compile(env common.Environment, form common.Form) (common.Expression, error) {
+func Compile(env common.Environment, form common.Datum) (common.Expression, error) {
 	var err error
 	form, err = ExpandCompletely(env, form)
 	if err != nil {
