@@ -3,15 +3,14 @@ package eval
 import (
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 var (
-	PatternMacroUseList                = util.Pattern(read.MustReadString("(keyword _ ...)")[0])
-	PatternMacroUseImproperList        = util.Pattern(read.MustReadString("(keyword _ ... . _)")[0])
-	PatternMacroUseSingletonIdentifier = util.Pattern(read.MustReadString("keyword")[0])
-	PatternMacroUseSet                 = util.Pattern(read.MustReadString("(set! keyword _)")[0])
-	PatternApplication                 = util.Pattern(read.MustReadString("(procedure arguments ...)")[0])
+	PatternMacroUseList                = common.Pattern(read.MustReadString("(keyword _ ...)")[0])
+	PatternMacroUseImproperList        = common.Pattern(read.MustReadString("(keyword _ ... . _)")[0])
+	PatternMacroUseSingletonIdentifier = common.Pattern(read.MustReadString("keyword")[0])
+	PatternMacroUseSet                 = common.Pattern(read.MustReadString("(set! keyword _)")[0])
+	PatternApplication                 = common.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
 func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
@@ -30,7 +29,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok, err := util.MatchSyntax(syntax, PatternApplication, nil); err != nil {
+	if result, ok, err := common.MatchSyntax(syntax, PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
 		procedure := result[common.Symbol("procedure")]
@@ -50,7 +49,7 @@ func Expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 
 func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
 	// TODO identifiers are actually wrapped
-	result, ok, err := util.MatchSyntax(syntax, pattern, literals)
+	result, ok, err := common.MatchSyntax(syntax, pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {

@@ -13,7 +13,7 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-var PatternTopLevelProgramImportForm = util.Pattern(read.MustReadString("(import import-spec ...)")[0])
+var PatternTopLevelProgramImportForm = common.Pattern(read.MustReadString("(import import-spec ...)")[0])
 
 type Runtime struct {
 	provisions map[string]*provision
@@ -43,7 +43,7 @@ func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
-	result, ok, err := util.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
+	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
 	if err != nil {

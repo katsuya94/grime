@@ -6,29 +6,28 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 var (
-	PatternImportSpecFor          = util.Pattern(read.MustReadString("(for import-set import-level ...)")[0])
-	PatternImportLevelMeta        = util.Pattern(read.MustReadString("(meta n)")[0])
-	PatternImportLevelRun         = util.Pattern(read.MustReadString("run")[0])
-	PatternImportLevelExpand      = util.Pattern(read.MustReadString("expand")[0])
-	PatternLibraryReference       = util.Pattern(read.MustReadString("(library-name ...)")[0])
-	PatternImportSetLibrary       = util.Pattern(read.MustReadString("(library library-reference)")[0])
-	PatternImportSetOnly          = util.Pattern(read.MustReadString("(only import-set identifier ...)")[0])
-	PatternImportSetExcept        = util.Pattern(read.MustReadString("(except import-set identifier ...)")[0])
-	PatternImportSetPrefix        = util.Pattern(read.MustReadString("(prefix import-set identifier)")[0])
-	PatternImportSetRename        = util.Pattern(read.MustReadString("(rename import-set (external internal) ...)")[0])
-	PatternSubVersionReferences   = util.Pattern(read.MustReadString("(sub-version-reference ...)")[0])
-	PatternVersionReferenceAnd    = util.Pattern(read.MustReadString("(and version-reference ...)")[0])
-	PatternVersionReferenceOr     = util.Pattern(read.MustReadString("(or version-reference ...)")[0])
-	PatternVersionReferenceNot    = util.Pattern(read.MustReadString("(not version-reference)")[0])
-	PatternSubVersionReferenceGte = util.Pattern(read.MustReadString("(>= sub-version)")[0])
-	PatternSubVersionReferenceLte = util.Pattern(read.MustReadString("(<= sub-version)")[0])
-	PatternSubVersionReferenceAnd = util.Pattern(read.MustReadString("(and sub-version-reference ...)")[0])
-	PatternSubVersionReferenceOr  = util.Pattern(read.MustReadString("(or sub-version-reference ...)")[0])
-	PatternSubVersionReferenceNot = util.Pattern(read.MustReadString("(not sub-version-reference)")[0])
+	PatternImportSpecFor          = common.Pattern(read.MustReadString("(for import-set import-level ...)")[0])
+	PatternImportLevelMeta        = common.Pattern(read.MustReadString("(meta n)")[0])
+	PatternImportLevelRun         = common.Pattern(read.MustReadString("run")[0])
+	PatternImportLevelExpand      = common.Pattern(read.MustReadString("expand")[0])
+	PatternLibraryReference       = common.Pattern(read.MustReadString("(library-name ...)")[0])
+	PatternImportSetLibrary       = common.Pattern(read.MustReadString("(library library-reference)")[0])
+	PatternImportSetOnly          = common.Pattern(read.MustReadString("(only import-set identifier ...)")[0])
+	PatternImportSetExcept        = common.Pattern(read.MustReadString("(except import-set identifier ...)")[0])
+	PatternImportSetPrefix        = common.Pattern(read.MustReadString("(prefix import-set identifier)")[0])
+	PatternImportSetRename        = common.Pattern(read.MustReadString("(rename import-set (external internal) ...)")[0])
+	PatternSubVersionReferences   = common.Pattern(read.MustReadString("(sub-version-reference ...)")[0])
+	PatternVersionReferenceAnd    = common.Pattern(read.MustReadString("(and version-reference ...)")[0])
+	PatternVersionReferenceOr     = common.Pattern(read.MustReadString("(or version-reference ...)")[0])
+	PatternVersionReferenceNot    = common.Pattern(read.MustReadString("(not version-reference)")[0])
+	PatternSubVersionReferenceGte = common.Pattern(read.MustReadString("(>= sub-version)")[0])
+	PatternSubVersionReferenceLte = common.Pattern(read.MustReadString("(<= sub-version)")[0])
+	PatternSubVersionReferenceAnd = common.Pattern(read.MustReadString("(and sub-version-reference ...)")[0])
+	PatternSubVersionReferenceOr  = common.Pattern(read.MustReadString("(or sub-version-reference ...)")[0])
+	PatternSubVersionReferenceNot = common.Pattern(read.MustReadString("(not sub-version-reference)")[0])
 )
 
 type importSpec struct {
@@ -37,7 +36,7 @@ type importSpec struct {
 }
 
 func newImportSpec(d common.WrappedSyntax) (importSpec, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternImportSpecFor, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSpecFor, map[common.Symbol]common.Location{
 		common.Symbol("for"): nil,
 	}); err != nil {
 		return importSpec{}, err
@@ -79,7 +78,7 @@ func (spec importSpec) libraryName() []common.Symbol {
 }
 
 func newImportLevel(d common.WrappedSyntax) (int, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternImportLevelMeta, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportLevelMeta, map[common.Symbol]common.Location{
 		common.Symbol("meta"): nil,
 	}); err != nil {
 		return 0, err
@@ -94,14 +93,14 @@ func newImportLevel(d common.WrappedSyntax) (int, error) {
 		}
 		return int(n), nil
 	}
-	if _, ok, err := util.MatchSyntax(d, PatternImportLevelRun, map[common.Symbol]common.Location{
+	if _, ok, err := common.MatchSyntax(d, PatternImportLevelRun, map[common.Symbol]common.Location{
 		common.Symbol("run"): nil,
 	}); err != nil {
 		return 0, err
 	} else if ok {
 		return 0, nil
 	}
-	if _, ok, err := util.MatchSyntax(d, PatternImportLevelExpand, map[common.Symbol]common.Location{
+	if _, ok, err := common.MatchSyntax(d, PatternImportLevelExpand, map[common.Symbol]common.Location{
 		common.Symbol("expand"): nil,
 	}); err != nil {
 		return 0, err
@@ -117,14 +116,14 @@ type importSet interface {
 }
 
 func newImportSet(d common.WrappedSyntax) (importSet, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternImportSetLibrary, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
 		return newLibraryReference(result[common.Symbol("library-reference")].(common.WrappedSyntax))
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternImportSetOnly, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetOnly, map[common.Symbol]common.Location{
 		common.Symbol("only"): nil,
 	}); err != nil {
 		return nil, err
@@ -143,7 +142,7 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 		}
 		return importSetOnly{iSet, ids}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternImportSetExcept, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetExcept, map[common.Symbol]common.Location{
 		common.Symbol("except"): nil,
 	}); err != nil {
 		return nil, err
@@ -162,7 +161,7 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 		}
 		return importSetExcept{iSet, ids}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternImportSetPrefix, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetPrefix, map[common.Symbol]common.Location{
 		common.Symbol("prefix"): nil,
 	}); err != nil {
 		return nil, err
@@ -177,7 +176,7 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 		}
 		return importSetPrefix{iSet, id}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternImportSetRename, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetRename, map[common.Symbol]common.Location{
 		common.Symbol("rename"): nil,
 	}); err != nil {
 		return nil, err
@@ -446,7 +445,7 @@ type importSetLibraryReference struct {
 
 func newLibraryReference(d common.WrappedSyntax) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
-	result, ok, err := util.MatchSyntax(d, PatternLibraryReference, map[common.Symbol]common.Location{})
+	result, ok, err := common.MatchSyntax(d, PatternLibraryReference, map[common.Symbol]common.Location{})
 	if err != nil {
 		return importSetLibraryReference{}, err
 	} else if !ok {
@@ -491,7 +490,7 @@ type versionReference interface {
 }
 
 func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternVersionReferenceAnd, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceAnd, map[common.Symbol]common.Location{
 		common.Symbol("and"): nil,
 	}); err != nil {
 		return nil, err
@@ -506,7 +505,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 		}
 		return versionReferenceAnd{vRefs}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternVersionReferenceOr, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceOr, map[common.Symbol]common.Location{
 		common.Symbol("or"): nil,
 	}); err != nil {
 		return nil, err
@@ -521,7 +520,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 		}
 		return versionReferenceOr{vRefs}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternVersionReferenceNot, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceNot, map[common.Symbol]common.Location{
 		common.Symbol("not"): nil,
 	}); err != nil {
 		return nil, err
@@ -532,7 +531,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 		}
 		return versionReferenceNot{vRef}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferences, map[common.Symbol]common.Location{}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferences, map[common.Symbol]common.Location{}); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
@@ -603,7 +602,7 @@ type subVersionReference interface {
 }
 
 func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Location{
 		common.Symbol(">="): nil,
 	}); err != nil {
 		return nil, err
@@ -614,7 +613,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 		}
 		return subVersionReferenceGte{subV}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Location{
 		common.Symbol("<="): nil,
 	}); err != nil {
 		return nil, err
@@ -625,7 +624,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 		}
 		return subVersionReferenceLte{subV}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Location{
 		common.Symbol("and"): nil,
 	}); err != nil {
 		return nil, err
@@ -640,7 +639,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 		}
 		return subVersionReferenceAnd{subVRefs}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Location{
 		common.Symbol("or"): nil,
 	}); err != nil {
 		return nil, err
@@ -655,7 +654,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 		}
 		return subVersionReferenceOr{subVRefs}, nil
 	}
-	if result, ok, err := util.MatchSyntax(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Location{
 		common.Symbol("not"): nil,
 	}); err != nil {
 		return nil, err

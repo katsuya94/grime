@@ -8,13 +8,12 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 var (
-	PatternLibrary      = util.Pattern(read.MustReadString("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)")[0])
-	PatternVersion      = util.Pattern(read.MustReadString("(sub-version ...)")[0])
-	PatternExportRename = util.Pattern(read.MustReadString("(rename (internal external) ...)")[0])
+	PatternLibrary      = common.Pattern(read.MustReadString("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)")[0])
+	PatternVersion      = common.Pattern(read.MustReadString("(sub-version ...)")[0])
+	PatternExportRename = common.Pattern(read.MustReadString("(rename (internal external) ...)")[0])
 )
 
 type Library struct {
@@ -27,7 +26,7 @@ type Library struct {
 
 func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 	var library Library
-	result, ok, err := util.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
+	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 		common.Symbol("export"):  nil,
 		common.Symbol("import"):  nil,
@@ -50,7 +49,7 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := util.MatchSyntax(libraryName[i].(common.WrappedSyntax), PatternVersion, map[common.Symbol]common.Location{})
+		result, ok, err := common.MatchSyntax(libraryName[i].(common.WrappedSyntax), PatternVersion, map[common.Symbol]common.Location{})
 		if err != nil {
 			return nil, err
 		} else if !ok {
@@ -145,7 +144,7 @@ func (l *Library) Name() []common.Symbol {
 }
 
 func newExportSpecs(d common.WrappedSyntax) ([]identifierBinding, error) {
-	if result, ok, err := util.MatchSyntax(d, PatternExportRename, map[common.Symbol]common.Location{
+	if result, ok, err := common.MatchSyntax(d, PatternExportRename, map[common.Symbol]common.Location{
 		common.Symbol("rename"): nil,
 	}); err != nil {
 		return nil, err

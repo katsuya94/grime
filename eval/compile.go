@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/util"
 )
 
 var ErrNoExpressionsInBody = fmt.Errorf("compile: no expressions in body")
@@ -230,7 +229,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 		literals := make(map[common.Symbol]common.Location)
 		for _, literal := range form.Literals {
 			binding := env.Get(literal)
-			if binding == common.WildcardKeyword {
+			if binding == common.UnderscoreKeyword {
 				return nil, fmt.Errorf("compile: wildcard cannot appear in literals")
 			}
 			if binding == common.EllipsisKeyword {
@@ -249,7 +248,7 @@ func Compile(env common.Environment, form common.Datum) (common.Expression, erro
 			if err != nil {
 				return nil, err
 			}
-			patternVariables, err := util.PatternVariables(pattern, literals)
+			patternVariables, err := common.PatternVariables(pattern, literals)
 			if err != nil {
 				return nil, err
 			}
@@ -403,8 +402,8 @@ func compilePattern(env common.Environment, datum common.Datum) (common.Datum, e
 		return datum, nil
 	case common.Symbol:
 		binding := env.Get(datum)
-		if binding == common.WildcardKeyword {
-			return common.Wildcard, nil
+		if binding == common.UnderscoreKeyword {
+			return common.Underscore, nil
 		}
 		if binding == common.EllipsisKeyword {
 			return common.Ellipsis, nil

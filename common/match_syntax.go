@@ -1,44 +1,42 @@
-package util
+package common
 
 import (
 	"fmt"
-
-	"github.com/katsuya94/grime/common"
 )
 
-func Pattern(d common.Datum) common.Datum {
-	if d, ok := d.(common.Pair); ok {
-		return common.Pair{
+func Pattern(d Datum) Datum {
+	if d, ok := d.(Pair); ok {
+		return Pair{
 			Pattern(d.First),
 			Pattern(d.Rest),
 		}
 	}
-	if d == common.Symbol("_") {
-		return common.Wildcard
+	if d == Symbol("_") {
+		return Underscore
 	}
-	if d == common.Symbol("...") {
-		return common.Ellipsis
+	if d == Symbol("...") {
+		return Ellipsis
 	}
 	return d
 }
 
 type syntaxMatcher struct {
-	literals map[common.Symbol]common.Location
+	literals map[Symbol]Location
 }
 
-func newSyntaxMatcher(literals map[common.Symbol]common.Location) *syntaxMatcher {
+func newSyntaxMatcher(literals map[Symbol]Location) *syntaxMatcher {
 	return &syntaxMatcher{literals}
 }
 
-func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum) (map[common.Symbol]interface{}, bool, error) {
-	syntax, isSyntax := input.(common.WrappedSyntax)
+func (m *syntaxMatcher) match(input Datum, pattern Datum) (map[Symbol]interface{}, bool, error) {
+	syntax, isSyntax := input.(WrappedSyntax)
 	switch p := pattern.(type) {
-	case common.Boolean, common.Number, common.Character, common.String, nil:
+	case Boolean, Number, Character, String, nil:
 		if (isSyntax && syntax.Datum() == p) || input == p {
-			return map[common.Symbol]interface{}{}, true, nil
+			return map[Symbol]interface{}{}, true, nil
 		}
 		return nil, false, nil
-	case common.Symbol:
+	case Symbol:
 		if location, ok := m.literals[p]; ok {
 			if !isSyntax {
 				return nil, false, nil
@@ -47,32 +45,32 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum) (map[com
 			if !ok {
 				return nil, false, nil
 			} else if location == nil && name == p {
-				return map[common.Symbol]interface{}{}, true, nil
+				return map[Symbol]interface{}{}, true, nil
 			} else if location != nil && l == location {
-				return map[common.Symbol]interface{}{}, true, nil
+				return map[Symbol]interface{}{}, true, nil
 			}
 			return nil, false, nil
 		}
-		return map[common.Symbol]interface{}{p: input}, true, nil
-	case common.Pair:
-		if rest, ok := p.Rest.(common.Pair); ok {
-			if rest.First == common.Ellipsis {
+		return map[Symbol]interface{}{p: input}, true, nil
+	case Pair:
+		if rest, ok := p.Rest.(Pair); ok {
+			if rest.First == Ellipsis {
 				return m.matchEllipsis(input, p.First, rest.Rest)
 			}
 		}
 		var (
-			first common.Datum
-			rest  common.Datum
+			first Datum
+			rest  Datum
 		)
 		if isSyntax {
-			pair, ok := syntax.Datum().(common.Pair)
+			pair, ok := syntax.Datum().(Pair)
 			if !ok {
 				return nil, false, nil
 			}
 			first = syntax.PushOnto(pair.First)
 			rest = syntax.PushOnto(pair.Rest)
 		} else {
-			pair, ok := input.(common.Pair)
+			pair, ok := input.(Pair)
 			if !ok {
 				return nil, false, nil
 			}
@@ -91,7 +89,7 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum) (map[com
 		} else if !match {
 			return nil, false, nil
 		}
-		result := map[common.Symbol]interface{}{}
+		result := map[Symbol]interface{}{}
 		for k, v := range firstResult {
 			result[k] = v
 		}
@@ -100,34 +98,34 @@ func (m *syntaxMatcher) match(input common.Datum, pattern common.Datum) (map[com
 		}
 		return result, true, nil
 	default:
-		if p == common.Wildcard {
-			return map[common.Symbol]interface{}{}, true, nil
+		if p == Underscore {
+			return map[Symbol]interface{}{}, true, nil
 		}
 		return nil, false, fmt.Errorf("match: unhandled pattern %#v", p)
 	}
 }
 
-func (m *syntaxMatcher) matchEllipsis(input common.Datum, subpattern common.Datum, restpattern common.Datum) (map[common.Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) matchEllipsis(input Datum, subpattern Datum, restpattern Datum) (map[Symbol]interface{}, bool, error) {
 	var (
-		result     map[common.Symbol]interface{}
-		subresults []map[common.Symbol]interface{}
+		result     map[Symbol]interface{}
+		subresults []map[Symbol]interface{}
 	)
 	for {
-		syntax, isSyntax := input.(common.WrappedSyntax)
+		syntax, isSyntax := input.(WrappedSyntax)
 		var (
-			pair   common.Pair
+			pair   Pair
 			isPair bool
-			first  common.Datum
-			rest   common.Datum
+			first  Datum
+			rest   Datum
 		)
 		if isSyntax {
-			pair, isPair = syntax.Datum().(common.Pair)
+			pair, isPair = syntax.Datum().(Pair)
 			if isPair {
 				first = syntax.PushOnto(pair.First)
 				rest = syntax.PushOnto(pair.Rest)
 			}
 		} else {
-			pair, isPair = input.(common.Pair)
+			pair, isPair = input.(Pair)
 			if isPair {
 				first = pair.First
 				rest = pair.Rest
@@ -191,24 +189,24 @@ func (m *syntaxMatcher) matchEllipsis(input common.Datum, subpattern common.Datu
 	return result, true, nil
 }
 
-func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]int, error) {
+func PatternVariables(pattern Datum, literals map[Symbol]Location) (map[Symbol]int, error) {
 	switch p := pattern.(type) {
-	case common.Boolean, common.Number, common.Character, common.String, nil:
+	case Boolean, Number, Character, String, nil:
 		return nil, nil
-	case common.Symbol:
+	case Symbol:
 		if _, ok := literals[p]; ok {
 			return nil, nil
 		} else {
-			return map[common.Symbol]int{p: 0}, nil
+			return map[Symbol]int{p: 0}, nil
 		}
-	case common.Pair:
-		if rest, ok := p.Rest.(common.Pair); ok {
-			if rest.First == common.Ellipsis {
+	case Pair:
+		if rest, ok := p.Rest.(Pair); ok {
+			if rest.First == Ellipsis {
 				subpatternVariables, err := PatternVariables(p.First, literals)
 				if err != nil {
 					return nil, err
 				}
-				patternVariables := make(map[common.Symbol]int, len(subpatternVariables))
+				patternVariables := make(map[Symbol]int, len(subpatternVariables))
 				for name, n := range subpatternVariables {
 					patternVariables[name] = n + 1
 				}
@@ -223,7 +221,7 @@ func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Lo
 		if err != nil {
 			return nil, err
 		}
-		patternVariables := make(map[common.Symbol]int, len(firstPatternVariables)+len(restPatternVariables))
+		patternVariables := make(map[Symbol]int, len(firstPatternVariables)+len(restPatternVariables))
 		for name, n := range firstPatternVariables {
 			patternVariables[name] = n
 		}
@@ -235,13 +233,13 @@ func PatternVariables(pattern common.Datum, literals map[common.Symbol]common.Lo
 		}
 		return patternVariables, nil
 	default:
-		if p == common.Wildcard || p == common.Ellipsis {
+		if p == Underscore || p == Ellipsis {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("match: unhandled pattern %#v", p)
 	}
 }
 
-func MatchSyntax(input common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (map[common.Symbol]interface{}, bool, error) {
+func MatchSyntax(input Datum, pattern Datum, literals map[Symbol]Location) (map[Symbol]interface{}, bool, error) {
 	return newSyntaxMatcher(literals).match(input, pattern)
 }
