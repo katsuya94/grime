@@ -85,9 +85,9 @@ func TestCompileBody(t *testing.T) {
 			"",
 		},
 		{
-			"cannot expand wildcard",
+			"cannot expand underscore",
 			"_",
-			"cannot expand wildcard",
+			"cannot expand underscore",
 		},
 		{
 			"cannot expand ellipsis",

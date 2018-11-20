@@ -102,10 +102,15 @@ func (d String) Evaluate(c Continuation) (EvaluationResult, error) {
 	return CallC(c, d)
 }
 
+// Symbol represents a symbolic value.
 type Symbol string
 
 func (d Symbol) Write() string {
 	return string(d)
+}
+
+func (d Symbol) Evaluate(c Continuation) (EvaluationResult, error) {
+	return CallC(c, d)
 }
 
 // Pair represents a pair of data.
