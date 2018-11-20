@@ -18,6 +18,13 @@ Grime is a programming language for developing joyful developer experiences that
 * [ ] Implement slice operations
 * [ ] Implement minimal numeric operations
 
+## Refactoring TODO
+
+* [ ] Move expressions and their continuations into core.
+* [ ] Create interfaces for a generic expander.
+* [ ] Implement expander in core.
+* [ ] Test expressions and compiler separately.
+
 ## TODO
 
 * [ ] Implement multiple return values
