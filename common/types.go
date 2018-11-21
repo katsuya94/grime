@@ -49,20 +49,10 @@ func (nullType) Write() string {
 // Underscore is a value used in patterns as a non-capturing wildcard.
 var Underscore = &underscoreType{}
 
-// UnderscoreKeyword cannot be expanded, but is used to identify usages of Underscore.
-var UnderscoreKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
-	return nil, fmt.Errorf("cannot expand underscore")
-})}
-
 type underscoreType struct{}
 
 // Ellipsis is a value used in patterns to signify repitition.
 var Ellipsis = &ellipsisType{}
-
-// EllipsisKeyword cannot be expanded, but is used to identify usages of Ellipsis, as well as repition in syntax templates.
-var EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
-	return nil, fmt.Errorf("cannot expand ellipsis")
-})}
 
 type ellipsisType struct{}
 

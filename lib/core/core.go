@@ -12,7 +12,15 @@ var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{commo
 
 var Bindings common.BindingSet
 
-var setKeyword = &common.Keyword{common.Function(transformSet)}
+var (
+	setKeyword        = &common.Keyword{common.Function(transformSet)}
+	underscoreKeyword = &common.Keyword{common.Function(func(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand underscore")
+	})}
+	ellipsisKeyword = &common.Keyword{common.Function(func(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand ellipsis")
+	})}
+)
 
 func init() {
 	env := common.EmptyEnvironment
@@ -26,8 +34,8 @@ func init() {
 	env = env.MustDefine(common.Symbol("define-syntax"), []int{0}, &common.Keyword{common.Function(transformDefineSyntax)})
 	env = env.MustDefine(common.Symbol("syntax-case"), []int{0}, &common.Keyword{common.Function(transformSyntaxCase)})
 	env = env.MustDefine(common.Symbol("set!"), []int{0}, setKeyword)
-	env = env.MustDefine(common.Symbol("_"), []int{0}, common.UnderscoreKeyword)
-	env = env.MustDefine(common.Symbol("..."), []int{0}, common.EllipsisKeyword)
+	env = env.MustDefine(common.Symbol("_"), []int{0}, underscoreKeyword)
+	env = env.MustDefine(common.Symbol("..."), []int{0}, ellipsisKeyword)
 	env = env.MustDefine(common.Symbol("not"), []int{0}, &common.Variable{common.Function(not), true})
 	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons), true})
 	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car), true})

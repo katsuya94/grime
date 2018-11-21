@@ -20,10 +20,7 @@ Grime is a programming language for developing joyful developer experiences that
 
 ## Refactoring TODO
 
-* [ ] Move expressions and their continuations into core.
 * [ ] Test expressions and compiler separately.
-* [ ] Remove Evaluate definitions from common, those should be defined along with the compiler.
-* [ ] Move underscoreKeyword and ellipsisKeyword into core.
 
 ## TODO
 
