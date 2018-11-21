@@ -11,12 +11,12 @@ import (
 )
 
 func TestGrime(t *testing.T) {
-	rt := runtime.NewRuntime()
-	rt.Provide(core.Library)
-	rt.Bind(core.Library.Name(), core.Bindings)
-	rt.Provide(derived.Library)
-	rt.Provide(base.Library)
-	rt.Provide(Library)
+	rt := runtime.NewRuntime(core.Compile)
+	rt.MustProvide(core.Library)
+	rt.MustBind(core.Library.Name(), core.Bindings)
+	rt.MustProvide(derived.Library)
+	rt.MustProvide(base.Library)
+	rt.MustProvide(Library)
 	err := rt.ExecuteFile("grime_test")
 	if err != nil {
 		t.Fatal(err)

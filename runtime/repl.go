@@ -7,11 +7,10 @@ import (
 	"io"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/eval"
 	"github.com/katsuya94/grime/read"
 )
 
-func REPL(bindings common.BindingSet, r io.Reader, w io.Writer) {
+func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w io.Writer) {
 	var forms []common.Datum
 	for {
 		fmt.Fprintf(w, "grime:%v> ", len(forms))
@@ -32,8 +31,8 @@ func REPL(bindings common.BindingSet, r io.Reader, w io.Writer) {
 			forms = append(forms, common.NewWrappedSyntax(d))
 		}
 		env := common.NewEnvironment(bindings)
-		expression, newBindings, err := eval.CompileBody(env, forms)
-		if err == eval.ErrNoExpressionsInBody && !eof {
+		expression, newBindings, err := compiler(env, forms)
+		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}
 		forms = nil
@@ -41,7 +40,7 @@ func REPL(bindings common.BindingSet, r io.Reader, w io.Writer) {
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		result, err := eval.EvaluateExpressionOnce(expression)
+		result, err := common.EvaluateOnce(expression)
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue

@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/katsuya94/grime/eval"
-
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/util"
@@ -16,11 +14,12 @@ import (
 var PatternTopLevelProgramImportForm = common.Pattern(read.MustReadString("(import import-spec ...)")[0])
 
 type Runtime struct {
+	compiler   common.Compiler
 	provisions map[string]*provision
 }
 
-func NewRuntime() *Runtime {
-	return &Runtime{make(map[string]*provision)}
+func NewRuntime(compiler common.Compiler) *Runtime {
+	return &Runtime{compiler, make(map[string]*provision)}
 }
 
 func (r *Runtime) Provide(library *Library) error {
@@ -32,6 +31,13 @@ func (r *Runtime) Provide(library *Library) error {
 	return nil
 }
 
+func (r *Runtime) MustProvide(library *Library) {
+	err := r.Provide(library)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
 	ns := nameString(name)
 	prov, ok := r.provisions[ns]
@@ -40,6 +46,13 @@ func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
 	}
 	prov.bindings = bindings
 	return nil
+}
+
+func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
+	err := r.Bind(name, bindings)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
@@ -60,7 +73,10 @@ func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	library.body = topLevelProgram[1:]
-	r.Provide(&library)
+	err = r.Provide(&library)
+	if err != nil {
+		return err
+	}
 	return r.instantiate(r.provisions["()"])
 }
 
@@ -125,6 +141,13 @@ func (r *Runtime) Instantiate(name []common.Symbol) error {
 	return r.instantiate(prov)
 }
 
+func (r *Runtime) MustInstantiate(name []common.Symbol) {
+	err := r.Instantiate(name)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (r *Runtime) instantiate(prov *provision) error {
 	if prov.bindings != nil {
 		return nil
@@ -184,7 +207,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for _, syntax := range body {
 		forms = append(forms, syntax)
 	}
-	expression, definitions, err := eval.CompileBody(env, forms)
+	expression, definitions, err := r.compiler(env, forms)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
@@ -206,7 +229,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}
 		}
 	}
-	_, err = eval.EvaluateExpressionOnce(expression)
+	_, err = common.EvaluateOnce(expression)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}

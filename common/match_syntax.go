@@ -31,7 +31,7 @@ func newSyntaxMatcher(literals map[Symbol]Location) *syntaxMatcher {
 func (m *syntaxMatcher) match(input Datum, pattern Datum) (map[Symbol]interface{}, bool, error) {
 	syntax, isSyntax := input.(WrappedSyntax)
 	switch p := pattern.(type) {
-	case Boolean, Number, Character, String, nil:
+	case Boolean, Number, Character, String:
 		if (isSyntax && syntax.Datum() == p) || input == p {
 			return map[Symbol]interface{}{}, true, nil
 		}
@@ -98,7 +98,12 @@ func (m *syntaxMatcher) match(input Datum, pattern Datum) (map[Symbol]interface{
 		}
 		return result, true, nil
 	default:
-		if p == Underscore {
+		if p == Null {
+			if (isSyntax && syntax.Datum() == Null) || input == Null {
+				return map[Symbol]interface{}{}, true, nil
+			}
+			return nil, false, nil
+		} else if p == Underscore {
 			return map[Symbol]interface{}{}, true, nil
 		}
 		return nil, false, fmt.Errorf("match: unhandled pattern %#v", p)
@@ -191,7 +196,7 @@ func (m *syntaxMatcher) matchEllipsis(input Datum, subpattern Datum, restpattern
 
 func PatternVariables(pattern Datum, literals map[Symbol]Location) (map[Symbol]int, error) {
 	switch p := pattern.(type) {
-	case Boolean, Number, Character, String, nil:
+	case Boolean, Number, Character, String:
 		return nil, nil
 	case Symbol:
 		if _, ok := literals[p]; ok {
@@ -233,7 +238,7 @@ func PatternVariables(pattern Datum, literals map[Symbol]Location) (map[Symbol]i
 		}
 		return patternVariables, nil
 	default:
-		if p == Underscore || p == Ellipsis {
+		if p == Null || p == Underscore || p == Ellipsis {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("match: unhandled pattern %#v", p)

@@ -18,7 +18,10 @@ var runCmd = &cobra.Command{
 	Short: "Run a Grime top-level program",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		rt := newRuntime()
+		rt, err := newRuntime()
+		if err != nil {
+			return err
+		}
 		f, err := os.Open(args[0])
 		if err != nil {
 			return err

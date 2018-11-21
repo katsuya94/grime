@@ -32,12 +32,27 @@ func Execute() {
 	}
 }
 
-func newRuntime() *runtime.Runtime {
-	rt := runtime.NewRuntime()
-	rt.Provide(core.Library)
-	rt.Bind(core.Library.Name(), core.Bindings)
-	rt.Provide(derived.Library)
-	rt.Provide(base.Library)
-	rt.Provide(grime.Library)
-	return rt
+func newRuntime() (*runtime.Runtime, error) {
+	rt := runtime.NewRuntime(core.Compile)
+	err := rt.Provide(core.Library)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Bind(core.Library.Name(), core.Bindings)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Provide(derived.Library)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Provide(base.Library)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Provide(grime.Library)
+	if err != nil {
+		return nil, err
+	}
+	return rt, nil
 }

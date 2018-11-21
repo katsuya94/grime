@@ -44,49 +44,49 @@ func (d *DatumReader) ReadDatum() (common.Datum, error) {
 	case Quote:
 		if datum, err := d.ReadDatum(); err == nil {
 			// TODO: consider introducing a special kind of wrapped syntax so this always resolves
-			return common.Pair{common.Symbol("quote"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("quote"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case Quasiquote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("quasiquote"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("quasiquote"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case Unquote:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("unquote"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("unquote"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case UnquoteSplicing:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("unquote-splicing"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("unquote-splicing"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case Syntax:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("syntax"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("syntax"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case Quasisyntax:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("quasisyntax"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("quasisyntax"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case Unsyntax:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("unsyntax"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("unsyntax"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
 	case UnsyntaxSplicing:
 		if datum, err := d.ReadDatum(); err == nil {
-			return common.Pair{common.Symbol("unsyntax-splicing"), common.Pair{datum, nil}}, nil
+			return common.Pair{common.Symbol("unsyntax-splicing"), common.Pair{datum, common.Null}}, nil
 		} else {
 			return nil, err
 		}
@@ -114,13 +114,13 @@ func (d *DatumReader) readList(kind int) (common.Datum, error) {
 		switch lexeme.(type) {
 		case RightParenthesis:
 			if kind == PARENTHESES {
-				return nil, nil
+				return common.Null, nil
 			} else {
 				return nil, Errorf("unexpected lexeme: %#v", lexeme)
 			}
 		case RightBracket:
 			if kind == BRACKETS {
-				return nil, nil
+				return common.Null, nil
 			} else {
 				return nil, Errorf("unexpected lexeme: %#v", lexeme)
 			}

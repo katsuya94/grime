@@ -62,7 +62,7 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export) (import) 'id)",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				body: []common.WrappedSyntax{common.NewWrappedSyntax(common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), nil}})},
+				body: []common.WrappedSyntax{common.NewWrappedSyntax(common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), common.Null}})},
 			},
 			"",
 		},

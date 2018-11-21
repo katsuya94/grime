@@ -12,6 +12,8 @@ var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{commo
 
 var Bindings common.BindingSet
 
+var setKeyword = &common.Keyword{common.Function(transformSet)}
+
 func init() {
 	env := common.EmptyEnvironment
 	env = env.MustDefine(common.Symbol("quote"), []int{0}, &common.Keyword{common.Function(transformQuote)})
@@ -23,7 +25,7 @@ func init() {
 	env = env.MustDefine(common.Symbol("define"), []int{0}, &common.Keyword{common.Function(transformDefine)})
 	env = env.MustDefine(common.Symbol("define-syntax"), []int{0}, &common.Keyword{common.Function(transformDefineSyntax)})
 	env = env.MustDefine(common.Symbol("syntax-case"), []int{0}, &common.Keyword{common.Function(transformSyntaxCase)})
-	env = env.MustDefine(common.Symbol("set!"), []int{0}, &common.Keyword{common.Function(transformSet)})
+	env = env.MustDefine(common.Symbol("set!"), []int{0}, setKeyword)
 	env = env.MustDefine(common.Symbol("_"), []int{0}, common.UnderscoreKeyword)
 	env = env.MustDefine(common.Symbol("..."), []int{0}, common.EllipsisKeyword)
 	env = env.MustDefine(common.Symbol("not"), []int{0}, &common.Variable{common.Function(not), true})
@@ -319,7 +321,7 @@ func null(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("null?: wrong arity"))
 	}
-	return common.CallC(c, common.Boolean(args[0] == nil))
+	return common.CallC(c, common.Boolean(args[0] == common.Null))
 }
 
 func pair(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -433,17 +435,18 @@ func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Ev
 			list = syntax.Datum()
 		}
 		switch datum := list.(type) {
-		case nil:
 		case common.Pair:
 			n++
 			list = datum.Rest
 			continue
 		default:
-			return common.ErrorC(fmt.Errorf("generate-temporaries: expected proper list"))
+			if datum != common.Null {
+				return common.ErrorC(fmt.Errorf("generate-temporaries: expected proper list"))
+			}
 		}
 		break
 	}
-	var temporaries common.Datum
+	var temporaries common.Datum = common.Null
 	for i := 0; i < n; i++ {
 		syntax := common.NewWrappedSyntax(common.Symbol(fmt.Sprintf(".%v", temporaryIdentifiers)))
 		temporaries = common.Pair{syntax, temporaries}
@@ -453,7 +456,7 @@ func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Ev
 }
 
 func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	var list common.Datum
+	var list common.Datum = common.Null
 	for i := len(args) - 1; i >= 0; i-- {
 		list = common.Pair{args[i], list}
 	}

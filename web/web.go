@@ -62,16 +62,16 @@ func main() {
 			}
 		}
 	}()
-	rt := runtime.NewRuntime()
-	rt.Provide(core.Library)
-	rt.Bind(core.Library.Name(), core.Bindings)
-	rt.Provide(derived.Library)
-	rt.Provide(base.Library)
-	rt.Provide(grime.Library)
-	rt.Instantiate([]common.Symbol{common.Symbol("grime")})
+	rt := runtime.NewRuntime(core.Compile)
+	rt.MustProvide(core.Library)
+	rt.MustBind(core.Library.Name(), core.Bindings)
+	rt.MustProvide(derived.Library)
+	rt.MustProvide(base.Library)
+	rt.MustProvide(grime.Library)
+	rt.MustInstantiate([]common.Symbol{common.Symbol("grime")})
 	bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("grime")})
 	if err != nil {
 		panic(err)
 	}
-	runtime.REPL(bindings, r, terminal)
+	runtime.REPL(core.Compile, bindings, r, terminal)
 }

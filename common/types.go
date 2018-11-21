@@ -12,10 +12,6 @@ type Writable interface {
 	Write() string
 }
 
-type Expression interface {
-	Evaluate(Continuation) (EvaluationResult, error)
-}
-
 type Procedure interface {
 	Datum
 	Call(Continuation, ...Datum) (EvaluationResult, error)
@@ -32,6 +28,19 @@ func (voidType) Write() string {
 
 func (voidType) Evaluate(c Continuation) (EvaluationResult, error) {
 	return CallC(c, Void)
+}
+
+// Null is the empty list.
+var Null = &nullType{}
+
+type nullType struct{}
+
+func (nullType) Write() string {
+	return "()"
+}
+
+func (nullType) Evaluate(c Continuation) (EvaluationResult, error) {
+	return CallC(c, Null)
 }
 
 // Underscore is a value used in patterns as a non-capturing wildcard.
@@ -127,9 +136,10 @@ func formatRest(d Datum) string {
 	switch d := d.(type) {
 	case Pair:
 		return fmt.Sprintf(" %v%v", Write(d.First), formatRest(d.Rest))
-	case nil:
-		return ")"
 	default:
+		if d == Null {
+			return ")"
+		}
 		return fmt.Sprintf(" . %v)", Write(d))
 	}
 }
@@ -155,10 +165,8 @@ func IsSyntax(d Datum) bool {
 		return true
 	case Pair:
 		return IsSyntax(d.First) && IsSyntax(d.Rest)
-	case nil:
-		return true
 	default:
-		return false
+		return d == Null
 	}
 }
 

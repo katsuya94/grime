@@ -113,15 +113,9 @@ func TestRuntime_Execute(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runtime := NewRuntime()
-			err := runtime.Provide(core.Library)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = runtime.Bind(core.Library.Name(), core.Bindings)
-			if err != nil {
-				t.Fatal(err)
-			}
+			runtime := NewRuntime(core.Compile)
+			runtime.MustProvide(core.Library)
+			runtime.MustBind(core.Library.Name(), core.Bindings)
 			for _, librarySource := range test.librarySources {
 				data, err := read.ReadString(librarySource)
 				if err != nil {

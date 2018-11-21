@@ -26,7 +26,7 @@ func Each(list common.Datum, fn func(common.Datum) error) error {
 
 func List(data ...common.Datum) common.Datum {
 	if len(data) == 0 {
-		return nil
+		return common.Null
 	} else {
 		return common.Pair{data[0], List(data[1:]...)}
 	}

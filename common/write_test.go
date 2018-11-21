@@ -44,22 +44,22 @@ func TestWrite(t *testing.T) {
 		},
 		{
 			"empty list",
-			nil,
+			Null,
 			"()",
 		},
 		{
 			"list with one symbol",
-			Pair{Symbol("id"), nil},
+			Pair{Symbol("id"), Null},
 			"(id)",
 		},
 		{
 			"list with two symbols",
-			Pair{Symbol("id"), Pair{Symbol("name"), nil}},
+			Pair{Symbol("id"), Pair{Symbol("name"), Null}},
 			"(id name)",
 		},
 		{
 			"list with a literal",
-			Pair{Boolean(false), nil},
+			Pair{Boolean(false), Null},
 			"(#f)",
 		},
 		{
@@ -69,12 +69,12 @@ func TestWrite(t *testing.T) {
 		},
 		{
 			"empty list in a list",
-			Pair{nil, nil},
+			Pair{Null, Null},
 			"(())",
 		},
 		{
 			"list with one symbol in a list",
-			Pair{Pair{Symbol("id"), nil}, nil},
+			Pair{Pair{Symbol("id"), Null}, Null},
 			"((id))",
 		},
 		{

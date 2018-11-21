@@ -45,7 +45,7 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"): NewWrappedSyntax(Pair{Symbol("foo"), nil}),
+				Symbol("id"): NewWrappedSyntax(Pair{Symbol("foo"), Null}),
 			},
 			"",
 		},
@@ -81,7 +81,7 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"):   NewWrappedSyntax(Symbol("foo")),
-				Symbol("name"): NewWrappedSyntax(Pair{Symbol("bar"), nil}),
+				Symbol("name"): NewWrappedSyntax(Pair{Symbol("bar"), Null}),
 			},
 			"",
 		},

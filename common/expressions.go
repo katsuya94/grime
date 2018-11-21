@@ -274,6 +274,7 @@ func (c syntaxCaseFenderEvaluated) Call(d Datum) (EvaluationResult, error) {
 
 func syntaxCaseMatch(continuation Continuation, input Datum, literals map[Symbol]Location, patterns []Datum, patternVariableBindings []map[Symbol]*PatternVariable, fenders []Expression, outputs []Expression) (EvaluationResult, error) {
 	for i := range patterns {
+		fmt.Printf("%#v\n%#v\n\n", input, patterns[i])
 		result, ok, err := MatchSyntax(input, patterns[i], literals)
 		if err != nil {
 			return nil, err
