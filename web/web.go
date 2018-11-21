@@ -10,7 +10,6 @@ import (
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/lib/derived"
 	"github.com/katsuya94/grime/lib/grime"
-	"github.com/katsuya94/grime/repl"
 	"github.com/katsuya94/grime/runtime"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -74,5 +73,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	repl.REPL(bindings, r, terminal)
+	runtime.REPL(bindings, r, terminal)
 }

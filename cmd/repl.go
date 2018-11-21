@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/repl"
+	"github.com/katsuya94/grime/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ var replCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		repl.REPL(bindings, os.Stdin, os.Stdout)
+		runtime.REPL(bindings, os.Stdin, os.Stdout)
 		return nil
 	},
 }
