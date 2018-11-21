@@ -9,12 +9,23 @@ import (
 type Datum interface{}
 
 type Writable interface {
+	Datum
 	Write() string
 }
 
+// Procedure represents a callable value.
 type Procedure interface {
 	Datum
 	Call(Continuation, ...Datum) (EvaluationResult, error)
+}
+
+// Apply attempts to call the given procedure if it is callable.
+func Apply(c Continuation, procedureV Datum, argumentsV ...Datum) (EvaluationResult, error) {
+	p, ok := procedureV.(Procedure)
+	if !ok {
+		return nil, fmt.Errorf("application: non-procedure in procedure position")
+	}
+	return p.Call(c, argumentsV...)
 }
 
 // Void is returned as the result of side-effects with no useful result.
@@ -26,10 +37,6 @@ func (voidType) Write() string {
 	return "#<void>"
 }
 
-func (voidType) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, Void)
-}
-
 // Null is the empty list.
 var Null = &nullType{}
 
@@ -37,10 +44,6 @@ type nullType struct{}
 
 func (nullType) Write() string {
 	return "()"
-}
-
-func (nullType) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, Null)
 }
 
 // Underscore is a value used in patterns as a non-capturing wildcard.
@@ -74,19 +77,11 @@ func (d Boolean) Write() string {
 	}
 }
 
-func (d Boolean) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
-}
-
 // Number represents a numerical value.
 type Number string
 
 func (d Number) Write() string {
 	return string(d)
-}
-
-func (d Number) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
 }
 
 // Character represents a unicode code point.
@@ -96,10 +91,6 @@ func (d Character) Write() string {
 	return fmt.Sprintf(`#\%v`, string(d))
 }
 
-func (d Character) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
-}
-
 // String represents a string.
 type String string
 
@@ -107,19 +98,11 @@ func (d String) Write() string {
 	return fmt.Sprintf(`"%v"`, string(d))
 }
 
-func (d String) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
-}
-
 // Symbol represents a symbolic value.
 type Symbol string
 
 func (d Symbol) Write() string {
 	return string(d)
-}
-
-func (d Symbol) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
 }
 
 // Pair represents a pair of data.
@@ -144,21 +127,7 @@ func formatRest(d Datum) string {
 	}
 }
 
-func (d Pair) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
-}
-
-// WrappedSyntax represents syntax along with its lexical context.
-type WrappedSyntax struct {
-	substitutions map[identifier]Location
-	marks         int
-	datum         Datum
-}
-
-func (d WrappedSyntax) Write() string {
-	return fmt.Sprintf("#<syntax: %v>", Write(d.datum))
-}
-
+// IsSyntax determines whether a Datum is a Syntax object.
 func IsSyntax(d Datum) bool {
 	switch d := d.(type) {
 	case WrappedSyntax:
@@ -168,6 +137,52 @@ func IsSyntax(d Datum) bool {
 	default:
 		return d == Null
 	}
+}
+
+type identifier struct {
+	name  Symbol
+	marks int
+}
+
+// WrappedSyntax represents syntax along with its lexical context.
+type WrappedSyntax struct {
+	substitutions map[identifier]Location
+	marks         int
+	datum         Datum
+}
+
+func NewWrappedSyntax(d Datum) WrappedSyntax {
+	return WrappedSyntax{make(map[identifier]Location), 0, d}
+}
+
+func (d WrappedSyntax) Write() string {
+	return fmt.Sprintf("#<syntax: %v>", Write(d.datum))
+}
+
+func (d WrappedSyntax) Datum() Datum {
+	return d.datum
+}
+
+func (d WrappedSyntax) PushOnto(s Datum) WrappedSyntax {
+	return WrappedSyntax{d.substitutions, d.marks, s}
+}
+
+func (d WrappedSyntax) Identifier() (Symbol, Location, bool) {
+	name, ok := d.datum.(Symbol)
+	if !ok {
+		return Symbol(""), nil, false
+	}
+	location, _ := d.substitutions[identifier{name, d.marks}]
+	return name, location, true
+}
+
+func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {
+	substitutions := make(map[identifier]Location, len(d.substitutions))
+	for id, l := range d.substitutions {
+		substitutions[id] = l
+	}
+	substitutions[identifier{name, d.marks}] = location
+	return WrappedSyntax{substitutions, d.marks, d.datum}
 }
 
 // Function represents a Go function.
@@ -203,10 +218,6 @@ func (d Lambda) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
 	return EvalC(c, d.Body)
 }
 
-func (d Lambda) Evaluate(c Continuation) (EvaluationResult, error) {
-	return CallC(c, d)
-}
-
 // ContinuationProcedure represents a callable continuation.
 type ContinuationProcedure struct {
 	Continuation Continuation
@@ -221,16 +232,4 @@ func (d ContinuationProcedure) Call(_ Continuation, args ...Datum) (EvaluationRe
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for continuation", len(args)))
 	}
 	return CallC(d.Continuation, args[0])
-}
-
-// Subtemplate represents the repitition of a SyntaxTemplate.
-type Subtemplate struct {
-	Subtemplate      SyntaxTemplate
-	Nesting          int
-	PatternVariables []*PatternVariable
-}
-
-// PatternVariableReference represents a reference to a pattern variable.
-type PatternVariableReference struct {
-	PatternVariable *PatternVariable
 }
