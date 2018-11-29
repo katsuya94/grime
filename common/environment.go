@@ -19,9 +19,13 @@ type PatternVariable struct {
 
 type BindingSet map[int]map[Symbol]Location
 
+type Identifier struct {
+	Name  Symbol
+	Marks int
+}
+
 type Environment struct {
 	leveled     BindingSet
-	lexical     map[Symbol]Location
 	definitions map[Symbol]bool
 	level       int
 }
@@ -29,7 +33,6 @@ type Environment struct {
 func NewEnvironment(init BindingSet) Environment {
 	return Environment{
 		cloneBindingSet(init),
-		make(map[Symbol]Location),
 		make(map[Symbol]bool),
 		0,
 	}
@@ -38,34 +41,15 @@ func NewEnvironment(init BindingSet) Environment {
 var EmptyEnvironment = NewEnvironment(make(BindingSet))
 
 func (env Environment) Get(name Symbol) Location {
-	location, ok := env.lexical[name]
-	if ok {
-		return location
-	}
 	locations, ok := env.leveled[env.level]
 	if !ok {
 		return nil
 	}
-	location, _ = locations[name]
+	location, _ := locations[name]
 	return location
 }
 
-func (env Environment) Set(name Symbol, location Location) Environment {
-	lexical := cloneLexical(env.lexical)
-	lexical[name] = location
-	return Environment{env.leveled, lexical, env.definitions, env.level}
-}
-
 func (env Environment) Define(name Symbol, levels []int, location Location) (Environment, error) {
-	if levels == nil {
-		if env.definitions[name] && location != env.Get(name) {
-			return Environment{}, fmt.Errorf("previously defined: %v", name)
-		}
-		env = env.Set(name, location)
-		definitions := cloneDefinitions(env.definitions)
-		definitions[name] = true
-		return Environment{env.leveled, env.lexical, definitions, env.level}, nil
-	}
 	leveled := cloneBindingSet(env.leveled)
 	for _, level := range levels {
 		_, ok := leveled[level]
@@ -78,7 +62,7 @@ func (env Environment) Define(name Symbol, levels []int, location Location) (Env
 		}
 		leveled[level][name] = location
 	}
-	return Environment{leveled, env.lexical, env.definitions, env.level}, nil
+	return Environment{leveled, env.definitions, env.level}, nil
 }
 
 func (env Environment) MustDefine(name Symbol, levels []int, location Location) Environment {
@@ -95,18 +79,15 @@ func (env Environment) Bindings() BindingSet {
 	if !ok {
 		bindingSet[0] = make(map[Symbol]Location)
 	}
-	for name, location := range env.lexical {
-		bindingSet[0][name] = location
-	}
 	return bindingSet
 }
 
 func (env Environment) Next() Environment {
-	return Environment{env.leveled, env.lexical, env.definitions, env.level + 1}
+	return Environment{env.leveled, env.definitions, env.level + 1}
 }
 
 func (env Environment) Clear() Environment {
-	return Environment{env.leveled, env.lexical, make(map[Symbol]bool), env.level}
+	return Environment{env.leveled, make(map[Symbol]bool), env.level}
 }
 
 func cloneBindingSet(init BindingSet) BindingSet {
@@ -118,14 +99,6 @@ func cloneBindingSet(init BindingSet) BindingSet {
 		}
 	}
 	return bindingSet
-}
-
-func cloneLexical(init map[Symbol]Location) map[Symbol]Location {
-	lexical := make(map[Symbol]Location)
-	for name, location := range init {
-		lexical[name] = location
-	}
-	return lexical
 }
 
 func cloneDefinitions(init map[Symbol]bool) map[Symbol]bool {

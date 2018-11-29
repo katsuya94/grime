@@ -160,7 +160,12 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, err
 		}
 		variable := &common.Variable{common.Void, true}
-		env = env.Set(form.Name, variable)
+		body := form.Body
+		syntax, ok := form.Body.(common.WrappedSyntax)
+		if ok {
+			name, location, _ := form.Identifier.Identifier()
+			body = syntax.Set(name, location)
+		}
 		bodyExpression, err := compile(env, form.Body)
 		if err != nil {
 			return nil, err
@@ -182,10 +187,16 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
 		var variables []*common.Variable
-		for _, formal := range form.Formals {
-			variable := &common.Variable{common.Void, true}
-			env = env.Set(formal, variable)
-			variables = append(variables, variable)
+		body := form.Body
+		syntax, ok := form.Body.(common.WrappedSyntax)
+		if ok {
+			for _, formal := range form.Formals {
+				name, _, _ := formal.Identifier()
+				variable := &common.Variable{common.Void, true}
+				syntax = syntax.Set(name, variable)
+				variables = append(variables, variable)
+			}
+			body = syntax
 		}
 		expression, err := compile(env, form.Body)
 		if err != nil {
@@ -193,23 +204,23 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return Literal{common.Lambda{variables, expression}}, nil
 	case ReferenceForm:
-		binding := env.Get(form.Name)
-		if binding == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v", form.Name)
+		name, location, _ := form.Identifier.Identifier()
+		if location == nil {
+			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
-		variable, ok := binding.(*common.Variable)
+		variable, ok := location.(*common.Variable)
 		if !ok {
-			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", form.Name)
+			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", name)
 		}
 		return Reference{variable}, nil
 	case SetForm:
-		binding := env.Get(form.Name)
-		if binding == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v", form.Name)
+		name, location, _ := form.Identifier.Identifier()
+		if location == nil {
+			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
-		variable, ok := binding.(*common.Variable)
+		variable, ok := location.(*common.Variable)
 		if !ok {
-			return nil, fmt.Errorf("compile: non-variable identifier %v in set!", form.Name)
+			return nil, fmt.Errorf("compile: non-variable identifier %v in set!", name)
 		}
 		expression, err := compile(env, form.Form)
 		if err != nil {

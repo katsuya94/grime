@@ -27,9 +27,9 @@ type IfForm struct {
 }
 
 type LetForm struct {
-	Name common.Symbol
-	Init common.Datum
-	Body common.Datum
+	Identifier common.WrappedSyntax
+	Init       common.Datum
+	Body       common.Datum
 }
 
 type LetSyntaxForm struct{}
@@ -44,17 +44,17 @@ type ApplicationForm struct {
 }
 
 type LambdaForm struct {
-	Formals []common.Symbol
+	Formals []common.WrappedSyntax
 	Body    common.Datum
 }
 
 type SetForm struct {
-	Name common.Symbol
-	Form common.Datum
+	Identifier common.WrappedSyntax
+	Form       common.Datum
 }
 
 type ReferenceForm struct {
-	Name common.Symbol
+	Identifier common.WrappedSyntax
 }
 
 type QuoteForm struct {

@@ -39,8 +39,8 @@ func expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 		return ApplicationForm{procedure, arguments}, true, nil
 	}
 	if syntax, ok := syntax.(common.WrappedSyntax); ok {
-		if name, _, ok := syntax.Identifier(); ok {
-			return ReferenceForm{name}, true, nil
+		if _, _, ok := syntax.Identifier(); ok {
+			return ReferenceForm{syntax}, true, nil
 		}
 	}
 	return nil, false, nil
