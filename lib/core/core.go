@@ -116,7 +116,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if !ok {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
-	name, _, ok := syntax.Identifier()
+	_, _, ok = syntax.Identifier()
 	if !ok {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
@@ -125,7 +125,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.CallC(c, LetForm{name, init, BeginForm{forms}})
+	return common.CallC(c, LetForm{syntax, init, BeginForm{forms}})
 }
 
 func transformBegin(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -245,17 +245,17 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 		return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 	}
 	input := result[common.Symbol("input")]
-	var literals []common.Symbol
+	var literals []common.WrappedSyntax
 	for _, literal := range result[common.Symbol("literal")].([]interface{}) {
 		identifier, ok := literal.(common.WrappedSyntax)
 		if !ok {
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
-		name, _, ok := identifier.Identifier()
+		_, _, ok = identifier.Identifier()
 		if !ok {
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
-		literals = append(literals, name)
+		literals = append(literals, identifier)
 	}
 	var (
 		patterns []common.Datum

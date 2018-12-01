@@ -160,13 +160,9 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, err
 		}
 		variable := &common.Variable{common.Void, true}
-		body := form.Body
-		syntax, ok := form.Body.(common.WrappedSyntax)
-		if ok {
-			name, location, _ := form.Identifier.Identifier()
-			body = syntax.Set(name, location)
-		}
-		bodyExpression, err := compile(env, form.Body)
+		name, location := form.Identifier.MustIdentifier()
+		body := syntaxSet(form.Body, name, location)
+		bodyExpression, err := compile(env, body)
 		if err != nil {
 			return nil, err
 		}
@@ -188,23 +184,19 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 	case LambdaForm:
 		var variables []*common.Variable
 		body := form.Body
-		syntax, ok := form.Body.(common.WrappedSyntax)
-		if ok {
-			for _, formal := range form.Formals {
-				name, _, _ := formal.Identifier()
-				variable := &common.Variable{common.Void, true}
-				syntax = syntax.Set(name, variable)
-				variables = append(variables, variable)
-			}
-			body = syntax
+		for _, formal := range form.Formals {
+			name, _ := formal.MustIdentifier()
+			variable := &common.Variable{common.Void, true}
+			body = syntaxSet(body, name, variable)
+			variables = append(variables, variable)
 		}
-		expression, err := compile(env, form.Body)
+		expression, err := compile(env, body)
 		if err != nil {
 			return nil, err
 		}
 		return Literal{common.Lambda{variables, expression}}, nil
 	case ReferenceForm:
-		name, location, _ := form.Identifier.Identifier()
+		name, location := form.Identifier.MustIdentifier()
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -214,7 +206,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return Reference{variable}, nil
 	case SetForm:
-		name, location, _ := form.Identifier.Identifier()
+		name, location := form.Identifier.MustIdentifier()
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -234,14 +226,14 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		literals := make(map[common.Symbol]common.Location)
 		for _, literal := range form.Literals {
-			binding := env.Get(literal)
-			if binding == underscoreKeyword {
-				return nil, fmt.Errorf("compile: wildcard cannot appear in literals")
+			name, location := literal.MustIdentifier()
+			if location == underscoreKeyword {
+				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}
-			if binding == ellipsisKeyword {
+			if location == ellipsisKeyword {
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
-			literals[literal] = binding
+			literals[name] = location
 		}
 		var (
 			patterns                []common.Datum
@@ -259,17 +251,19 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 				return nil, err
 			}
 			bindings := make(map[common.Symbol]*common.PatternVariable)
-			clauseEnv := env
+			fender := form.Fenders[i]
+			output := form.Outputs[i]
 			for name, n := range patternVariables {
 				patternVariable := &common.PatternVariable{common.NewWrappedSyntax(common.Void), n}
 				bindings[name] = patternVariable
-				clauseEnv = clauseEnv.Set(name, patternVariable)
+				fender = syntaxSet(fender, name, patternVariable)
+				output = syntaxSet(output, name, patternVariable)
 			}
-			fenderExpression, err := compile(clauseEnv, form.Fenders[i])
+			fenderExpression, err := compile(env, fender)
 			if err != nil {
 				return nil, err
 			}
-			outputExpression, err := compile(clauseEnv, form.Outputs[i])
+			outputExpression, err := compile(env, output)
 			if err != nil {
 				return nil, err
 			}
@@ -296,6 +290,15 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 	default:
 		return nil, fmt.Errorf("compile: unhandled form %#v", form)
 	}
+}
+
+// syntaxSet sets a substitution for on the given form if the given form is a wrapped syntax object.
+func syntaxSet(form common.Datum, name common.Symbol, location common.Location) common.Datum {
+	syntax, ok := form.(common.WrappedSyntax)
+	if ok {
+		form = syntax.Set(name, location)
+	}
+	return form
 }
 
 func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, map[*common.PatternVariable]int, error) {

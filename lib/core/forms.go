@@ -9,7 +9,7 @@ type DefineSyntaxForm struct {
 
 type SyntaxCaseForm struct {
 	Input    common.Datum
-	Literals []common.Symbol
+	Literals []common.WrappedSyntax
 	Patterns []common.Datum
 	Fenders  []common.Datum
 	Outputs  []common.Datum

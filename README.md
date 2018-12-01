@@ -21,6 +21,7 @@ Grime is a programming language for developing joyful developer experiences that
 ## Refactoring TODO
 
 * [ ] Test expressions and compiler separately.
+* [ ] Pass recursive call to compile to compile (DI).
 
 ## TODO
 
