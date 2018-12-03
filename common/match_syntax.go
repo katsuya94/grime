@@ -38,15 +38,11 @@ func (m *syntaxMatcher) match(input Datum, pattern Datum) (map[Symbol]interface{
 		return nil, false, nil
 	case Symbol:
 		if location, ok := m.literals[p]; ok {
-			if !isSyntax {
+			if !(isSyntax && syntax.IsIdentifier()) {
 				return nil, false, nil
 			}
-			name, l, ok := syntax.Identifier()
-			if !ok {
-				return nil, false, nil
-			} else if location == nil && name == p {
-				return map[Symbol]interface{}{}, true, nil
-			} else if location != nil && l == location {
+			name, l := syntax.IdentifierAt(0) // TODO this 0 is wrong
+			if (location == nil && name == p) || (location != nil && l == location) {
 				return map[Symbol]interface{}{}, true, nil
 			}
 			return nil, false, nil

@@ -116,8 +116,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if !ok {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
-	_, _, ok = syntax.Identifier()
-	if !ok {
+	if !syntax.IsIdentifier {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
 	init := result[common.Symbol("init")]
@@ -158,20 +157,15 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 
 func transformDefine(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	var (
-		name common.Symbol
-		form common.Datum
+		identifier common.WrappedSyntax
+		form       common.Datum
 	)
-	// TODO implement other define forms
-	// TODO implement define procedure with syntax transformation
+	// TODO implement define in derived
 	if result, ok, err := common.MatchSyntax(args[0], PatternDefineLambda, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
-		identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-		if !ok {
-			return common.ErrorC(fmt.Errorf("define: bad syntax"))
-		}
-		name, _, ok = identifier.Identifier()
-		if !ok {
+		identifier, ok = result[common.Symbol("name")].(common.WrappedSyntax)
+		if !(ok && identifier.IsIdentifier()) {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
 		lambda, err := makeLambdaFromResult(result)
@@ -182,30 +176,22 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if result, ok, err := common.MatchSyntax(args[0], PatternDefine, nil); err != nil {
 		return common.ErrorC(err)
 	} else if ok {
-		identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-		if !ok {
-			return common.ErrorC(fmt.Errorf("define: bad syntax"))
-		}
-		name, _, ok = identifier.Identifier()
-		if !ok {
+		identifier, ok = result[common.Symbol("name")].(common.WrappedSyntax)
+		if !(ok && identifier.IsIdentifier()) {
 			return common.ErrorC(fmt.Errorf("define: bad syntax"))
 		}
 		form = result[common.Symbol("value")]
 	} else {
 		return common.ErrorC(fmt.Errorf("define: bad syntax"))
 	}
-	return common.CallC(c, DefineForm{name, form})
+	return common.CallC(c, DefineForm{identifier, form})
 }
 
 func makeLambdaFromResult(result map[common.Symbol]interface{}) (LambdaForm, error) {
 	var formals []common.WrappedSyntax
 	for _, syntax := range result[common.Symbol("formals")].([]interface{}) {
 		identifier, ok := syntax.(common.WrappedSyntax)
-		if !ok {
-			return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
-		}
-		_, _, ok = identifier.Identifier()
-		if !ok {
+		if !(ok && identifier.IsIdentifier()) {
 			return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
 		formals = append(formals, identifier)
@@ -226,15 +212,11 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
 	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
-	}
-	name, _, ok := identifier.Identifier()
-	if !ok {
+	if !(ok && identifier.IsIdentifier()) {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
 	form := result[common.Symbol("value")]
-	return common.CallC(c, DefineSyntaxForm{name, form})
+	return common.CallC(c, DefineSyntaxForm{identifier, form})
 }
 
 func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -248,11 +230,7 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 	var literals []common.WrappedSyntax
 	for _, literal := range result[common.Symbol("literal")].([]interface{}) {
 		identifier, ok := literal.(common.WrappedSyntax)
-		if !ok {
-			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
-		}
-		_, _, ok = identifier.Identifier()
-		if !ok {
+		if !(ok && identifier.IsIdentifier()) {
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
 		literals = append(literals, identifier)
@@ -298,11 +276,7 @@ func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
 	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-	if !ok {
-		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
-	}
-	_, _, ok = identifier.Identifier()
-	if !ok {
+	if !(ok && identifier.IsIdentifier()) {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
 	form := result[common.Symbol("expression")]
@@ -446,11 +420,7 @@ func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationR
 		return common.ErrorC(fmt.Errorf("identifier?: wrong arity"))
 	}
 	syntax, ok := args[0].(common.WrappedSyntax)
-	if !ok {
-		return common.CallC(c, common.Boolean(false))
-	}
-	_, _, ok = syntax.Identifier()
-	return common.CallC(c, common.Boolean(ok))
+	return common.CallC(c, common.Boolean(ok && syntax.IsIdentifier()))
 }
 
 var temporaryIdentifiers int

@@ -6,11 +6,16 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func Compile(env common.Environment, forms []common.Datum) (common.Expression, common.BindingSet, error) {
-	return compileBody(env, forms)
+func Compile(body common.WrappedSyntax) (common.Expression, map[common.Symbol]common.Location, error) {
+	definitions := body.Definitions()
+	forms, err := util.Slice(body.Datum())
+	if err != nil {
+		return nil, nil, err
+	}
+	return compileBody(definitions, forms, 0)
 }
 
-func compileBody(env common.Environment, forms []common.Datum) (common.Expression, common.BindingSet, error) {
+func compileBody(definitions map[common.Symbol]common.Location, forms []common.Datum, phase int) (common.Expression, map[common.Symbol]common.Location, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -24,7 +29,14 @@ func compileBody(env common.Environment, forms []common.Datum) (common.Expressio
 			form := forms[i]
 			switch v := form.(type) {
 			case DefineSyntaxForm:
-				expression, err := compile(env.Next().Clear(), v.Form)
+				_, ok := definitions[name]
+				if ok {
+					return fmt.Errorf("compile: %v: already defined")
+				}
+				name, _ := v.Identifier.IdentifierAt(phase)
+				keyword := &common.Keyword{common.Void} // TODO need to implement cannot expand transformer before definition
+				form := syntaxSet(v.Form, name, keyword)
+				expression, err := compile(form, level+1)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -36,7 +48,8 @@ func compileBody(env common.Environment, forms []common.Datum) (common.Expressio
 				if !ok {
 					return nil, nil, fmt.Errorf("compile: define-syntax: expected procedure")
 				}
-				env, err = env.Define(v.Name, nil, &common.Keyword{procedure})
+				keyword.Transformer = procedure
+				env, err = env.Define(v.Identifier, nil, &common.Keyword{procedure})
 				if err != nil {
 					return nil, nil, err
 				}
@@ -160,7 +173,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 			return nil, err
 		}
 		variable := &common.Variable{common.Void, true}
-		name, location := form.Identifier.MustIdentifier()
+		name, location := form.Identifier.IdentifierAt(level)
 		body := syntaxSet(form.Body, name, location)
 		bodyExpression, err := compile(env, body)
 		if err != nil {
@@ -185,7 +198,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		var variables []*common.Variable
 		body := form.Body
 		for _, formal := range form.Formals {
-			name, _ := formal.MustIdentifier()
+			name, _ := formal.IdentifierAt(level)
 			variable := &common.Variable{common.Void, true}
 			body = syntaxSet(body, name, variable)
 			variables = append(variables, variable)
@@ -196,7 +209,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return Literal{common.Lambda{variables, expression}}, nil
 	case ReferenceForm:
-		name, location := form.Identifier.MustIdentifier()
+		name, location := form.Identifier.IdentifierAt(level)
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -206,7 +219,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		return Reference{variable}, nil
 	case SetForm:
-		name, location := form.Identifier.MustIdentifier()
+		name, location := form.Identifier.IdentifierAt(level)
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -226,7 +239,7 @@ func compile(env common.Environment, form common.Datum) (common.Expression, erro
 		}
 		literals := make(map[common.Symbol]common.Location)
 		for _, literal := range form.Literals {
-			name, location := literal.MustIdentifier()
+			name, location := literal.IdentifierAt(level)
 			if location == underscoreKeyword {
 				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}

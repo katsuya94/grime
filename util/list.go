@@ -11,17 +11,33 @@ var ErrImproperList = fmt.Errorf("improper list")
 func Each(list common.Datum, fn func(common.Datum) error) error {
 	for {
 		if p, ok := list.(common.Pair); ok {
-			if err := fn(p.First); err != nil {
+			err := fn(p.First)
+			if err != nil {
 				return err
-			} else {
-				list = p.Rest
 			}
-		} else if list == nil {
-			return nil
-		} else {
-			return ErrImproperList
-		}
+			list = p.Rest
+			continue
+		} else if list == common.Null {
+			break
+		} 
+		return ErrImproperList
 	}
+	return nil
+}
+
+func Slice(list common.Datum) error) ([]common.Datum, error) {
+	var data []common.Datum
+	for {
+		if p, ok := list.(common.Pair); ok {
+			data = append(data, p.First)
+			list = p.Rest
+			continue
+		} else if list == common.Null {
+			break
+		}
+		return nil, ErrImproperList
+	}
+	return data, nil
 }
 
 func List(data ...common.Datum) common.Datum {

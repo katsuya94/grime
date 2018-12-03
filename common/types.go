@@ -1,12 +1,9 @@
 package common
 
 import (
-	"math"
 	"fmt"
 	"reflect"
 	"runtime"
-
-	"github.com/katsuya94/grime/common"
 )
 
 type Datum interface{}
@@ -141,13 +138,12 @@ type identifier struct {
 type WrappedSyntax struct {
 	lexicalSubstitutions map[identifier]Location
 	leveledSubstitutions []map[identifier]Location
-	definitions map[identifier]
 	marks                int
 	datum                Datum
 }
 
 func NewWrappedSyntax(d Datum) WrappedSyntax {
-	return WrappedSyntax{make(map[identifier]Location), []map[identifier]Location{make(map[identifier]Location)}, 0, d}
+	return WrappedSyntax{make(map[identifier]Location), nil, 0, d}
 }
 
 func (d WrappedSyntax) Write() string {
@@ -162,52 +158,63 @@ func (d WrappedSyntax) PushOnto(s Datum) WrappedSyntax {
 	return WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, d.marks, s}
 }
 
-func (d WrappedSyntax) Identifier() (Symbol, Location, bool) {
-	name, ok := d.datum.(Symbol)
-	if !ok {
-		return common.Symbol(""), nil, false
-	}
-	location, _ := d.lexicalSubstitutions[identifier{name, d.marks}]
-	if location != nil {
-		return name, location, true
-	}
-	location, _ := d.leveledSubstitutions[0][identifier{name, d.marks}]
-	return name, location, true
+func (d WrappedSyntax) IsIdentifier() bool {
+	_, ok := d.datum.(Symbol)
+	return ok
 }
 
-func (d WrappedSyntax) MustIdentifier() (Symbol, Location) {
-	name, location, ok := d.Identifier()
-	if !ok {
-		panic("expected identifier")
+func (d WrappedSyntax) IdentifierAt(level int) (Symbol, Location) {
+	name := d.datum.(Symbol)
+	location, _ := d.lexicalSubstitutions[identifier{name, d.marks}]
+	if location != nil {
+		return name, location
 	}
+	if level < 0 || len(d.leveledSubstitutions) <= level {
+		return name, nil
+	}
+	substitutions := d.leveledSubstitutions[level]
+	if substitutions == nil {
+		return name, nil
+	}
+	location, _ = substitutions[identifier{name, d.marks}]
 	return name, location
+}
+
+func (d WrappedSyntax) Definitions() map[Symbol]Location {
+	if len(d.leveledSubstitutions) == 0 {
+		return make(map[Symbol]Location)
+	}
+	substitutions := d.leveledSubstitutions[0]
+	if substitutions == nil {
+		return make(map[Symbol]Location)
+	}
+	return substitutions
 }
 
 func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {
 	lexicalSubstitutions := make(map[identifier]Location, len(d.lexicalSubstitutions))
-	for id, l := range d.substitutions {
-		substitutions[id] = l
+	for id, l := range d.lexicalSubstitutions {
+		lexicalSubstitutions[id] = l
 	}
-	substitutions[identifier{name, d.marks}] = location
+	lexicalSubstitutions[identifier{name, d.marks}] = location
 	return WrappedSyntax{lexicalSubstitutions, d.leveledSubstitutions, d.marks, d.datum}
 }
 
-func (d WrappedSyntax) SetAt(name Symbol, level int, location Location) (WrappedSyntax, error) {
-	n := math.MaxInt64(len(d.leveledSubstitutions), level+1)
+func (d WrappedSyntax) SetAt(name Symbol, level int, location Location) WrappedSyntax {
+	n := len(d.leveledSubstitutions)
+	if level+1 > n {
+		n = level + 1
+	}
 	leveledSubstitutions := make([]map[identifier]Location, n)
-	for i := 0; i < n; i++ {
-		leveledSubstitutions[i] = make(map[identifier]Location, len(substitutions))
-	}
 	for i, substitutions := range d.leveledSubstitutions {
-		for id, l := range substitutions {
-			leveledSubstitutions[i][id] = l
-		}
+		leveledSubstitutions[i] = substitutions
 	}
-	if _, ok := leveledSubstitutions[level][identifier{name, d.marks}]; ok {
-		return WrappedSyntax{}, fmt.Errorf("already defined")
+	leveledSubstitutions[level] = make(map[identifier]Location, len(d.leveledSubstitutions[level]))
+	for id, l := range d.leveledSubstitutions[level] {
+		leveledSubstitutions[level][id] = l
 	}
 	leveledSubstitutions[level][identifier{name, d.marks}] = location
-	return WrappedSyntax{d.lexicalSubstitutions, leveledSubstitutions, d.marks, d.datum}, nil
+	return WrappedSyntax{d.lexicalSubstitutions, leveledSubstitutions, d.marks, d.datum}
 }
 
 // Function represents a Go function.

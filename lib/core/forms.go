@@ -3,8 +3,8 @@ package core
 import "github.com/katsuya94/grime/common"
 
 type DefineSyntaxForm struct {
-	Name common.Symbol
-	Form common.Datum
+	Identifier common.WrappedSyntax
+	Form       common.Datum
 }
 
 type SyntaxCaseForm struct {
@@ -16,8 +16,8 @@ type SyntaxCaseForm struct {
 }
 
 type DefineForm struct {
-	Name common.Symbol
-	Form common.Datum
+	Identifier common.WrappedSyntax
+	Form       common.Datum
 }
 
 type IfForm struct {
