@@ -154,8 +154,8 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) PushOnto(s Datum) WrappedSyntax {
-	return WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, d.marks, s}
+func (d WrappedSyntax) PushOnto(datum Datum) WrappedSyntax {
+	return WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, d.marks, datum}
 }
 
 func (d WrappedSyntax) IsIdentifier() bool {
@@ -180,15 +180,26 @@ func (d WrappedSyntax) IdentifierAt(level int) (Symbol, Location) {
 	return name, location
 }
 
-func (d WrappedSyntax) Definitions() map[Symbol]Location {
+func (d WrappedSyntax) IdentifierEquals(other WrappedSyntax) bool {
+	return d.datum.(Symbol) == other.datum.(Symbol) && d.marks == other.marks
+}
+
+func (d WrappedSyntax) Unmarked() bool {
+	return d.marks == 0
+}
+
+func (d WrappedSyntax) Defined() []WrappedSyntax {
 	if len(d.leveledSubstitutions) == 0 {
-		return make(map[Symbol]Location)
+		return nil
 	}
-	substitutions := d.leveledSubstitutions[0]
-	if substitutions == nil {
-		return make(map[Symbol]Location)
+	if d.leveledSubstitutions[0] == nil {
+		return nil
 	}
-	return substitutions
+	var defined []WrappedSyntax
+	for id, _ := range d.leveledSubstitutions[0] {
+		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, id.marks, id.name})
+	}
+	return defined
 }
 
 func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {

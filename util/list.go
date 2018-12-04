@@ -19,13 +19,13 @@ func Each(list common.Datum, fn func(common.Datum) error) error {
 			continue
 		} else if list == common.Null {
 			break
-		} 
+		}
 		return ErrImproperList
 	}
 	return nil
 }
 
-func Slice(list common.Datum) error) ([]common.Datum, error) {
+func Slice(list common.Datum) ([]common.Datum, error) {
 	var data []common.Datum
 	for {
 		if p, ok := list.(common.Pair); ok {

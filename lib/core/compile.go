@@ -4,18 +4,19 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/util"
 )
 
-func Compile(body common.WrappedSyntax) (common.Expression, map[common.Symbol]common.Location, error) {
-	definitions := body.Definitions()
+func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
+	defined := body.Defined()
 	forms, err := util.Slice(body.Datum())
 	if err != nil {
 		return nil, nil, err
 	}
-	return compileBody(definitions, forms, 0)
+	return compileBody(forms, defined, 0)
 }
 
-func compileBody(definitions map[common.Symbol]common.Location, forms []common.Datum, phase int) (common.Expression, map[common.Symbol]common.Location, error) {
+func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int) (common.Expression, []common.WrappedSyntax, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -29,12 +30,20 @@ func compileBody(definitions map[common.Symbol]common.Location, forms []common.D
 			form := forms[i]
 			switch v := form.(type) {
 			case DefineSyntaxForm:
-				_, ok := definitions[name]
-				if ok {
-					return fmt.Errorf("compile: %v: already defined")
+				// Complain if identifier is already defined at given phase reflecting marks.
+				_, location := v.Identifier.IdentifierAt(phase)
+				if location != nil {
+					for _, id := range defined {
+						if v.Identifier.IdentifierEquals(id) {
+							return nil, nil, fmt.Errorf("compile: %v: already defined")
+						}
+					}
 				}
-				name, _ := v.Identifier.IdentifierAt(phase)
 				keyword := &common.Keyword{common.Void} // TODO need to implement cannot expand transformer before definition
+				if v.Identifier.Unmarked() {
+					name, _ = v.Identifier.IdentifierAt(phase)
+					defined = append(defined, v.Identifier.Set())
+				}
 				form := syntaxSet(v.Form, name, keyword)
 				expression, err := compile(form, level+1)
 				if err != nil {
