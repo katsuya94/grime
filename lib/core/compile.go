@@ -54,6 +54,9 @@ func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []com
 				form := v.Form
 				variable := &common.Variable{}
 				err := define(v.Identifier, phase, variable, &form, forms[i+1:], &defined)
+				if err != nil {
+					return nil, nil, err
+				}
 				definitionVariables = append(definitionVariables, variable)
 				definitionForms = append(definitionForms, form)
 				processed = true
