@@ -8,8 +8,7 @@ type Keyword struct {
 	Transformer Procedure
 }
 type Variable struct {
-	Value   Datum
-	Defined bool
+	Value Datum
 }
 
 type PatternVariable struct {

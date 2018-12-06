@@ -8,15 +8,15 @@ import (
 )
 
 func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
-	defined := body.Defined()
+	return compileBody(body, 0)
+}
+
+func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []common.WrappedSyntax, error) {
+	defined := body.DefinedAt(phase)
 	forms, err := util.Slice(body.Datum())
 	if err != nil {
 		return nil, nil, err
 	}
-	return compileBody(forms, defined, 0)
-}
-
-func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int) (common.Expression, []common.WrappedSyntax, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -30,22 +30,13 @@ func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int
 			form := forms[i]
 			switch v := form.(type) {
 			case DefineSyntaxForm:
-				// Complain if identifier is already defined at given phase reflecting marks.
-				_, location := v.Identifier.IdentifierAt(phase)
-				if location != nil {
-					for _, id := range defined {
-						if v.Identifier.IdentifierEquals(id) {
-							return nil, nil, fmt.Errorf("compile: %v: already defined")
-						}
-					}
+				form := v.Form
+				keyword := &common.Keyword{}
+				err := define(v.Identifier, phase, keyword, &form, forms[i+1:], &defined)
+				if err != nil {
+					return nil, nil, err
 				}
-				keyword := &common.Keyword{common.Void} // TODO need to implement cannot expand transformer before definition
-				if v.Identifier.Unmarked() {
-					name, _ = v.Identifier.IdentifierAt(phase)
-					defined = append(defined, v.Identifier.Set())
-				}
-				form := syntaxSet(v.Form, name, keyword)
-				expression, err := compile(form, level+1)
+				expression, err := compile(form, phase+1)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -58,20 +49,13 @@ func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int
 					return nil, nil, fmt.Errorf("compile: define-syntax: expected procedure")
 				}
 				keyword.Transformer = procedure
-				env, err = env.Define(v.Identifier, nil, &common.Keyword{procedure})
-				if err != nil {
-					return nil, nil, err
-				}
 				processed = true
 			case DefineForm:
-				variable := &common.Variable{common.Void, false}
+				form := v.Form
+				variable := &common.Variable{}
+				err := define(v.Identifier, phase, variable, &form, forms[i+1:], &defined)
 				definitionVariables = append(definitionVariables, variable)
-				definitionForms = append(definitionForms, v.Form)
-				var err error
-				env, err = env.Define(v.Name, nil, variable)
-				if err != nil {
-					return nil, nil, err
-				}
+				definitionForms = append(definitionForms, form)
 				processed = true
 			case BeginForm:
 				if len(forms) == i+1 {
@@ -134,7 +118,26 @@ func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int
 	return expression, env.Bindings(), nil
 }
 
-func compile(env common.Environment, form common.Datum) (common.Expression, error) {
+func define(identifier common.WrappedSyntax, phase int, location common.Location, form *common.Datum, rest []common.Datum, defined *[]common.WrappedSyntax) error {
+	name, l := identifier.IdentifierAt(phase)
+	if l != nil {
+		for _, id := range *defined {
+			if identifier.IdentifierEquals(id) {
+				return fmt.Errorf("compile: %v: already defined", name)
+			}
+		}
+	}
+	if identifier.Unmarked() {
+		*defined = append(*defined, identifier)
+	}
+	*form = syntaxSet(*form, name, location)
+	for i := 0; i < len(rest); i++ {
+		rest[i] = syntaxSet(rest[i], name, location)
+	}
+	return nil
+}
+
+func compile(form common.Datum, phase int) (common.Expression, error) {
 	var err error
 	form, err = expandCompletely(env, form)
 	if err != nil {

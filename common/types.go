@@ -188,15 +188,15 @@ func (d WrappedSyntax) Unmarked() bool {
 	return d.marks == 0
 }
 
-func (d WrappedSyntax) Defined() []WrappedSyntax {
-	if len(d.leveledSubstitutions) == 0 {
+func (d WrappedSyntax) DefinedAt(phase int) []WrappedSyntax {
+	if len(d.leveledSubstitutions) < phase+1 {
 		return nil
 	}
-	if d.leveledSubstitutions[0] == nil {
+	if d.leveledSubstitutions[phase] == nil {
 		return nil
 	}
 	var defined []WrappedSyntax
-	for id, _ := range d.leveledSubstitutions[0] {
+	for id, _ := range d.leveledSubstitutions[phase] {
 		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, id.marks, id.name})
 	}
 	return defined
