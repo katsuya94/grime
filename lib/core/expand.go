@@ -15,8 +15,6 @@ var (
 	PatternApplication                 = common.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-type Expander func(compiler Compiler, form common.Datum) (common.Datum, bool, error)
-
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
