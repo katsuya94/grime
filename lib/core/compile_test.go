@@ -276,7 +276,8 @@ func TestExpressionCompile_SyntaxEllipsisIncompatible(t *testing.T) {
 func TestExpressionCompile_Begin(t *testing.T) {
 	form := BeginForm{[]common.Datum{comparable()}}
 	expected := comparable()
-	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
+		assertEquals(t, compiler.Phase, 0)
 		assertDeepEquals(t, forms, form.Forms)
 		assertEquals(t, len(defined), 0)
 		return expected, nil, nil
@@ -304,14 +305,12 @@ func TestExpressionCompile_Let(t *testing.T) {
 	initExpression := comparable()
 	bodyExpression := comparable()
 	var location common.Location
-	compiler := Compiler{Expander: expandNever, ExpressionCompiler: func(compiler Compiler, form common.Datum) (common.Expression, error) {
-		if syntax, ok := form.(common.WrappedSyntax); ok && syntax.Datum() == common.Symbol("id") {
-			_, location = syntax.IdentifierAt(compiler.Phase)
-			return bodyExpression, nil
-		}
-		return form.(common.Expression), nil
+	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
+		_, location = forms[0].(common.WrappedSyntax).IdentifierAt(compiler.Phase)
+		assertEquals(t, len(defined), 0)
+		return bodyExpression, nil, nil
 	}}
-	expression, err := ExpressionCompile(compiler, LetForm{identifier, initExpression, wrap(datum("id"))})
+	expression, err := ExpressionCompile(compiler, LetForm{identifier, initExpression, []common.Datum{wrap(datum("id"))}})
 	assertNoError(t, err)
 	letExpression := expression.(Let)
 	assertEquals(t, letExpression.Variable, location)
@@ -339,17 +338,13 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	bodyExpression := comparable()
 	var location0 common.Location
 	var location1 common.Location
-	compiler := Compiler{Expander: expandNever, ExpressionCompiler: func(compiler Compiler, form common.Datum) (common.Expression, error) {
-		syntax := form.(common.WrappedSyntax)
-		slice, err := util.Slice(syntax.Datum())
-		if err != nil {
-			panic(err)
-		}
-		_, location0 = syntax.PushOnto(slice[0]).IdentifierAt(0)
-		_, location1 = syntax.PushOnto(slice[1]).IdentifierAt(0)
-		return bodyExpression, nil
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
+		_, location0 = forms[0].(common.WrappedSyntax).IdentifierAt(compiler.Phase)
+		_, location1 = forms[1].(common.WrappedSyntax).IdentifierAt(compiler.Phase)
+		assertEquals(t, len(defined), 0)
+		return bodyExpression, nil, nil
 	}}
-	expression, err := ExpressionCompile(compiler, LambdaForm{[]common.WrappedSyntax{identifier0, identifier1}, wrap(datum("(arg0 arg1)"))})
+	expression, err := ExpressionCompile(compiler, LambdaForm{[]common.WrappedSyntax{identifier0, identifier1}, []common.Datum{identifier0, identifier1}})
 	assertNoError(t, err)
 	literalExpression := expression.(Literal)
 	lambda := literalExpression.Datum.(common.Lambda)
@@ -472,17 +467,17 @@ func TestCompile(t *testing.T) {
 		},
 		{
 			"duplicate definitions: define, define",
-			"(define foo 'id) (define foo 'thing)",
+			"(~define foo 'id) (~define foo 'thing)",
 			"compile: foo: already defined",
 		},
 		{
 			"duplicate definitions: define, define-syntax",
-			"(define foo 'id) (define-syntax foo (lambda (x) #''thing))",
+			"(~define foo 'id) (define-syntax foo (lambda (x) #''thing))",
 			"compile: foo: already defined",
 		},
 		{
 			"duplicate definitions: define-syntax, define",
-			"(define-syntax foo (lambda (x) #''thing))  (define foo 'thing)",
+			"(define-syntax foo (lambda (x) #''thing))  (~define foo 'thing)",
 			"compile: foo: already defined",
 		},
 		{
@@ -497,17 +492,12 @@ func TestCompile(t *testing.T) {
 		},
 		{
 			"body forms after expression in begin",
-			"(begin 'foo (define x 'bar))",
+			"(begin 'foo (~define x 'bar))",
 			"compile: unexpected form in expression context: #<core.DefineForm>",
 		},
 		{
 			"empty lambda",
 			"(lambda ())",
-			"unexpected final form",
-		},
-		{
-			"empty define procedure",
-			"(define (id)) 'foo",
 			"unexpected final form",
 		},
 		{
@@ -527,7 +517,7 @@ func TestCompile(t *testing.T) {
 		},
 		{
 			"allows nested definitions to shadow",
-			"(define id 'foo) (~let (name 'bar) (define id 'baz) id)",
+			"(~define id 'foo) (~let (name 'bar) (~define id 'baz) id)",
 			"",
 		},
 		{

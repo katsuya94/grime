@@ -83,7 +83,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 			case DefineSyntaxForm:
 				form := v.Form
 				keyword := &common.Keyword{}
-				err := define(v.Identifier, compiler.Phase, keyword, &form, forms[i+1:], &defined)
+				err := define(v.Identifier, compiler.Phase, keyword, &form, forms[i+1:], definitionForms, &defined)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -104,12 +104,12 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 			case DefineForm:
 				form := v.Form
 				variable := &common.Variable{}
-				err := define(v.Identifier, compiler.Phase, variable, &form, forms[i+1:], &defined)
+				definitionVariables = append(definitionVariables, variable)
+				definitionForms = append(definitionForms, form)
+				err := define(v.Identifier, compiler.Phase, variable, &form, forms[i+1:], definitionForms, &defined)
 				if err != nil {
 					return nil, nil, err
 				}
-				definitionVariables = append(definitionVariables, variable)
-				definitionForms = append(definitionForms, form)
 				processed = true
 			case BeginForm:
 				if len(forms) == i+1 {
@@ -172,7 +172,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 	return expression, defined, nil
 }
 
-func define(identifier common.WrappedSyntax, phase int, location common.Location, form *common.Datum, rest []common.Datum, defined *[]common.WrappedSyntax) error {
+func define(identifier common.WrappedSyntax, phase int, location common.Location, form *common.Datum, rest []common.Datum, deferred []common.Datum, defined *[]common.WrappedSyntax) error {
 	name, l := identifier.IdentifierAt(phase)
 	if l != nil {
 		for _, id := range *defined {
@@ -185,8 +185,11 @@ func define(identifier common.WrappedSyntax, phase int, location common.Location
 		*defined = append(*defined, identifier)
 	}
 	*form = syntaxSet(*form, name, location)
-	for i := 0; i < len(rest); i++ {
+	for i := range rest {
 		rest[i] = syntaxSet(rest[i], name, location)
+	}
+	for i := range deferred {
+		deferred[i] = syntaxSet(deferred[i], name, location)
 	}
 	return nil
 }
@@ -241,8 +244,11 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		variable := &common.Variable{}
 		name, _ := form.Identifier.IdentifierAt(compiler.Phase)
-		body := syntaxSet(form.Body, name, variable)
-		bodyExpression, err := compiler.ExpressionCompile(body)
+		forms := form.Body
+		for i := range forms {
+			forms[i] = syntaxSet(forms[i], name, variable)
+		}
+		bodyExpression, _, err := compiler.BodyCompile(forms, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -263,14 +269,16 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
 		var variables []*common.Variable
-		body := form.Body
+		forms := form.Body
 		for _, formal := range form.Formals {
 			name, _ := formal.IdentifierAt(compiler.Phase)
 			variable := &common.Variable{}
-			body = syntaxSet(body, name, variable)
+			for i := range forms {
+				forms[i] = syntaxSet(forms[i], name, variable)
+			}
 			variables = append(variables, variable)
 		}
-		expression, err := compiler.ExpressionCompile(body)
+		expression, _, err := compiler.BodyCompile(forms, nil)
 		if err != nil {
 			return nil, err
 		}

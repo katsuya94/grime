@@ -7,6 +7,7 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 )
 
 func TestEvaluateExpression(t *testing.T) {
@@ -71,26 +72,14 @@ func TestEvaluateExpression(t *testing.T) {
 			"",
 		},
 		{
-			"~let",
+			"let",
 			"(~let (x 'id) x)",
 			"id",
 			"",
 		},
 		{
 			"define",
-			"(define x 'foo) x",
-			"foo",
-			"",
-		},
-		{
-			"define procedure",
-			"(define (id) 'foo) (id)",
-			"foo",
-			"",
-		},
-		{
-			"define procedure with argument",
-			"(define (id x) x) (id 'foo)",
+			"(~define x 'foo) x",
 			"foo",
 			"",
 		},
@@ -120,7 +109,7 @@ func TestEvaluateExpression(t *testing.T) {
 		},
 		{
 			"begin with body forms",
-			"(begin (define x 'foo) x)",
+			"(begin (~define x 'foo) x)",
 			"foo",
 			"",
 		},
@@ -150,20 +139,20 @@ func TestEvaluateExpression(t *testing.T) {
 		},
 		{
 			"set! used to set a defined variable",
-			"(define x 'bar) (set! x 'foo) x",
+			"(~define x 'bar) (set! x 'foo) x",
 			"foo",
 			"",
 		},
 		{
 			"call/cc and set! used to loop",
 			`
-			(define in '(foo bar baz))
-			(define continue #f)
-			(define out (call/cc (lambda (c) (set! continue c) '())))
+			(~define in '(foo bar baz))
+			(~define continue #f)
+			(~define out (call/cc (lambda (c) (set! continue c) '())))
 			(if (null? in)
 				out
 				(begin
-					(define new (cons (car in) out))
+					(~define new (cons (car in) out))
 					(set! in (cdr in))
 					(continue new)))
 			`,
@@ -178,13 +167,13 @@ func TestEvaluateExpression(t *testing.T) {
 		},
 		{
 			"cannot reference identifer before its definition",
-			"(define (foo) bar) (define baz (foo)) (define bar 'id) baz",
+			"(~define foo (lambda () bar)) (~define baz (foo)) (~define bar 'id) baz",
 			"",
 			"evaluate: cannot reference identifier before its definition",
 		},
 		{
 			"cannot set identifer before its definition",
-			"(define (foo) (set! bar 'thing)) (define baz (foo)) (define bar 'id) baz",
+			"(~define foo (lambda () (set! bar 'thing))) (~define baz (foo)) (~define bar 'id) baz",
 			"",
 			"evaluate: cannot set identifier before its definition",
 		},
@@ -256,7 +245,7 @@ func TestEvaluateExpression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			body := common.NewWrappedSyntax(sourceBody)
+			body := common.NewWrappedSyntax(util.List(sourceBody...))
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)

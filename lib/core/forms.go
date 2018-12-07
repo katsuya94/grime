@@ -29,7 +29,7 @@ type IfForm struct {
 type LetForm struct {
 	Identifier common.WrappedSyntax
 	Init       common.Datum
-	Body       common.Datum
+	Body       []common.Datum
 }
 
 type LetSyntaxForm struct{}
@@ -45,7 +45,7 @@ type ApplicationForm struct {
 
 type LambdaForm struct {
 	Formals []common.WrappedSyntax
-	Body    common.Datum
+	Body    []common.Datum
 }
 
 type SetForm struct {
