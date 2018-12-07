@@ -137,7 +137,7 @@ type identifier struct {
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
 	lexicalSubstitutions map[identifier]Location
-	leveledSubstitutions []map[identifier]Location
+	phaseSubstitutions   []map[identifier]Location
 	marks                int
 	datum                Datum
 }
@@ -155,7 +155,7 @@ func (d WrappedSyntax) Datum() Datum {
 }
 
 func (d WrappedSyntax) PushOnto(datum Datum) WrappedSyntax {
-	return WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, d.marks, datum}
+	return WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, d.marks, datum}
 }
 
 func (d WrappedSyntax) IsIdentifier() bool {
@@ -163,16 +163,16 @@ func (d WrappedSyntax) IsIdentifier() bool {
 	return ok
 }
 
-func (d WrappedSyntax) IdentifierAt(level int) (Symbol, Location) {
+func (d WrappedSyntax) IdentifierAt(phase int) (Symbol, Location) {
 	name := d.datum.(Symbol)
 	location, _ := d.lexicalSubstitutions[identifier{name, d.marks}]
 	if location != nil {
 		return name, location
 	}
-	if level < 0 || len(d.leveledSubstitutions) <= level {
+	if phase < 0 || len(d.phaseSubstitutions) <= phase {
 		return name, nil
 	}
-	substitutions := d.leveledSubstitutions[level]
+	substitutions := d.phaseSubstitutions[phase]
 	if substitutions == nil {
 		return name, nil
 	}
@@ -189,15 +189,15 @@ func (d WrappedSyntax) Unmarked() bool {
 }
 
 func (d WrappedSyntax) DefinedAt(phase int) []WrappedSyntax {
-	if len(d.leveledSubstitutions) < phase+1 {
+	if len(d.phaseSubstitutions) < phase+1 {
 		return nil
 	}
-	if d.leveledSubstitutions[phase] == nil {
+	if d.phaseSubstitutions[phase] == nil {
 		return nil
 	}
 	var defined []WrappedSyntax
-	for id, _ := range d.leveledSubstitutions[phase] {
-		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.leveledSubstitutions, id.marks, id.name})
+	for id, _ := range d.phaseSubstitutions[phase] {
+		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, id.marks, id.name})
 	}
 	return defined
 }
@@ -208,24 +208,24 @@ func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {
 		lexicalSubstitutions[id] = l
 	}
 	lexicalSubstitutions[identifier{name, d.marks}] = location
-	return WrappedSyntax{lexicalSubstitutions, d.leveledSubstitutions, d.marks, d.datum}
+	return WrappedSyntax{lexicalSubstitutions, d.phaseSubstitutions, d.marks, d.datum}
 }
 
-func (d WrappedSyntax) SetAt(name Symbol, level int, location Location) WrappedSyntax {
-	n := len(d.leveledSubstitutions)
-	if level+1 > n {
-		n = level + 1
+func (d WrappedSyntax) SetAt(name Symbol, phase int, location Location) WrappedSyntax {
+	n := len(d.phaseSubstitutions)
+	if phase+1 > n {
+		n = phase + 1
 	}
-	leveledSubstitutions := make([]map[identifier]Location, n)
-	for i, substitutions := range d.leveledSubstitutions {
-		leveledSubstitutions[i] = substitutions
+	phaseSubstitutions := make([]map[identifier]Location, n)
+	for i, substitutions := range d.phaseSubstitutions {
+		phaseSubstitutions[i] = substitutions
 	}
-	leveledSubstitutions[level] = make(map[identifier]Location, len(d.leveledSubstitutions[level]))
-	for id, l := range d.leveledSubstitutions[level] {
-		leveledSubstitutions[level][id] = l
+	phaseSubstitutions[phase] = make(map[identifier]Location, len(d.phaseSubstitutions[phase]))
+	for id, l := range d.phaseSubstitutions[phase] {
+		phaseSubstitutions[phase][id] = l
 	}
-	leveledSubstitutions[level][identifier{name, d.marks}] = location
-	return WrappedSyntax{d.lexicalSubstitutions, leveledSubstitutions, d.marks, d.datum}
+	phaseSubstitutions[phase][identifier{name, d.marks}] = location
+	return WrappedSyntax{d.lexicalSubstitutions, phaseSubstitutions, d.marks, d.datum}
 }
 
 // Function represents a Go function.

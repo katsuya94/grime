@@ -8,15 +8,19 @@ import (
 )
 
 func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
-	return compileBody(body, 0)
-}
-
-func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []common.WrappedSyntax, error) {
-	defined := body.DefinedAt(phase)
-	forms, err := util.Slice(body.Datum())
+	defined := body.DefinedAt(0)
+	var forms []common.Datum
+	err := util.Each(body.Datum(), func(datum common.Datum) error {
+		forms = append(forms, body.PushOnto(datum))
+		return nil
+	})
 	if err != nil {
 		return nil, nil, err
 	}
+	return compileBody(forms, defined, 0)
+}
+
+func compileBody(forms []common.Datum, defined []common.WrappedSyntax, phase int) (common.Expression, []common.WrappedSyntax, error) {
 	var (
 		i                   int
 		definitionVariables []*common.Variable
@@ -76,7 +80,7 @@ func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []com
 				return nil, nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
 				if syntax, ok := v.(common.WrappedSyntax); ok {
-					v, ok, err := expand(env, syntax)
+					v, ok, err := expand(syntax, phase)
 					if err != nil {
 						return nil, nil, err
 					} else if ok {
@@ -95,7 +99,7 @@ func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []com
 	// Compile define expressions for the definitions.
 	var expressions []common.Expression
 	for i := range definitionVariables {
-		expression, err := compile(env.Clear(), definitionForms[i])
+		expression, err := compile(definitionForms[i], phase)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -106,7 +110,7 @@ func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []com
 		return nil, nil, common.ErrUnexpectedFinalForm
 	}
 	for _, form := range forms[i:] {
-		expression, err := compile(env.Clear(), form)
+		expression, err := compile(form, i)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -118,7 +122,7 @@ func compileBody(body common.WrappedSyntax, phase int) (common.Expression, []com
 	} else {
 		expression = expressions[0]
 	}
-	return expression, env.Bindings(), nil
+	return expression, defined, nil
 }
 
 func define(identifier common.WrappedSyntax, phase int, location common.Location, form *common.Datum, rest []common.Datum, defined *[]common.WrappedSyntax) error {
@@ -141,8 +145,7 @@ func define(identifier common.WrappedSyntax, phase int, location common.Location
 }
 
 func compile(form common.Datum, phase int) (common.Expression, error) {
-	var err error
-	form, err = expandCompletely(env, form)
+	form, err := expandCompletely(form, phase)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +153,7 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 	case QuoteForm:
 		return Literal{form.Datum}, nil
 	case SyntaxForm:
-		template, patternVariablesUnexpanded, err := compileTemplate(env, form.Datum)
+		template, patternVariablesUnexpanded, err := compileTemplate(form.Datum, phase)
 		if err != nil {
 			return nil, err
 		}
@@ -163,46 +166,46 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 		}
 		return SyntaxTemplate{template, patternVariables}, nil
 	case BeginForm:
-		expression, _, err := compileBody(env, form.Forms)
+		expression, _, err := compileBody(form.Forms, nil, phase)
 		if err != nil {
 			return nil, err
 		}
 		return expression, nil
 	case IfForm:
-		conditionExpression, err := compile(env, form.Condition)
+		conditionExpression, err := compile(form.Condition, phase)
 		if err != nil {
 			return nil, err
 		}
-		thenExpression, err := compile(env, form.Then)
+		thenExpression, err := compile(form.Then, phase)
 		if err != nil {
 			return nil, err
 		}
-		elseExpression, err := compile(env, form.Else)
+		elseExpression, err := compile(form.Else, phase)
 		if err != nil {
 			return nil, err
 		}
 		return If{conditionExpression, thenExpression, elseExpression}, nil
 	case LetForm:
-		initExpression, err := compile(env, form.Init)
+		initExpression, err := compile(form.Init, phase)
 		if err != nil {
 			return nil, err
 		}
-		variable := &common.Variable{common.Void, true}
-		name, location := form.Identifier.IdentifierAt(level)
+		variable := &common.Variable{}
+		name, location := form.Identifier.IdentifierAt(phase)
 		body := syntaxSet(form.Body, name, location)
-		bodyExpression, err := compile(env, body)
+		bodyExpression, err := compile(body, phase)
 		if err != nil {
 			return nil, err
 		}
 		return Let{variable, initExpression, bodyExpression}, nil
 	case ApplicationForm:
-		procedureExpression, err := compile(env, form.Procedure)
+		procedureExpression, err := compile(form.Procedure, phase)
 		if err != nil {
 			return nil, err
 		}
 		var argumentExpressions []common.Expression
 		for _, argumentForm := range form.Arguments {
-			expression, err := compile(env, argumentForm)
+			expression, err := compile(argumentForm, phase)
 			if err != nil {
 				return nil, err
 			}
@@ -213,18 +216,18 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 		var variables []*common.Variable
 		body := form.Body
 		for _, formal := range form.Formals {
-			name, _ := formal.IdentifierAt(level)
-			variable := &common.Variable{common.Void, true}
+			name, _ := formal.IdentifierAt(phase)
+			variable := &common.Variable{}
 			body = syntaxSet(body, name, variable)
 			variables = append(variables, variable)
 		}
-		expression, err := compile(env, body)
+		expression, err := compile(body, phase)
 		if err != nil {
 			return nil, err
 		}
 		return Literal{common.Lambda{variables, expression}}, nil
 	case ReferenceForm:
-		name, location := form.Identifier.IdentifierAt(level)
+		name, location := form.Identifier.IdentifierAt(phase)
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -234,7 +237,7 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 		}
 		return Reference{variable}, nil
 	case SetForm:
-		name, location := form.Identifier.IdentifierAt(level)
+		name, location := form.Identifier.IdentifierAt(phase)
 		if location == nil {
 			return nil, fmt.Errorf("compile: unbound identifier %v", name)
 		}
@@ -242,19 +245,19 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 		if !ok {
 			return nil, fmt.Errorf("compile: non-variable identifier %v in set!", name)
 		}
-		expression, err := compile(env, form.Form)
+		expression, err := compile(form.Form, phase)
 		if err != nil {
 			return nil, err
 		}
 		return Set{variable, expression}, nil
 	case SyntaxCaseForm:
-		inputExpression, err := compile(env, form.Input)
+		inputExpression, err := compile(form.Input, phase)
 		if err != nil {
 			return nil, err
 		}
 		literals := make(map[common.Symbol]common.Location)
 		for _, literal := range form.Literals {
-			name, location := literal.IdentifierAt(level)
+			name, location := literal.IdentifierAt(phase)
 			if location == underscoreKeyword {
 				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}
@@ -270,7 +273,7 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(env, form.Patterns[i])
+			pattern, err := compilePattern(form.Patterns[i], phase)
 			if err != nil {
 				return nil, err
 			}
@@ -287,11 +290,11 @@ func compile(form common.Datum, phase int) (common.Expression, error) {
 				fender = syntaxSet(fender, name, patternVariable)
 				output = syntaxSet(output, name, patternVariable)
 			}
-			fenderExpression, err := compile(env, fender)
+			fenderExpression, err := compile(fender, phase)
 			if err != nil {
 				return nil, err
 			}
-			outputExpression, err := compile(env, output)
+			outputExpression, err := compile(output, phase)
 			if err != nil {
 				return nil, err
 			}
@@ -329,7 +332,7 @@ func syntaxSet(form common.Datum, name common.Symbol, location common.Location) 
 	return form
 }
 
-func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, map[*common.PatternVariable]int, error) {
+func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.PatternVariable]int, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {
 		datum = syntax.Datum()
@@ -341,11 +344,11 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 		if !isSyntax {
 			return nil, nil, fmt.Errorf("compile: encountered unwrapped symbol in syntax template")
 		}
-		binding := env.Get(datum)
-		if patternVariable, ok := binding.(*common.PatternVariable); ok {
+		_, location := syntax.IdentifierAt(phase)
+		if patternVariable, ok := location.(*common.PatternVariable); ok {
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
 		}
-		if binding == ellipsisKeyword {
+		if location == ellipsisKeyword {
 			return nil, nil, fmt.Errorf("compile: malformed syntax template")
 		}
 		return syntax, map[*common.PatternVariable]int{}, nil
@@ -357,11 +360,19 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 			if !ok {
 				break
 			}
-			name, ok := pair.First.(common.Symbol)
+			first := pair.First
+			if isSyntax {
+				first = syntax.PushOnto(first)
+			}
+			identifier, ok := first.(common.WrappedSyntax)
 			if !ok {
 				break
 			}
-			if env.Get(name) != ellipsisKeyword {
+			if !identifier.IsIdentifier() {
+				break
+			}
+			_, location := identifier.IdentifierAt(phase)
+			if location != ellipsisKeyword {
 				break
 			}
 			ellipsis++
@@ -378,7 +389,7 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 			firstTemplate = datum.First
 			restTemplate = datum.Rest
 		}
-		firstCompiled, firstPatternVariables, err := compileTemplate(env, firstTemplate)
+		firstCompiled, firstPatternVariables, err := compileTemplate(firstTemplate, phase)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -386,7 +397,7 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
 		}
-		restCompiled, restPatternVariables, err := compileTemplate(env, restTemplate)
+		restCompiled, restPatternVariables, err := compileTemplate(restTemplate, phase)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -430,7 +441,7 @@ func compileTemplate(env common.Environment, datum common.Datum) (common.Datum, 
 	}
 }
 
-func compilePattern(env common.Environment, datum common.Datum) (common.Datum, error) {
+func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {
 		datum = syntax.Datum()
@@ -439,11 +450,14 @@ func compilePattern(env common.Environment, datum common.Datum) (common.Datum, e
 	case common.Boolean, common.Number, common.Character, common.String:
 		return datum, nil
 	case common.Symbol:
-		binding := env.Get(datum)
-		if binding == underscoreKeyword {
+		if !isSyntax {
+			return nil, fmt.Errorf("compile: encountered unwrapped symbol in pattern")
+		}
+		_, location := syntax.IdentifierAt(phase)
+		if location == underscoreKeyword {
 			return common.Underscore, nil
 		}
-		if binding == ellipsisKeyword {
+		if location == ellipsisKeyword {
 			return common.Ellipsis, nil
 		}
 		return datum, nil
@@ -459,11 +473,11 @@ func compilePattern(env common.Environment, datum common.Datum) (common.Datum, e
 			firstPattern = datum.First
 			restPattern = datum.Rest
 		}
-		first, err := compilePattern(env, firstPattern)
+		first, err := compilePattern(firstPattern, 1)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := compilePattern(env, restPattern)
+		rest, err := compilePattern(restPattern, 1)
 		if err != nil {
 			return nil, err
 		}

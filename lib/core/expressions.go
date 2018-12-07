@@ -169,7 +169,6 @@ type defineExpressionEvaluated struct {
 }
 
 func (c defineExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	(*c.variable).Defined = true
 	(*c.variable).Value = d
 	return common.CallC(c.continuation, common.Void)
 }
@@ -193,7 +192,7 @@ type setExpressionEvaluated struct {
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	if !c.variable.Defined {
+	if c.variable.Value == nil {
 		return nil, fmt.Errorf("evaluate: cannot set identifier before its definition")
 	}
 	(*c.variable).Value = d
@@ -206,7 +205,7 @@ type Reference struct {
 }
 
 func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
-	if !e.Variable.Defined {
+	if e.Variable.Value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: cannot reference identifier before its definition"))
 	}
 	return common.CallC(c, e.Variable.Value)

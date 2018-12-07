@@ -36,21 +36,21 @@ func init() {
 	env = env.MustDefine(common.Symbol("set!"), []int{0}, setKeyword)
 	env = env.MustDefine(common.Symbol("_"), []int{0}, underscoreKeyword)
 	env = env.MustDefine(common.Symbol("..."), []int{0}, ellipsisKeyword)
-	env = env.MustDefine(common.Symbol("not"), []int{0}, &common.Variable{common.Function(not), true})
-	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons), true})
-	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car), true})
-	env = env.MustDefine(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr), true})
-	env = env.MustDefine(common.Symbol("null?"), []int{0}, &common.Variable{common.Function(null), true})
-	env = env.MustDefine(common.Symbol("pair?"), []int{0}, &common.Variable{common.Function(pair), true})
-	env = env.MustDefine(common.Symbol("proc?"), []int{0}, &common.Variable{common.Function(proc), true})
-	env = env.MustDefine(common.Symbol("write"), []int{0}, &common.Variable{common.Function(write), true})
-	env = env.MustDefine(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation), true})
-	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err), true})
-	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv), true})
-	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum), true})
-	env = env.MustDefine(common.Symbol("identifier?"), []int{0}, &common.Variable{common.Function(identifier), true})
-	env = env.MustDefine(common.Symbol("generate-temporaries"), []int{0}, &common.Variable{common.Function(generateTemporaries), true})
-	env = env.MustDefine(common.Symbol("list"), []int{0}, &common.Variable{common.Function(list), true})
+	env = env.MustDefine(common.Symbol("not"), []int{0}, &common.Variable{common.Function(not)})
+	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons)})
+	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car)})
+	env = env.MustDefine(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr)})
+	env = env.MustDefine(common.Symbol("null?"), []int{0}, &common.Variable{common.Function(null)})
+	env = env.MustDefine(common.Symbol("pair?"), []int{0}, &common.Variable{common.Function(pair)})
+	env = env.MustDefine(common.Symbol("proc?"), []int{0}, &common.Variable{common.Function(proc)})
+	env = env.MustDefine(common.Symbol("write"), []int{0}, &common.Variable{common.Function(write)})
+	env = env.MustDefine(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation)})
+	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err)})
+	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv)})
+	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum)})
+	env = env.MustDefine(common.Symbol("identifier?"), []int{0}, &common.Variable{common.Function(identifier)})
+	env = env.MustDefine(common.Symbol("generate-temporaries"), []int{0}, &common.Variable{common.Function(generateTemporaries)})
+	env = env.MustDefine(common.Symbol("list"), []int{0}, &common.Variable{common.Function(list)})
 	Bindings = env.Bindings()
 }
 
@@ -116,7 +116,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if !ok {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
-	if !syntax.IsIdentifier {
+	if !syntax.IsIdentifier() {
 		return common.ErrorC(fmt.Errorf("let: bad syntax"))
 	}
 	init := result[common.Symbol("init")]

@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 )
@@ -13,22 +15,22 @@ var (
 	PatternApplication                 = common.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-func expand(env common.Environment, syntax common.Datum) (common.Datum, bool, error) {
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSet, map[common.Symbol]common.Location{
+func expand(form common.Datum, phase int) (common.Datum, bool, error) {
+	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
 	}); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseImproperList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseImproperList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(env, syntax, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok, err := common.MatchSyntax(syntax, PatternApplication, nil); err != nil {
+	if result, ok, err := common.MatchSyntax(form, PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
 		procedure := result[common.Symbol("procedure")]
@@ -38,16 +40,14 @@ func expand(env common.Environment, syntax common.Datum) (common.Datum, bool, er
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
 	}
-	if syntax, ok := syntax.(common.WrappedSyntax); ok {
-		if _, _, ok := syntax.Identifier(); ok {
-			return ReferenceForm{syntax}, true, nil
-		}
+	if syntax, ok := form.(common.WrappedSyntax); ok && syntax.IsIdentifier() {
+		return ReferenceForm{syntax}, true, nil
 	}
 	return nil, false, nil
 }
 
-func expandMacroMatching(env common.Environment, syntax common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
-	result, ok, err := common.MatchSyntax(syntax, pattern, literals)
+func expandMacroMatching(form common.Datum, phase int, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
+	result, ok, err := common.MatchSyntax(form, pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
@@ -57,20 +57,22 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	if !ok {
 		return nil, false, nil
 	}
-	name, _, ok := identifier.Identifier()
+	if !identifier.IsIdentifier() {
+		return nil, false, nil
+	}
+	_, location := identifier.IdentifierAt(phase)
+	if location == nil {
+		return nil, false, nil
+	}
+	keyword, ok := location.(*common.Keyword)
 	if !ok {
 		return nil, false, nil
 	}
-	binding := env.Get(name)
-	if binding == nil {
-		return nil, false, nil
-	}
-	keyword, ok := binding.(*common.Keyword)
-	if !ok {
-		return nil, false, nil
+	if keyword.Transformer == nil {
+		return nil, false, fmt.Errorf("expand: cannot use keyword before definition")
 	}
 	output, err := common.WithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return keyword.Transformer.Call(escape, syntax)
+		return keyword.Transformer.Call(escape, form)
 	})
 	if err != nil {
 		return nil, false, err
@@ -78,17 +80,14 @@ func expandMacroMatching(env common.Environment, syntax common.Datum, pattern co
 	return output, true, nil
 }
 
-func expandCompletely(env common.Environment, d common.Datum) (common.Datum, error) {
+func expandCompletely(form common.Datum, phase int) (common.Datum, error) {
 	for {
-		if !common.IsSyntax(d) {
-			return d, nil
-		}
-		expanded, ok, err := expand(env, d)
+		expanded, ok, err := expand(form, phase)
 		if err != nil {
 			return nil, err
 		} else if !ok {
-			return d, nil
+			return form, nil
 		}
-		d = expanded
+		form = expanded
 	}
 }
