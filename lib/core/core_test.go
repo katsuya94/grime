@@ -245,10 +245,6 @@ func TestEvaluateExpression(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			environment := common.NewEnvironment(Bindings)
-			// Make lambda, syntax available at phase 1
-			environment = environment.MustDefine(common.Symbol("lambda"), []int{1}, environment.Get(common.Symbol("lambda")))
-			environment = environment.MustDefine(common.Symbol("syntax"), []int{1}, environment.Get(common.Symbol("syntax")))
 			data, err := read.ReadString(test.val)
 			if err != nil {
 				t.Fatal(err)
@@ -256,15 +252,20 @@ func TestEvaluateExpression(t *testing.T) {
 				data = []common.Datum{nil}
 			}
 			expected := data[0]
-			body, err := read.ReadString(test.source)
+			sourceBody, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
 			}
-			var forms []common.Datum
-			for _, d := range body {
-				forms = append(forms, common.NewWrappedSyntax(d))
+			body := common.NewWrappedSyntax(sourceBody)
+			for phase, locations := range Bindings {
+				for name, location := range locations {
+					body = body.SetAt(name, phase, location)
+				}
 			}
-			expression, _, err := Compile(environment, forms)
+			// Make lambda, syntax available at phase 1
+			body = body.SetAt(common.Symbol("lambda"), 1, Bindings[0][common.Symbol("lambda")])
+			body = body.SetAt(common.Symbol("syntax"), 1, Bindings[0][common.Symbol("syntax")])
+			expression, _, err := Compile(body)
 			if err != nil {
 				t.Fatal(err)
 			}

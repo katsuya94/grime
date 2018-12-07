@@ -209,7 +209,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		var patternVariables []*common.PatternVariable
 		for patternVariable, n := range patternVariablesUnexpanded {
 			if n > 0 {
-				return nil, fmt.Errorf("compile: pattern variable not fully expanded")
+				return nil, fmt.Errorf("compile: encountered unexpanded pattern variable")
 			}
 			patternVariables = append(patternVariables, patternVariable)
 		}
@@ -240,8 +240,8 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			return nil, err
 		}
 		variable := &common.Variable{}
-		name, location := form.Identifier.IdentifierAt(compiler.Phase)
-		body := syntaxSet(form.Body, name, location)
+		name, _ := form.Identifier.IdentifierAt(compiler.Phase)
+		body := syntaxSet(form.Body, name, variable)
 		bodyExpression, err := compiler.ExpressionCompile(body)
 		if err != nil {
 			return nil, err
@@ -292,7 +292,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		variable, ok := location.(*common.Variable)
 		if !ok {
-			return nil, fmt.Errorf("compile: non-variable identifier %v in set!", name)
+			return nil, fmt.Errorf("compile: non-variable identifier %v in assignment", name)
 		}
 		expression, err := compiler.ExpressionCompile(form.Form)
 		if err != nil {
@@ -353,8 +353,6 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions = append(outputExpressions, outputExpression)
 		}
 		return SyntaxCase{inputExpression, literals, patterns, patternVariableBindings, fenderExpressions, outputExpressions}, nil
-	case DefineForm, DefineSyntaxForm:
-		return nil, fmt.Errorf("compile: unexpected body form in expression context")
 	case common.WrappedSyntax:
 		switch datum := form.Datum().(type) {
 		case common.Boolean, common.Number, common.Character, common.String:
@@ -368,7 +366,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			}
 		}
 	default:
-		return nil, fmt.Errorf("compile: unhandled form %#v", form)
+		return nil, fmt.Errorf("compile: unexpected form in expression context %#v", form)
 	}
 }
 
@@ -398,7 +396,7 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
 		}
 		if location == ellipsisKeyword {
-			return nil, nil, fmt.Errorf("compile: malformed syntax template")
+			return nil, nil, fmt.Errorf("compile: improper use of ellipsis in syntax template")
 		}
 		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Pair:
@@ -473,13 +471,13 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		for patternVariable, n := range firstPatternVariables {
 			patternVariables[patternVariable] = n
 		}
-		for patternVariable, n := range restPatternVariables {
+		for patternVariable, rest := range restPatternVariables {
 			if first, ok := patternVariables[patternVariable]; ok {
-				if n != first {
-					return nil, nil, fmt.Errorf("compile: nested expansion of a single pattern variable")
+				if rest != first {
+					return nil, nil, fmt.Errorf("compile: incompatible expansion counts for pattern variable")
 				}
 			}
-			patternVariables[patternVariable] = n
+			patternVariables[patternVariable] = rest
 		}
 		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil
 	default:
