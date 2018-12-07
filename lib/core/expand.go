@@ -15,19 +15,21 @@ var (
 	PatternApplication                 = common.Pattern(read.MustReadString("(procedure arguments ...)")[0])
 )
 
-func expand(form common.Datum, phase int) (common.Datum, bool, error) {
-	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseSet, map[common.Symbol]common.Location{
+type Expander func(compiler Compiler, form common.Datum) (common.Datum, bool, error)
+
+func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
+	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
 	}); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseImproperList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseImproperList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, phase, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
 	if result, ok, err := common.MatchSyntax(form, PatternApplication, nil); err != nil {
@@ -78,16 +80,4 @@ func expandMacroMatching(form common.Datum, phase int, pattern common.Datum, lit
 		return nil, false, err
 	}
 	return output, true, nil
-}
-
-func expandCompletely(form common.Datum, phase int) (common.Datum, error) {
-	for {
-		expanded, ok, err := expand(form, phase)
-		if err != nil {
-			return nil, err
-		} else if !ok {
-			return form, nil
-		}
-		form = expanded
-	}
 }
