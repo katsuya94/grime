@@ -460,7 +460,6 @@ func TestExpressionCompile_LiteralVoid(t *testing.T) {
 }
 
 func TestCompile(t *testing.T) {
-	t.SkipNow() // TODO
 	tests := []struct {
 		name   string
 		source string
@@ -474,22 +473,22 @@ func TestCompile(t *testing.T) {
 		{
 			"duplicate definitions: define, define",
 			"(define foo 'id) (define foo 'thing)",
-			"previously defined: foo",
+			"compile: foo: already defined",
 		},
 		{
 			"duplicate definitions: define, define-syntax",
 			"(define foo 'id) (define-syntax foo (lambda (x) #''thing))",
-			"previously defined: foo",
+			"compile: foo: already defined",
 		},
 		{
 			"duplicate definitions: define-syntax, define",
 			"(define-syntax foo (lambda (x) #''thing))  (define foo 'thing)",
-			"previously defined: foo",
+			"compile: foo: already defined",
 		},
 		{
 			"duplicate definitions: define-syntax, define-syntax",
 			"(define-syntax foo (lambda (x) #''thing)) (define-syntax foo (lambda (x) #''thing))",
-			"previously defined: foo",
+			"compile: foo: already defined",
 		},
 		{
 			"empty begin in definition context",
@@ -499,7 +498,7 @@ func TestCompile(t *testing.T) {
 		{
 			"body forms after expression in begin",
 			"(begin 'foo (define x 'bar))",
-			"compile: unexpected body form in expression context",
+			"compile: unexpected form in expression context: #<core.DefineForm>",
 		},
 		{
 			"empty lambda",
@@ -544,27 +543,27 @@ func TestCompile(t *testing.T) {
 		{
 			"ellipsis outside pair",
 			"(syntax-case #'foo () (_ #'...))",
-			"compile: malformed syntax template",
+			"compile: improper use of ellipsis in syntax template",
 		},
 		{
 			"ellipsis in first position",
 			"(syntax-case #'foo () (_ #'(...)))",
-			"compile: malformed syntax template",
+			"compile: improper use of ellipsis in syntax template",
 		},
 		{
-			"ellipsis in first position",
+			"ellipsis in rest position",
 			"(syntax-case #'foo () (id #'(id . ...)))",
-			"compile: malformed syntax template",
+			"compile: improper use of ellipsis in syntax template",
 		},
 		{
 			"not enough ellipsis",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'(id ...)))",
-			"compile: pattern variable not fully expanded",
+			"compile: encountered unexpanded pattern variable",
 		},
 		{
 			"not enough ellipsis nested",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'((id) ...)))",
-			"compile: pattern variable not fully expanded",
+			"compile: encountered unexpanded pattern variable",
 		},
 		{
 			"no pattern variable",
@@ -583,7 +582,7 @@ func TestCompile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			body := common.NewWrappedSyntax(sourceBody)
+			body := common.NewWrappedSyntax(util.List(sourceBody...))
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)
@@ -592,7 +591,7 @@ func TestCompile(t *testing.T) {
 			// Make lambda, syntax available at phase 1
 			body = body.SetAt(common.Symbol("lambda"), 1, Bindings[0][common.Symbol("lambda")])
 			body = body.SetAt(common.Symbol("syntax"), 1, Bindings[0][common.Symbol("syntax")])
-			_, _, err = Compile(common.NewWrappedSyntax(body))
+			_, _, err = Compile(body)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

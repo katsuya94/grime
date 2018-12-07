@@ -220,9 +220,13 @@ func (d WrappedSyntax) SetAt(name Symbol, phase int, location Location) WrappedS
 	for i, substitutions := range d.phaseSubstitutions {
 		phaseSubstitutions[i] = substitutions
 	}
-	phaseSubstitutions[phase] = make(map[identifier]Location, len(d.phaseSubstitutions[phase]))
-	for id, l := range d.phaseSubstitutions[phase] {
-		phaseSubstitutions[phase][id] = l
+	if phase < len(d.phaseSubstitutions) {
+		phaseSubstitutions[phase] = make(map[identifier]Location, len(d.phaseSubstitutions[phase])+1)
+		for id, l := range d.phaseSubstitutions[phase] {
+			phaseSubstitutions[phase][id] = l
+		}
+	} else {
+		phaseSubstitutions[phase] = make(map[identifier]Location, 1)
 	}
 	phaseSubstitutions[phase][identifier{name, d.marks}] = location
 	return WrappedSyntax{d.lexicalSubstitutions, phaseSubstitutions, d.marks, d.datum}

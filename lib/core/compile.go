@@ -366,7 +366,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			}
 		}
 	default:
-		return nil, fmt.Errorf("compile: unexpected form in expression context %#v", form)
+		return nil, fmt.Errorf("compile: unexpected form in expression context: %v", common.Write(form))
 	}
 }
 
@@ -484,7 +484,7 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		if datum == common.Null {
 			return syntax, map[*common.PatternVariable]int{}, nil
 		}
-		return nil, nil, fmt.Errorf("compile: unhandled syntax template form %#v", datum)
+		return nil, nil, fmt.Errorf("compile: unexpected syntax template form: %v", common.Write(datum))
 	}
 }
 
@@ -520,11 +520,11 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 			firstPattern = datum.First
 			restPattern = datum.Rest
 		}
-		first, err := compilePattern(firstPattern, 1)
+		first, err := compilePattern(firstPattern, phase)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := compilePattern(restPattern, 1)
+		rest, err := compilePattern(restPattern, phase)
 		if err != nil {
 			return nil, err
 		}
@@ -533,6 +533,6 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 		if datum == common.Null {
 			return common.Null, nil
 		}
-		return nil, fmt.Errorf("compile: unhandled pattern %#v", datum)
+		return nil, fmt.Errorf("compile: unhandled pattern form: %v", common.Write(datum))
 	}
 }
