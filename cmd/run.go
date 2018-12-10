@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"io"
 	"os"
 
-	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
 	"github.com/spf13/cobra"
 )
@@ -26,16 +24,9 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		reader := read.NewDatumReader(f)
-		var topLevelProgram []common.WrappedSyntax
-		for {
-			if datum, err := reader.ReadDatum(); err == io.EOF {
-				break
-			} else if err != nil {
-				return err
-			} else {
-				topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(datum))
-			}
+		topLevelProgram, err := read.Read(f)
+		if err != nil {
+			return err
 		}
 		return rt.Execute(topLevelProgram)
 	},

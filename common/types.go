@@ -163,6 +163,10 @@ func (d WrappedSyntax) IsIdentifier() bool {
 	return ok
 }
 
+func (d WrappedSyntax) IdentifierName() Symbol {
+	return d.datum.(Symbol)
+}
+
 func (d WrappedSyntax) IdentifierAt(phase int) (Symbol, Location) {
 	name := d.datum.(Symbol)
 	location, _ := d.lexicalSubstitutions[identifier{name, d.marks}]
@@ -178,6 +182,18 @@ func (d WrappedSyntax) IdentifierAt(phase int) (Symbol, Location) {
 	}
 	location, _ = substitutions[identifier{name, d.marks}]
 	return name, location
+}
+
+func (d WrappedSyntax) Phases() []int {
+	name := d.datum.(Symbol)
+	var phases []int
+	for phase, substitutions := range d.phaseSubstitutions {
+		_, ok := substitutions[identifier{name, d.marks}]
+		if ok {
+			phases = append(phases, phase)
+		}
+	}
+	return phases
 }
 
 func (d WrappedSyntax) IdentifierEquals(other WrappedSyntax) bool {
@@ -200,6 +216,11 @@ func (d WrappedSyntax) DefinedAt(phase int) []WrappedSyntax {
 		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, id.marks, id.name})
 	}
 	return defined
+}
+
+func (d WrappedSyntax) GetAt(name Symbol, phase int) Location {
+	_, location := d.PushOnto(name).IdentifierAt(phase)
+	return location
 }
 
 func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {

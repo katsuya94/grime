@@ -55,7 +55,7 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 	}
 }
 
-func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
+func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
 	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
@@ -94,11 +94,7 @@ func (r *Runtime) ExecuteFile(name string) error {
 	if err != nil {
 		return err
 	}
-	var topLevelProgram []common.WrappedSyntax
-	for _, d := range data {
-		topLevelProgram = append(topLevelProgram, common.NewWrappedSyntax(d))
-	}
-	return r.Execute(topLevelProgram)
+	return r.Execute(data)
 }
 
 func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingSet, error) {
@@ -175,7 +171,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	env := common.EmptyEnvironment
+	body := common.NewWrappedSyntax(util.List(append(prov.library.body, common.Void)...))
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
@@ -186,44 +182,41 @@ func (r *Runtime) instantiate(prov *provision) error {
 			return instantiationError{prov.library.name, err}
 		}
 		for exportLevel, locations := range bindings {
-			for id, location := range locations {
+			for name, location := range locations {
 				levelSet := make(map[int]bool)
 				for _, importLevel := range resolutions[i].levels {
 					levelSet[importLevel+exportLevel] = true
 				}
-				var levels []int
 				for level := range levelSet {
-					levels = append(levels, level)
-				}
-				env, err = env.Define(id, levels, location)
-				if err != nil {
-					return instantiationError{prov.library.name, err}
+					if body.GetAt(name, level) != nil {
+						return fmt.Errorf("duplicate import at level %v: %v", level, name)
+					}
+					body = body.SetAt(name, level, location)
 				}
 			}
 		}
 	}
-	body := append(prov.library.body, common.NewWrappedSyntax(common.Void))
-	var forms []common.Datum
-	for _, syntax := range body {
-		forms = append(forms, syntax)
-	}
-	expression, definitions, err := r.compiler(env, forms)
+	expression, definitions, err := r.compiler(body)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
+	// TODO: rethink relationship between compiler and runtime for passing back defs
 	prov.bindings = make(common.BindingSet)
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false
-		for exportLevel, locations := range definitions {
-			location, ok := locations[exportSpec.internal]
-			if !ok {
+		for _, identifier := range definitions {
+			if exportSpec.internal != identifier.IdentifierName() {
 				continue
 			}
-			exported = true
-			if _, ok := prov.bindings[exportLevel]; !ok {
-				prov.bindings[exportLevel] = make(map[common.Symbol]common.Location)
+			for _, phase := range identifier.Phases() {
+				_, ok := prov.bindings[phase]
+				if !ok {
+					prov.bindings[phase] = make(map[common.Symbol]common.Location)
+				}
+				_, location := identifier.IdentifierAt(phase)
+				prov.bindings[phase][exportSpec.internal] = location
 			}
-			prov.bindings[exportLevel][exportSpec.external] = location
+			exported = true
 		}
 		if !exported {
 			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}

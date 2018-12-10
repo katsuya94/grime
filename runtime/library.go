@@ -21,7 +21,7 @@ type Library struct {
 	version     []subVersion
 	importSpecs []importSpec
 	exportSpecs []identifierBinding
-	body        []common.WrappedSyntax
+	body        []common.Datum
 }
 
 func NewLibrary(source common.WrappedSyntax) (*Library, error) {

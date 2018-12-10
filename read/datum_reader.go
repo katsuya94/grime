@@ -177,14 +177,15 @@ func Read(r io.Reader) ([]common.Datum, error) {
 	datumReader := NewDatumReader(r)
 	var data []common.Datum
 	for {
-		if datum, err := datumReader.ReadDatum(); err == nil {
-			data = append(data, datum)
-		} else if err == io.EOF {
-			return data, nil
-		} else {
+		datum, err := datumReader.ReadDatum()
+		if err == io.EOF {
+			break
+		} else if err != nil {
 			return nil, err
 		}
+		data = append(data, datum)
 	}
+	return data, nil
 }
 
 func MustRead(r io.Reader) []common.Datum {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 )
 
 func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w io.Writer) {
@@ -27,11 +28,13 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		for _, d := range data {
-			forms = append(forms, common.NewWrappedSyntax(d))
+		body := common.NewWrappedSyntax(util.List(data...))
+		for phase, locations := range bindings {
+			for name, location := range locations {
+				body = body.SetAt(name, phase, location)
+			}
 		}
-		env := common.NewEnvironment(bindings)
-		expression, newBindings, err := compiler(env, forms)
+		expression, definitions, err := compiler(body)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}
@@ -45,7 +48,17 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		bindings = newBindings
+		bindings = make(common.BindingSet, len(bindings))
+		for _, definition := range definitions {
+			for _, phase := range definition.Phases() {
+				_, ok := bindings[phase]
+				if !ok {
+					bindings[phase] = make(map[common.Symbol]common.Location)
+				}
+				name, location := definition.IdentifierAt(phase)
+				bindings[phase][name] = location
+			}
+		}
 		fmt.Fprintln(w, common.Write(result))
 	}
 }

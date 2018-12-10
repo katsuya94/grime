@@ -1,3 +1,3 @@
 package common
 
-type Compiler func(env Environment, forms []Datum) (Expression, BindingSet, error)
+type Compiler func(WrappedSyntax) (Expression, []WrappedSyntax, error)

@@ -23,6 +23,8 @@ type Identifier struct {
 	Marks int
 }
 
+// TODO: remove Environment
+
 type Environment struct {
 	leveled     BindingSet
 	definitions map[Symbol]bool
