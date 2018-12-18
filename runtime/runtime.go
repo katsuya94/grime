@@ -56,7 +56,7 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.Datum) error {
-	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
+	result, ok, err := common.MatchSyntax(common.NewWrappedSyntax(topLevelProgram[0]), PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
 	if err != nil {
@@ -214,9 +214,9 @@ func (r *Runtime) instantiate(prov *provision) error {
 					prov.bindings[phase] = make(map[common.Symbol]common.Location)
 				}
 				_, location := identifier.IdentifierAt(phase)
-				prov.bindings[phase][exportSpec.internal] = location
+				prov.bindings[phase][exportSpec.external] = location
+				exported = true
 			}
-			exported = true
 		}
 		if !exported {
 			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}

@@ -188,15 +188,6 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	}
 }
 
-// syntaxSet sets a substitution for on the given form if the given form is a wrapped syntax object.
-func syntaxSet(form common.Datum, name common.Symbol, location common.Location) common.Datum {
-	syntax, ok := form.(common.WrappedSyntax)
-	if ok {
-		form = syntax.Set(name, location)
-	}
-	return form
-}
-
 func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.PatternVariable]int, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {
@@ -353,4 +344,13 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 		}
 		return nil, fmt.Errorf("compile: unhandled pattern form: %v", common.Write(datum))
 	}
+}
+
+// syntaxSet sets a substitution for on the given form if the given form is a wrapped syntax object.
+func syntaxSet(form common.Datum, name common.Symbol, location common.Location) common.Datum {
+	syntax, ok := form.(common.WrappedSyntax)
+	if ok {
+		form = syntax.Set(name, location)
+	}
+	return form
 }

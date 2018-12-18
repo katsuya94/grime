@@ -24,9 +24,9 @@ type Library struct {
 	body        []common.Datum
 }
 
-func NewLibrary(source common.WrappedSyntax) (*Library, error) {
+func NewLibrary(source common.Datum) (*Library, error) {
 	var library Library
-	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
+	result, ok, err := common.MatchSyntax(common.NewWrappedSyntax(source), PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 		common.Symbol("export"):  nil,
 		common.Symbol("import"):  nil,
@@ -80,7 +80,7 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	for _, d := range result[common.Symbol("body")].([]interface{}) {
-		library.body = append(library.body, d.(common.WrappedSyntax))
+		library.body = append(library.body, d.(common.WrappedSyntax).Datum())
 	}
 	return &library, nil
 }

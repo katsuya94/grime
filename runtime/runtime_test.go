@@ -3,7 +3,6 @@ package runtime_test
 import (
 	"testing"
 
-	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
 	. "github.com/katsuya94/grime/runtime"
@@ -32,8 +31,8 @@ func TestRuntime_Execute(t *testing.T) {
 				(library (test)
 				  (export hello-world)
 				  (import (core))
-				  (define (hello-world)
-				    (write "hello world")))
+				  (~define hello-world (lambda ()
+				    (write "hello world"))))
 				`,
 			},
 			`
@@ -49,8 +48,8 @@ func TestRuntime_Execute(t *testing.T) {
 				(library (test)
 				  (export (rename (hello-world greeting)))
 				  (import (core))
-				  (define (hello-world)
-				    (write "hello world")))
+				  (~define hello-world (lambda ()
+				    (write "hello world"))))
 				`,
 			},
 			`
@@ -66,8 +65,8 @@ func TestRuntime_Execute(t *testing.T) {
 				(library (test)
 				  (export (rename (hello-world greeting)))
 				  (import (core))
-				  (define (hello-world)
-				    (write "hello world")))
+				  (~define hello-world (lambda ()
+				    (write "hello world"))))
 				`,
 			},
 			`
@@ -83,8 +82,8 @@ func TestRuntime_Execute(t *testing.T) {
 				(library (test)
 				  (export hello-world)
 				  (import (core))
-				  (define (hello-world)
-				    (write "hello world")))
+				  (~define hello-world (lambda ()
+				    (write "hello world"))))
 				`,
 			},
 			`
@@ -100,8 +99,8 @@ func TestRuntime_Execute(t *testing.T) {
 				(library (test)
 				  (export hello-world)
 				  (import (core))
-				  (define (hello-world)
-				    (write "hello world")))
+				  (~define hello-world (lambda ()
+				    (write "hello world"))))
 				`,
 			},
 			`
@@ -123,7 +122,7 @@ func TestRuntime_Execute(t *testing.T) {
 				} else if len(data) != 1 {
 					t.Fatalf("encountered %v data in pattern", len(data))
 				}
-				library, err := NewLibrary(common.NewWrappedSyntax(data[0]))
+				library, err := NewLibrary(data[0])
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -132,13 +131,9 @@ func TestRuntime_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			data, err := read.ReadString(test.source)
+			program, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
-			}
-			var program []common.WrappedSyntax
-			for _, d := range data {
-				program = append(program, common.NewWrappedSyntax(d))
 			}
 			err = runtime.Execute(program)
 			if test.error != "" {

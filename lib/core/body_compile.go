@@ -121,14 +121,23 @@ func define(identifier common.WrappedSyntax, phase int, location common.Location
 		}
 	}
 	if identifier.Unmarked() {
-		*defined = append(*defined, identifier)
+		*defined = append(*defined, identifier.SetAt(name, phase, location))
 	}
-	*form = syntaxSet(*form, name, location)
+	*form = syntaxSetAt(*form, name, phase, location)
 	for i := range rest {
-		rest[i] = syntaxSet(rest[i], name, location)
+		rest[i] = syntaxSetAt(rest[i], name, phase, location)
 	}
 	for i := range deferred {
-		deferred[i] = syntaxSet(deferred[i], name, location)
+		deferred[i] = syntaxSetAt(deferred[i], name, phase, location)
 	}
 	return nil
+}
+
+// syntaxSet sets a substitution for on the given form if the given form is a wrapped syntax object.
+func syntaxSetAt(form common.Datum, name common.Symbol, phase int, location common.Location) common.Datum {
+	syntax, ok := form.(common.WrappedSyntax)
+	if ok {
+		form = syntax.SetAt(name, phase, location)
+	}
+	return form
 }

@@ -37,7 +37,9 @@ Grime is a programming language for developing joyful developer experiences that
 * [ ] Write documentation
 * [ ] Generate bindings for arbitrary go packages
 * [ ] Comply with go lint
-* [ ] Compile to web assembly for use in the browser
+* [x] Compile to web assembly for use in the browser
+* [ ] Implement REPL in advanced terminal mode
+* [ ] Clarify level vs phase language
 
 ## Libraries
 
