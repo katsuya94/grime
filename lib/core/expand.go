@@ -16,6 +16,7 @@ var (
 )
 
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
+	fmt.Println(common.Write(form))
 	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
 	}); ok || err != nil {

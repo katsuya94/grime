@@ -90,7 +90,7 @@ func MustNewLibraryFromString(name string, src string) *Library {
 	if len(data) != 1 {
 		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
 	}
-	return MustNewLibrary(common.NewWrappedSyntax(data[0]))
+	return MustNewLibrary(data[0])
 }
 
 func MustNewLibraryFromFile(name string) *Library {
@@ -107,10 +107,10 @@ func MustNewLibraryFromFile(name string) *Library {
 	if len(data) != 1 {
 		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
 	}
-	return MustNewLibrary(common.NewWrappedSyntax(data[0]))
+	return MustNewLibrary(data[0])
 }
 
-func MustNewLibrary(source common.WrappedSyntax) *Library {
+func MustNewLibrary(source common.Datum) *Library {
 	library, err := NewLibrary(source)
 	if err != nil {
 		panic(err)

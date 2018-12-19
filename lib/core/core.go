@@ -61,8 +61,7 @@ var (
 	PatternLet                        = common.Pattern(read.MustReadString("(let (name init) body ...)")[0])
 	PatternBegin                      = common.Pattern(read.MustReadString("(begin body ...)")[0])
 	PatternLambda                     = common.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
-	PatternDefineLambda               = common.Pattern(read.MustReadString("(define (name formals ...) body ...)")[0])
-	PatternDefine                     = common.Pattern(read.MustReadString("(define name value)")[0])
+	PatternDefine                     = common.Pattern(read.MustReadString("(~define name value)")[0])
 	PatternDefineSyntax               = common.Pattern(read.MustReadString("(define-syntax name value)")[0])
 	PatternSyntaxCase                 = common.Pattern(read.MustReadString("(syntax-case input (literal ...) clause ...)")[0])
 	PatternSyntaxCaseClause           = common.Pattern(read.MustReadString("(pattern output)")[0])
@@ -110,14 +109,14 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
-		return common.ErrorC(fmt.Errorf("let: bad syntax"))
+		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
 	syntax, ok := result[common.Symbol("name")].(common.WrappedSyntax)
 	if !ok {
-		return common.ErrorC(fmt.Errorf("let: bad syntax"))
+		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
 	if !syntax.IsIdentifier() {
-		return common.ErrorC(fmt.Errorf("let: bad syntax"))
+		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
 	init := result[common.Symbol("init")]
 	var forms []common.Datum
@@ -168,11 +167,11 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	if err != nil {
 		return common.ErrorC(err)
 	} else if !ok {
-		return common.ErrorC(fmt.Errorf("define: bad syntax"))
+		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
 	}
 	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
 	if !(ok && identifier.IsIdentifier()) {
-		return common.ErrorC(fmt.Errorf("define: bad syntax"))
+		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
 	}
 	form := result[common.Symbol("value")]
 	return common.CallC(c, DefineForm{identifier, form})

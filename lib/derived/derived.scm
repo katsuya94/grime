@@ -20,6 +20,7 @@
            syntax
            begin
            ~let
+           ~define
            lambda
            syntax-case
            ...
@@ -29,6 +30,12 @@
            list
            generate-temporaries)
          expand))
+
+  (define-syntax define
+    (lambda (x)
+      (syntax-case x ()
+        [(_ (name formals ...) body ...) #'(~define name (lambda (formals ...) body ...))]
+        [(_ name value) #'(~define name value)])))
   
   (define-syntax when
     (lambda (x)

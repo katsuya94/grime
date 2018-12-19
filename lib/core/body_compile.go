@@ -125,10 +125,10 @@ func define(identifier common.WrappedSyntax, phase int, location common.Location
 	}
 	*form = syntaxSetAt(*form, name, phase, location)
 	for i := range rest {
-		rest[i] = syntaxSetAt(rest[i], name, phase, location)
+		rest[i] = syntaxSet(rest[i], name, location)
 	}
 	for i := range deferred {
-		deferred[i] = syntaxSetAt(deferred[i], name, phase, location)
+		deferred[i] = syntaxSet(deferred[i], name, location)
 	}
 	return nil
 }
