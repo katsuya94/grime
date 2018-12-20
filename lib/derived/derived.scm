@@ -1,5 +1,6 @@
 (library (derived)
   (export
+    define
     when
     unless
     let*

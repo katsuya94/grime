@@ -65,17 +65,15 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 			case LetSyntaxForm:
 				return nil, nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
-				if syntax, ok := v.(common.WrappedSyntax); ok {
-					v, ok, err := compiler.Expand(syntax)
-					if err != nil {
-						return nil, nil, err
-					} else if ok {
-						forms[i] = v
-						continue
-					}
+				expanded, ok, err := compiler.Expand(v)
+				if err != nil {
+					return nil, nil, err
+				} else if !ok {
+					processed = true
+					expression = true
+					break
 				}
-				processed = true
-				expression = true
+				forms[i] = expanded
 			}
 		}
 		if expression {
