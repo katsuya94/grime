@@ -18,11 +18,11 @@ type DatumReader struct {
 }
 
 func NewDatumReader(r io.Reader) *DatumReader {
-	return &DatumReader{NewLexemeReader(r)}
+	return &DatumReader{NewLexemeReader("datum", r)}
 }
 
 func (d *DatumReader) ReadDatum() (common.Datum, error) {
-	lexeme, err := d.reader.ReadLexeme()
+	lexeme, _, err := d.reader.ReadLexeme()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (d *DatumReader) readList(kind int) (common.Datum, error) {
 }
 
 func (d *DatumReader) expectNonEOF() (Lexeme, error) {
-	if lexeme, err := d.reader.ReadLexeme(); err == io.EOF {
+	if lexeme, _, err := d.reader.ReadLexeme(); err == io.EOF {
 		return nil, ErrUnexpectedEOF
 	} else if err == ErrUnexpectedEOF {
 		return nil, ErrUnexpectedEOF

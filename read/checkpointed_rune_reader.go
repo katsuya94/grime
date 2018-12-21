@@ -7,14 +7,17 @@ import (
 )
 
 type CheckpointedRuneReader struct {
-	r   *bufio.Reader
-	buf []rune
-	i   int
-	eof bool
+	r      *bufio.Reader
+	buf    []rune
+	i      int
+	eof    bool
+	line   int
+	column int
+	offset int
 }
 
 func NewCheckpointedRuneReader(r io.Reader) *CheckpointedRuneReader {
-	return &CheckpointedRuneReader{bufio.NewReader(r), nil, 0, false}
+	return &CheckpointedRuneReader{bufio.NewReader(r), nil, 0, false, 0, 0, 0}
 }
 
 func (c *CheckpointedRuneReader) ReadRune() (rune, error) {
@@ -34,7 +37,7 @@ func (c *CheckpointedRuneReader) ReadRune() (rune, error) {
 			c.buf = append(c.buf, r)
 		}
 	}
-	c.i += 1
+	c.i++
 	return r, err
 }
 
@@ -42,11 +45,14 @@ func (c *CheckpointedRuneReader) UnreadRune() error {
 	if c.i <= 0 {
 		return fmt.Errorf("lex: invalid use of UnreadRune")
 	}
-	c.i -= 1
+	c.i--
 	return nil
 }
 
 func (c *CheckpointedRuneReader) Checkpoint() {
+	c.line = c.Line()
+	c.column = c.Column()
+	c.offset = c.Offset()
 	c.buf = c.buf[c.i:]
 	c.i = 0
 }
@@ -55,6 +61,28 @@ func (c *CheckpointedRuneReader) Return() {
 	c.i = 0
 }
 
-func (c *CheckpointedRuneReader) Consumed() []rune {
-	return c.buf[:c.i]
+func (c *CheckpointedRuneReader) Line() int {
+	line := c.line
+	for j := 0; j < c.i; j++ {
+		if c.buf[j] == '\n' {
+			line++
+		}
+	}
+	return line
+}
+
+func (c *CheckpointedRuneReader) Column() int {
+	column := c.column
+	for j := 0; j < c.i; j++ {
+		if c.buf[j] == '\n' {
+			column = 0
+		} else {
+			column++
+		}
+	}
+	return column
+}
+
+func (c *CheckpointedRuneReader) Offset() int {
+	return c.offset + c.i
 }

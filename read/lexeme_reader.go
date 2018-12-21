@@ -1,41 +1,49 @@
 package read
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
 )
 
 type LexemeReader struct {
+	file   string
 	reader *CheckpointedRuneReader
 	next   Lexeme
 	unread bool
 }
 
-func NewLexemeReader(r io.Reader) *LexemeReader {
+func NewLexemeReader(file string, r io.Reader) *LexemeReader {
 	return &LexemeReader{
+		file,
 		NewCheckpointedRuneReader(r),
 		nil,
 		false,
 	}
 }
 
-func (l *LexemeReader) ReadLexeme() (Lexeme, error) {
+func (l *LexemeReader) ReadLexeme() (Lexeme, SourceLocation, error) {
 	if l.unread {
 		l.unread = false
-		return l.next, nil
+		return l.next, SourceLocation{}, nil
 	}
 	if err := l.readInterlexemeSpace(); err != nil {
-		return nil, err
+		return nil, SourceLocation{}, err
 	}
 	l.reader.Checkpoint()
+	sourceLocation := SourceLocation{
+		File:   l.file,
+		Line:   l.reader.Line(),
+		Column: l.reader.Column(),
+		Offset: l.reader.Offset(),
+	}
 	lexeme, err := l.expectLexeme()
 	if err != nil {
-		return nil, err
+		return nil, SourceLocation{}, err
 	}
+	sourceLocation.Length = l.reader.Offset() - sourceLocation.Offset
 	l.next = lexeme
-	return lexeme, nil
+	return lexeme, sourceLocation, nil
 }
 
 func (l *LexemeReader) readInterlexemeSpace() error {
@@ -631,24 +639,25 @@ func (l *LexemeReader) UnreadLexeme() error {
 	}
 }
 
-func Lex(r io.Reader) ([]Lexeme, error) {
-	lexemeReader := NewLexemeReader(r)
-	var lexemes []Lexeme
+func Lex(file string, r io.Reader) ([]Lexeme, []SourceLocation, error) {
+	lexemeReader := NewLexemeReader(file, r)
+	var (
+		lexemes         []Lexeme
+		sourceLocations []SourceLocation
+	)
 	for {
-		if lexeme, err := lexemeReader.ReadLexeme(); err == nil {
-			lexemes = append(lexemes, lexeme)
-		} else if err == io.EOF {
-			return lexemes, nil
-		} else {
-			return nil, err
+		lexeme, sourceLocation, err := lexemeReader.ReadLexeme()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, nil, err
 		}
+		lexemes = append(lexemes, lexeme)
+		sourceLocations = append(sourceLocations, sourceLocation)
 	}
+	return lexemes, sourceLocations, nil
 }
 
-func LexString(s string) ([]Lexeme, error) {
-	return Lex(strings.NewReader(s))
-}
-
-func LexBytes(b []byte) ([]Lexeme, error) {
-	return Lex(bytes.NewReader(b))
+func LexString(s string) ([]Lexeme, []SourceLocation, error) {
+	return Lex("string", strings.NewReader(s))
 }
