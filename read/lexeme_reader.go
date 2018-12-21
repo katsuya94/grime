@@ -9,10 +9,11 @@ import (
 )
 
 type LexemeReader struct {
-	file   string
-	reader *CheckpointedRuneReader
-	next   Lexeme
-	unread bool
+	file               string
+	reader             *CheckpointedRuneReader
+	next               Lexeme
+	nextSourceLocation common.SourceLocation
+	unread             bool
 }
 
 func NewLexemeReader(file string, r io.Reader) *LexemeReader {
@@ -20,6 +21,7 @@ func NewLexemeReader(file string, r io.Reader) *LexemeReader {
 		file,
 		NewCheckpointedRuneReader(r),
 		nil,
+		common.SourceLocation{},
 		false,
 	}
 }
@@ -27,7 +29,7 @@ func NewLexemeReader(file string, r io.Reader) *LexemeReader {
 func (l *LexemeReader) ReadLexeme() (Lexeme, common.SourceLocation, error) {
 	if l.unread {
 		l.unread = false
-		return l.next, common.SourceLocation{}, nil
+		return l.next, l.nextSourceLocation, nil
 	}
 	if err := l.readInterlexemeSpace(); err != nil {
 		return nil, common.SourceLocation{}, err
@@ -40,6 +42,7 @@ func (l *LexemeReader) ReadLexeme() (Lexeme, common.SourceLocation, error) {
 	}
 	sourceLocation.Length = l.reader.Offset() - sourceLocation.Offset
 	l.next = lexeme
+	l.nextSourceLocation = sourceLocation
 	return lexeme, sourceLocation, nil
 }
 

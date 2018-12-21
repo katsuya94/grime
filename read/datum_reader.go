@@ -39,17 +39,17 @@ func (d *DatumReader) ReadDatum() (common.Datum, common.SourceLocationTree, erro
 	case Identifier:
 		return common.Symbol(v), common.SourceLocationTree{sourceLocation, nil}, nil
 	case LeftParenthesis:
-		datum, sourceLocationTree, err := d.readList(PARENTHESES)
+		datum, sourceLocationTree, endSourceLocation, err := d.readList(PARENTHESES)
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
-		return datum, listSourceLocationTree(sourceLocation, sourceLocationTree), nil
+		return datum, listSourceLocationTree(sourceLocation, endSourceLocation, sourceLocationTree.Children), nil
 	case LeftBracket:
-		datum, sourceLocationTree, err := d.readList(BRACKETS)
+		datum, sourceLocationTree, endSourceLocation, err := d.readList(BRACKETS)
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
-		return datum, listSourceLocationTree(sourceLocation, sourceLocationTree), nil
+		return datum, listSourceLocationTree(sourceLocation, endSourceLocation, sourceLocationTree.Children), nil
 	case Quote:
 		datum, sourceLocationTree, err := d.ReadDatum()
 		if err != nil {
@@ -104,22 +104,28 @@ func (d *DatumReader) ReadDatum() (common.Datum, common.SourceLocationTree, erro
 	}
 }
 
-func listSourceLocationTree(sourceLocation common.SourceLocation, sourceLocationTree common.SourceLocationTree) common.SourceLocationTree {
+func listSourceLocationTree(startSourceLocation common.SourceLocation, endSourceLocation common.SourceLocation, children common.Datum) common.SourceLocationTree {
+	return common.SourceLocationTree{
+		common.SourceLocation{
+			File:   startSourceLocation.File,
+			Line:   startSourceLocation.Line,
+			Column: startSourceLocation.Column,
+			Offset: startSourceLocation.Offset,
+			Length: endSourceLocation.Offset + endSourceLocation.Length - startSourceLocation.Offset,
+		},
+		children,
+	}
+}
+
+func abbreviationSourceLocationTree(sourceLocation common.SourceLocation, sourceLocationTree common.SourceLocationTree) common.SourceLocationTree {
 	return common.SourceLocationTree{
 		common.SourceLocation{
 			File:   sourceLocation.File,
 			Line:   sourceLocation.Line,
 			Column: sourceLocation.Column,
 			Offset: sourceLocation.Offset,
-			Length: (sourceLocationTree.Offset + sourceLocationTree.Length) - sourceLocation.Offset,
+			Length: sourceLocationTree.Offset + sourceLocationTree.Length - sourceLocation.Offset,
 		},
-		sourceLocationTree,
-	}
-}
-
-func abbreviationSourceLocationTree(sourceLocation common.SourceLocation, sourceLocationTree common.SourceLocationTree) common.SourceLocationTree {
-	return common.SourceLocationTree{
-		sourceLocation,
 		common.Pair{
 			common.SourceLocationTree{
 				sourceLocation,
@@ -149,58 +155,68 @@ func (d *DatumReader) expectDatum() (common.Datum, common.SourceLocationTree, er
 	return datum, sourceLocationTree, nil
 }
 
-func (d *DatumReader) readList(kind int) (common.Datum, common.SourceLocationTree, error) {
+func (d *DatumReader) readList(kind int) (common.Datum, common.SourceLocationTree, common.SourceLocation, error) {
 	for {
 		lexeme, sourceLocation, err := d.expectNonEOF()
 		if err != nil {
-			return nil, common.SourceLocationTree{}, err
+			return nil, common.SourceLocationTree{}, common.SourceLocation{}, err
 		}
 		switch lexeme.(type) {
 		case RightParenthesis:
 			if kind == PARENTHESES {
-				return common.Null, common.SourceLocationTree{sourceLocation, nil}, nil
+				return common.Null, common.SourceLocationTree{sourceLocation, nil}, sourceLocation, nil
 			} else {
-				return nil, common.SourceLocationTree{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
 			}
 		case RightBracket:
 			if kind == BRACKETS {
-				return common.Null, common.SourceLocationTree{sourceLocation, nil}, nil
+				return common.Null, common.SourceLocationTree{sourceLocation, nil}, sourceLocation, nil
 			} else {
-				return nil, common.SourceLocationTree{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
 			}
 		case Dot:
 			datum, sourceLocationTree, err := d.expectDatum()
 			if err != nil {
-				return nil, common.SourceLocationTree{}, err
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, err
 			}
 			lexeme, sourceLocation, err := d.expectNonEOF()
 			if err != nil {
-				return nil, common.SourceLocationTree{}, err
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, err
 			}
 			switch lexeme.(type) {
 			case RightParenthesis:
 				if kind != PARENTHESES {
-					return nil, common.SourceLocationTree{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
+					return nil, common.SourceLocationTree{}, common.SourceLocation{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
 				}
 			case RightBracket:
 				if kind != BRACKETS {
-					return nil, common.SourceLocationTree{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
+					return nil, common.SourceLocationTree{}, common.SourceLocation{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
 				}
 			default:
-				return nil, common.SourceLocationTree{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, ReadError{sourceLocation, fmt.Sprintf("unexpected lexeme: #<%T>", lexeme)}
 			}
-			return datum, sourceLocationTree, nil
+			return datum, sourceLocationTree, sourceLocation, nil
 		default:
 			d.reader.UnreadLexeme()
 			first, firstSourceLocationTree, err := d.expectDatum()
 			if err != nil {
-				return nil, common.SourceLocationTree{}, err
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, err
 			}
-			rest, restSourceLocationTree, err := d.readList(kind)
+			rest, restSourceLocationTree, sourceLocation, err := d.readList(kind)
 			if err != nil {
-				return nil, common.SourceLocationTree{}, err
+				return nil, common.SourceLocationTree{}, common.SourceLocation{}, err
 			}
-			return common.Pair{first, rest}, listSourceLocationTree(firstSourceLocationTree.SourceLocation, restSourceLocationTree), nil
+			sourceLocationTree := common.SourceLocationTree{
+				common.SourceLocation{
+					File:   firstSourceLocationTree.File,
+					Line:   firstSourceLocationTree.Line,
+					Column: firstSourceLocationTree.Column,
+					Offset: firstSourceLocationTree.Offset,
+					Length: restSourceLocationTree.Offset + restSourceLocationTree.Length - firstSourceLocationTree.Offset,
+				},
+				common.Pair{firstSourceLocationTree, restSourceLocationTree},
+			}
+			return common.Pair{first, rest}, sourceLocationTree, sourceLocation, nil
 		}
 	}
 }
