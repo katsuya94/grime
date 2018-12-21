@@ -8,7 +8,6 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w io.Writer) {
@@ -16,7 +15,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	for {
 		fmt.Fprintf(w, "grime:%v> ", len(forms))
 		eof := false
-		data, err := readREPLData(r)
+		syntaxes, err := readREPLSyntaxes(r)
 		if err == io.EOF {
 			if len(forms) == 0 {
 				break
@@ -28,7 +27,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		body := common.NewWrappedSyntax(util.List(data...))
+		body := common.Body(syntaxes...)
 		for phase, locations := range bindings {
 			for name, location := range locations {
 				body = body.SetAt(name, phase, location)
@@ -63,15 +62,15 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	}
 }
 
-func readREPLData(r io.Reader) ([]common.Datum, error) {
+func readREPLSyntaxes(r io.Reader) ([]common.WrappedSyntax, error) {
 	var source []byte
 	scanner := bufio.NewScanner(r)
 	scanner.Split(splitReplLines)
 	for {
 		if scanner.Scan() {
 			source = append(source, scanner.Bytes()...)
-			if data, _, err := read.ReadBytes(source); err == nil {
-				return data, nil
+			if syntaxes, err := read.ReadBytes(source); err == nil {
+				return syntaxes, nil
 			} else if _, ok := err.(read.UnexpectedEOFError); !ok {
 				return nil, err
 			}
@@ -79,10 +78,10 @@ func readREPLData(r io.Reader) ([]common.Datum, error) {
 			return nil, err
 		} else {
 			source = append(source, scanner.Bytes()...)
-			if data, _, err := read.ReadBytes(source); data == nil && err == nil {
+			if syntaxes, err := read.ReadBytes(source); syntaxes == nil && err == nil {
 				return nil, io.EOF
 			} else {
-				return data, err
+				return syntaxes, err
 			}
 		}
 	}

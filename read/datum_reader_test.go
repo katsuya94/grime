@@ -151,7 +151,7 @@ func TestRead(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			data, sourceLocationTrees, err := ReadString(test.source)
+			syntaxes, err := ReadString(test.source)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -159,6 +159,14 @@ func TestRead(t *testing.T) {
 			} else if err != nil {
 				t.Fatal(err)
 			} else {
+				var (
+					data                []common.Datum
+					sourceLocationTrees []common.SourceLocationTree
+				)
+				for _, syntax := range syntaxes {
+					data = append(data, syntax.Datum())
+					sourceLocationTrees = append(sourceLocationTrees, *syntax.SourceLocationTree())
+				}
 				if !reflect.DeepEqual(data, test.data) {
 					t.Errorf("\nexpected: %#v\n     got: %#v", test.data, data)
 				}

@@ -2,9 +2,11 @@ package runtime
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
@@ -21,12 +23,12 @@ type Library struct {
 	version     []subVersion
 	importSpecs []importSpec
 	exportSpecs []identifierBinding
-	body        []common.Datum
+	body        []common.WrappedSyntax
 }
 
-func NewLibrary(source common.Datum) (*Library, error) {
+func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 	var library Library
-	result, ok, err := common.MatchSyntax(common.NewWrappedSyntax(source), PatternLibrary, map[common.Symbol]common.Location{
+	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 		common.Symbol("export"):  nil,
 		common.Symbol("import"):  nil,
@@ -80,13 +82,24 @@ func NewLibrary(source common.Datum) (*Library, error) {
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	for _, d := range result[common.Symbol("body")].([]interface{}) {
-		library.body = append(library.body, d.(common.WrappedSyntax).Datum())
+		library.body = append(library.body, d.(common.WrappedSyntax))
 	}
 	return &library, nil
 }
 
+func MustNewLibraryFromReader(name string, r io.Reader) *Library {
+	syntaxes, err := read.Read(name, r)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %v: %v", name, err))
+	}
+	if len(syntaxes) != 1 {
+		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(syntaxes)))
+	}
+	return MustNewLibrary(syntaxes[0])
+}
+
 func MustNewLibraryFromString(name string, src string) *Library {
-	return MustNewLibrary(read.MustReadDatum(src))
+	return MustNewLibraryFromReader(name, strings.NewReader(src))
 }
 
 func MustNewLibraryFromFile(name string) *Library {
@@ -99,17 +112,10 @@ func MustNewLibraryFromFile(name string) *Library {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load %v: %v", name, err))
 	}
-	data, _, err := read.Read(sourcePath, f)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load %v: %v", name, err))
-	}
-	if len(data) != 1 {
-		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
-	}
-	return MustNewLibrary(data[0])
+	return MustNewLibraryFromReader(sourcePath, f)
 }
 
-func MustNewLibrary(source common.Datum) *Library {
+func MustNewLibrary(source common.WrappedSyntax) *Library {
 	library, err := NewLibrary(source)
 	if err != nil {
 		panic(err)

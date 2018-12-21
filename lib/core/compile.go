@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/util"
 )
 
 type BodyCompiler func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error)
@@ -57,12 +56,14 @@ func (compiler Compiler) Next() Compiler {
 func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
 	defined := body.DefinedAt(0)
 	var forms []common.Datum
-	err := util.Each(body.Datum(), func(datum common.Datum) error {
-		forms = append(forms, body.PushOnto(datum))
-		return nil
-	})
-	if err != nil {
-		return nil, nil, err
+	for {
+		_, ok := body.Datum().(common.Pair)
+		if !ok {
+			break
+		}
+		pair := body.PushDown().(common.Pair)
+		forms = append(forms, pair.First)
+		body = pair.Rest.(common.WrappedSyntax)
 	}
 	return NewCompiler().BodyCompile(forms, defined)
 }

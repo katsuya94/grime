@@ -55,24 +55,23 @@ func (m *syntaxMatcher) match(input Datum, pattern Datum) (map[Symbol]interface{
 			}
 		}
 		var (
-			first Datum
-			rest  Datum
+			pair Pair
+			ok   bool
 		)
 		if isSyntax {
-			pair, ok := syntax.Datum().(Pair)
+			pair, ok = syntax.Datum().(Pair)
 			if !ok {
 				return nil, false, nil
 			}
-			first = syntax.PushOnto(pair.First)
-			rest = syntax.PushOnto(pair.Rest)
+			pair = syntax.PushDown().(Pair)
 		} else {
-			pair, ok := input.(Pair)
+			pair, ok = input.(Pair)
 			if !ok {
 				return nil, false, nil
 			}
-			first = pair.First
-			rest = pair.Rest
 		}
+		first := pair.First
+		rest := pair.Rest
 		firstResult, match, err := m.match(first, p.First)
 		if err != nil {
 			return nil, false, err
@@ -116,21 +115,14 @@ func (m *syntaxMatcher) matchEllipsis(input Datum, subpattern Datum, restpattern
 		var (
 			pair   Pair
 			isPair bool
-			first  Datum
-			rest   Datum
 		)
 		if isSyntax {
 			pair, isPair = syntax.Datum().(Pair)
 			if isPair {
-				first = syntax.PushOnto(pair.First)
-				rest = syntax.PushOnto(pair.Rest)
+				pair = syntax.PushDown().(Pair)
 			}
 		} else {
 			pair, isPair = input.(Pair)
-			if isPair {
-				first = pair.First
-				rest = pair.Rest
-			}
 		}
 		if !isPair {
 			restResult, ok, err := m.match(input, restpattern)
@@ -144,6 +136,8 @@ func (m *syntaxMatcher) matchEllipsis(input Datum, subpattern Datum, restpattern
 				break
 			}
 		}
+		first := pair.First
+		rest := pair.Rest
 		subresult, ok, err := m.match(first, subpattern)
 		if err != nil {
 			return nil, false, err

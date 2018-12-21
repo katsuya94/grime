@@ -223,7 +223,7 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 			return common.ErrorC(err)
 		} else if ok {
 			pattern = result[common.Symbol("pattern")]
-			fender = common.NewWrappedSyntax(common.Boolean(true))
+			fender = common.NewWrappedSyntax(common.Boolean(true), nil)
 			output = result[common.Symbol("output")]
 		} else if result, ok, err := common.MatchSyntax(clause, PatternSyntaxCaseClauseWithFender, nil); err != nil {
 			return common.ErrorC(err)
@@ -401,7 +401,7 @@ var temporaryIdentifiers int
 func generateTemporary() common.WrappedSyntax {
 	symbol := common.Symbol(fmt.Sprintf(".%v", temporaryIdentifiers))
 	temporaryIdentifiers++
-	return common.NewWrappedSyntax(symbol)
+	return common.NewWrappedSyntax(symbol, nil)
 }
 
 func generateTemporaries(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

@@ -152,7 +152,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			fender := form.Fenders[i]
 			output := form.Outputs[i]
 			for name, n := range patternVariables {
-				patternVariable := &common.PatternVariable{common.NewWrappedSyntax(common.Void), n}
+				patternVariable := &common.PatternVariable{nil, n}
 				bindings[name] = patternVariable
 				fender = syntaxSet(fender, name, patternVariable)
 				output = syntaxSet(output, name, patternVariable)
@@ -210,17 +210,34 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Pair:
 		ellipsis := 0
-		rest := datum.Rest
+		var (
+			first common.Datum
+			rest  common.Datum
+		)
+		if isSyntax {
+			pair := syntax.PushDown().(common.Pair)
+			first = pair.First
+			rest = pair.Rest
+		} else {
+			first = datum.First
+			rest = datum.Rest
+		}
 		for {
-			pair, ok := rest.(common.Pair)
-			if !ok {
-				break
+			var pair common.Pair
+			if syntax, ok := rest.(common.WrappedSyntax); ok {
+				_, ok := syntax.Datum().(common.Pair)
+				if !ok {
+					break
+				}
+				pair = syntax.PushDown().(common.Pair)
+			} else {
+				_, ok := rest.(common.Pair)
+				if !ok {
+					break
+				}
+				pair = rest.(common.Pair)
 			}
-			first := pair.First
-			if isSyntax {
-				first = syntax.PushOnto(first)
-			}
-			identifier, ok := first.(common.WrappedSyntax)
+			identifier, ok := pair.First.(common.WrappedSyntax)
 			if !ok {
 				break
 			}
@@ -234,17 +251,8 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 			ellipsis++
 			rest = pair.Rest
 		}
-		var (
-			firstTemplate common.Datum
-			restTemplate  common.Datum
-		)
-		if isSyntax {
-			firstTemplate = syntax.PushOnto(datum.First)
-			restTemplate = syntax.PushOnto(rest)
-		} else {
-			firstTemplate = datum.First
-			restTemplate = datum.Rest
-		}
+		firstTemplate := first
+		restTemplate := rest
 		firstCompiled, firstPatternVariables, err := compileTemplate(firstTemplate, phase)
 		if err != nil {
 			return nil, nil, err
@@ -323,8 +331,9 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 			restPattern  common.Datum
 		)
 		if isSyntax {
-			firstPattern = syntax.PushOnto(datum.First)
-			restPattern = syntax.PushOnto(datum.Rest)
+			pair := syntax.PushDown().(common.Pair)
+			firstPattern = pair.First
+			restPattern = pair.Rest
 		} else {
 			firstPattern = datum.First
 			restPattern = datum.Rest

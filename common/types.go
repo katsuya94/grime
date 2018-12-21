@@ -140,10 +140,11 @@ type WrappedSyntax struct {
 	phaseSubstitutions   []map[identifier]Location
 	marks                int
 	datum                Datum
+	sourceLocationTree   *SourceLocationTree
 }
 
-func NewWrappedSyntax(d Datum) WrappedSyntax {
-	return WrappedSyntax{make(map[identifier]Location), nil, 0, d}
+func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
+	return WrappedSyntax{make(map[identifier]Location), nil, 0, d, sourceLocationTree}
 }
 
 func (d WrappedSyntax) Write() string {
@@ -154,8 +155,35 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) PushOnto(datum Datum) WrappedSyntax {
-	return WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, d.marks, datum}
+func (d WrappedSyntax) SourceLocation() SourceLocation {
+	return d.sourceLocationTree.SourceLocation
+}
+
+func (d WrappedSyntax) SourceLocationTree() *SourceLocationTree {
+	return d.sourceLocationTree
+}
+
+func (d WrappedSyntax) PushDown() Datum {
+	switch datum := d.datum.(type) {
+	case Pair:
+		var (
+			firstSourceLocationTree *SourceLocationTree
+			restSourceLocationTree  *SourceLocationTree
+		)
+		if d.sourceLocationTree != nil {
+			first := d.sourceLocationTree.Children.(Pair).First.(SourceLocationTree)
+			firstSourceLocationTree = &first
+			rest := d.sourceLocationTree.Children.(Pair).Rest.(SourceLocationTree)
+			restSourceLocationTree = &rest
+		}
+		return Pair{d.pushOnto(datum.First, firstSourceLocationTree), d.pushOnto(datum.Rest, restSourceLocationTree)}
+	default:
+		panic(fmt.Sprintf("unhandled syntax #<%T>", datum))
+	}
+}
+
+func (d WrappedSyntax) pushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
+	return WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, d.marks, datum, sourceLocationTree}
 }
 
 func (d WrappedSyntax) IsIdentifier() bool {
@@ -213,13 +241,13 @@ func (d WrappedSyntax) DefinedAt(phase int) []WrappedSyntax {
 	}
 	var defined []WrappedSyntax
 	for id, _ := range d.phaseSubstitutions[phase] {
-		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, id.marks, id.name})
+		defined = append(defined, WrappedSyntax{d.lexicalSubstitutions, d.phaseSubstitutions, id.marks, id.name, nil})
 	}
 	return defined
 }
 
 func (d WrappedSyntax) GetAt(name Symbol, phase int) Location {
-	_, location := d.PushOnto(name).IdentifierAt(phase)
+	_, location := d.pushOnto(name, nil).IdentifierAt(phase)
 	return location
 }
 
@@ -229,7 +257,7 @@ func (d WrappedSyntax) Set(name Symbol, location Location) WrappedSyntax {
 		lexicalSubstitutions[id] = l
 	}
 	lexicalSubstitutions[identifier{name, d.marks}] = location
-	return WrappedSyntax{lexicalSubstitutions, d.phaseSubstitutions, d.marks, d.datum}
+	return WrappedSyntax{lexicalSubstitutions, d.phaseSubstitutions, d.marks, d.datum, d.sourceLocationTree}
 }
 
 func (d WrappedSyntax) SetAt(name Symbol, phase int, location Location) WrappedSyntax {
@@ -250,7 +278,7 @@ func (d WrappedSyntax) SetAt(name Symbol, phase int, location Location) WrappedS
 		phaseSubstitutions[phase] = make(map[identifier]Location, 1)
 	}
 	phaseSubstitutions[phase][identifier{name, d.marks}] = location
-	return WrappedSyntax{d.lexicalSubstitutions, phaseSubstitutions, d.marks, d.datum}
+	return WrappedSyntax{d.lexicalSubstitutions, phaseSubstitutions, d.marks, d.datum, d.sourceLocationTree}
 }
 
 // Function represents a Go function.

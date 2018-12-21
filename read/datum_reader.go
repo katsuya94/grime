@@ -14,6 +14,7 @@ const (
 	BRACKETS
 )
 
+// TODO: rename to SyntaxReader
 type DatumReader struct {
 	reader *LexemeReader
 }
@@ -22,7 +23,15 @@ func NewDatumReader(filename string, r io.Reader) *DatumReader {
 	return &DatumReader{NewLexemeReader(filename, r)}
 }
 
-func (d *DatumReader) ReadDatum() (common.Datum, common.SourceLocationTree, error) {
+func (d *DatumReader) ReadDatum() (common.WrappedSyntax, error) {
+	datum, sourceLocationTree, err := d.readDatum()
+	if err != nil {
+		return common.WrappedSyntax{}, err
+	}
+	return common.NewWrappedSyntax(datum, &sourceLocationTree), nil
+}
+
+func (d *DatumReader) readDatum() (common.Datum, common.SourceLocationTree, error) {
 	lexeme, sourceLocation, err := d.reader.ReadLexeme()
 	if err != nil {
 		return nil, common.SourceLocationTree{}, err
@@ -51,50 +60,50 @@ func (d *DatumReader) ReadDatum() (common.Datum, common.SourceLocationTree, erro
 		}
 		return datum, listSourceLocationTree(sourceLocation, endSourceLocation, sourceLocationTree.Children), nil
 	case Quote:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		// TODO: consider introducing a special kind of wrapped syntax so this always resolves
 		return common.Pair{common.Symbol("quote"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case Quasiquote:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("quasiquote"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case Unquote:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("unquote"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case UnquoteSplicing:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("unquote-splicing"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case Syntax:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("syntax"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case Quasisyntax:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("quasisyntax"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case Unsyntax:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
 		return common.Pair{common.Symbol("unsyntax"), common.Pair{datum, common.Null}}, abbreviationSourceLocationTree(sourceLocation, sourceLocationTree), nil
 	case UnsyntaxSplicing:
-		datum, sourceLocationTree, err := d.ReadDatum()
+		datum, sourceLocationTree, err := d.readDatum()
 		if err != nil {
 			return nil, common.SourceLocationTree{}, err
 		}
@@ -146,7 +155,7 @@ func abbreviationSourceLocationTree(sourceLocation common.SourceLocation, source
 }
 
 func (d *DatumReader) expectDatum() (common.Datum, common.SourceLocationTree, error) {
-	datum, sourceLocationTree, err := d.ReadDatum()
+	datum, sourceLocationTree, err := d.readDatum()
 	if err == io.EOF {
 		return nil, common.SourceLocationTree{}, NewUnexpectedEOFError(d.reader.sourceLocation())
 	} else if err != nil {
@@ -231,45 +240,50 @@ func (d *DatumReader) expectNonEOF() (Lexeme, common.SourceLocation, error) {
 	return lexeme, sourceLocation, nil
 }
 
-func Read(filename string, r io.Reader) ([]common.Datum, []common.SourceLocationTree, error) {
+func Read(filename string, r io.Reader) ([]common.WrappedSyntax, error) {
 	datumReader := NewDatumReader(filename, r)
 	var (
-		data                []common.Datum
-		sourceLocationTrees []common.SourceLocationTree
+		syntaxes []common.WrappedSyntax
 	)
 	for {
-		datum, sourceLocationTree, err := datumReader.ReadDatum()
+		syntax, err := datumReader.ReadDatum()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		data = append(data, datum)
-		sourceLocationTrees = append(sourceLocationTrees, sourceLocationTree)
+		syntaxes = append(syntaxes, syntax)
 	}
-	return data, sourceLocationTrees, nil
+	return syntaxes, nil
 }
 
-func ReadString(s string) ([]common.Datum, []common.SourceLocationTree, error) {
+func ReadString(s string) ([]common.WrappedSyntax, error) {
 	return Read("string", strings.NewReader(s))
 }
 
 func MustReadData(s string) []common.Datum {
-	data, _, err := ReadString(s)
+	syntaxes, err := ReadString(s)
 	if err != nil {
 		panic(err)
+	}
+	var data []common.Datum
+	for _, syntax := range syntaxes {
+		data = append(data, syntax.Datum())
 	}
 	return data
 }
 
 func MustReadDatum(s string) common.Datum {
-	data := MustReadData(s)
-	if len(data) != 1 {
-		panic(fmt.Sprintf("encountered %v data", len(data)))
+	syntaxes, err := ReadString(s)
+	if err != nil {
+		panic(err)
 	}
-	return data[0]
+	if len(syntaxes) != 1 {
+		panic(fmt.Sprintf("encountered %v data", len(syntaxes)))
+	}
+	return syntaxes[0].Datum()
 }
 
-func ReadBytes(b []byte) ([]common.Datum, []common.SourceLocationTree, error) {
+func ReadBytes(b []byte) ([]common.WrappedSyntax, error) {
 	return Read("bytes", bytes.NewReader(b))
 }
