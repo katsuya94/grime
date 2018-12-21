@@ -2,7 +2,6 @@ package read
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 )
 
@@ -41,12 +40,11 @@ func (c *CheckpointedRuneReader) ReadRune() (rune, error) {
 	return r, err
 }
 
-func (c *CheckpointedRuneReader) UnreadRune() error {
+func (c *CheckpointedRuneReader) UnreadRune() {
 	if c.i <= 0 {
-		return fmt.Errorf("lex: invalid use of UnreadRune")
+		panic("invalid use of UnreadRune")
 	}
 	c.i--
-	return nil
 }
 
 func (c *CheckpointedRuneReader) Checkpoint() {

@@ -7,3 +7,12 @@ func Errorf(format string, a ...interface{}) error {
 }
 
 var ErrUnexpectedEOF = Errorf("unexpected EOF")
+
+type ReadError struct {
+	SourceLocation
+	message string
+}
+
+func (e ReadError) Error() string {
+	return fmt.Sprintf("read: at %v:%v:%v: %v", e.File, e.Line+1, e.Column+1, e.message)
+}

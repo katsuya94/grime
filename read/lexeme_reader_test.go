@@ -172,7 +172,7 @@ func TestLex(t *testing.T) {
 			"#fn",
 			nil,
 			nil,
-			"read: expected delimiter",
+			"read: at string:1:3: expected delimiter",
 		},
 		{
 			"number",
@@ -221,7 +221,7 @@ func TestLex(t *testing.T) {
 			`#\x123456789abcdef`,
 			nil,
 			nil,
-			`read: invalid hex scalar value: 123456789abcdef`,
+			`read: at string:1:4: invalid hex scalar value: 123456789abcdef`,
 		},
 		{
 			"character named",
@@ -235,7 +235,7 @@ func TestLex(t *testing.T) {
 			`#\foo`,
 			nil,
 			nil,
-			`read: unrecognized character: #\foo`,
+			`read: at string:1:1: unrecognized character: #\foo`,
 		},
 		{
 			"string",
@@ -270,21 +270,21 @@ func TestLex(t *testing.T) {
 			`"\x6e"`,
 			nil,
 			nil,
-			"read: unexpected rune",
+			"read: at string:1:6: expected ;",
 		},
 		{
 			"string escape hex empty",
 			`"\x;"`,
 			nil,
 			nil,
-			"read: unexpected delimiter",
+			"read: at string:1:4: unexpected delimiter",
 		},
 		{
 			"string escape hex non hex digit",
 			`"\xg;"`,
 			nil,
 			nil,
-			"read: unexpected rune",
+			"read: at string:1:4: expected hex digit",
 		},
 		{
 			"string line ending",
