@@ -11,7 +11,7 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-var PatternTopLevelProgramImportForm = common.Pattern(read.MustReadString("(import import-spec ...)")[0])
+var PatternTopLevelProgramImportForm = common.Pattern(read.MustReadDatum("(import import-spec ...)"))
 
 type Runtime struct {
 	compiler   common.Compiler
@@ -90,7 +90,7 @@ func (r *Runtime) ExecuteFile(name string) error {
 	if err != nil {
 		return err
 	}
-	data, err := read.Read(f)
+	data, _, err := read.Read(sourcePath, f)
 	if err != nil {
 		return err
 	}

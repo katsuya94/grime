@@ -234,14 +234,11 @@ func TestEvaluateExpression(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			data, err := read.ReadString(test.val)
-			if err != nil {
-				t.Fatal(err)
-			} else if len(data) == 0 {
-				data = []common.Datum{nil}
+			var expected common.Datum
+			if test.val != "" {
+				expected = read.MustReadDatum(test.val)
 			}
-			expected := data[0]
-			sourceBody, err := read.ReadString(test.source)
+			sourceBody, _, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
 			}

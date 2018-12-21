@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/katsuya94/grime/common"
 )
 
 type LexemeReader struct {
@@ -22,38 +24,37 @@ func NewLexemeReader(file string, r io.Reader) *LexemeReader {
 	}
 }
 
-func (l *LexemeReader) ReadLexeme() (Lexeme, SourceLocation, error) {
+func (l *LexemeReader) ReadLexeme() (Lexeme, common.SourceLocation, error) {
 	if l.unread {
 		l.unread = false
-		return l.next, SourceLocation{}, nil
+		return l.next, common.SourceLocation{}, nil
 	}
 	if err := l.readInterlexemeSpace(); err != nil {
-		return nil, SourceLocation{}, err
+		return nil, common.SourceLocation{}, err
 	}
 	l.reader.Checkpoint()
-	sourceLocation := SourceLocation{
-		File:   l.file,
-		Line:   l.reader.Line(),
-		Column: l.reader.Column(),
-		Offset: l.reader.Offset(),
-	}
+	sourceLocation := l.sourceLocation()
 	lexeme, err := l.expectLexeme()
 	if err != nil {
-		return nil, SourceLocation{}, err
+		return nil, common.SourceLocation{}, err
 	}
 	sourceLocation.Length = l.reader.Offset() - sourceLocation.Offset
 	l.next = lexeme
 	return lexeme, sourceLocation, nil
 }
 
+func (l *LexemeReader) sourceLocation() common.SourceLocation {
+	return common.SourceLocation{
+		File:   l.file,
+		Line:   l.reader.Line(),
+		Column: l.reader.Column(),
+		Offset: l.reader.Offset(),
+	}
+}
+
 func (l *LexemeReader) errorf(format string, a ...interface{}) ReadError {
 	return ReadError{
-		SourceLocation{
-			File:   l.file,
-			Line:   l.reader.Line(),
-			Column: l.reader.Column(),
-			Offset: l.reader.Offset(),
-		},
+		l.sourceLocation(),
 		fmt.Sprintf(format, a...),
 	}
 }
@@ -105,7 +106,7 @@ func (l *LexemeReader) readInterlexemeSpace() error {
 				if err != nil {
 					return err
 				}
-				_, err = (&DatumReader{l}).expectDatum()
+				_, _, err = (&DatumReader{l}).expectDatum()
 				if err != nil {
 					return err
 				}
@@ -646,7 +647,7 @@ func (l *LexemeReader) expectNonEOF() (rune, error) {
 	} else if ok {
 		return r, nil
 	} else {
-		return 0, l.errorf("unexpected EOF")
+		return 0, NewUnexpectedEOFError(l.sourceLocation())
 	}
 }
 
@@ -668,11 +669,11 @@ func (l *LexemeReader) UnreadLexeme() {
 	l.unread = true
 }
 
-func Lex(file string, r io.Reader) ([]Lexeme, []SourceLocation, error) {
+func Lex(file string, r io.Reader) ([]Lexeme, []common.SourceLocation, error) {
 	lexemeReader := NewLexemeReader(file, r)
 	var (
 		lexemes         []Lexeme
-		sourceLocations []SourceLocation
+		sourceLocations []common.SourceLocation
 	)
 	for {
 		lexeme, sourceLocation, err := lexemeReader.ReadLexeme()
@@ -687,6 +688,6 @@ func Lex(file string, r io.Reader) ([]Lexeme, []SourceLocation, error) {
 	return lexemes, sourceLocations, nil
 }
 
-func LexString(s string) ([]Lexeme, []SourceLocation, error) {
+func LexString(s string) ([]Lexeme, []common.SourceLocation, error) {
 	return Lex("string", strings.NewReader(s))
 }

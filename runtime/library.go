@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	PatternLibrary      = common.Pattern(read.MustReadString("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)")[0])
-	PatternVersion      = common.Pattern(read.MustReadString("(sub-version ...)")[0])
-	PatternExportRename = common.Pattern(read.MustReadString("(rename (internal external) ...)")[0])
+	PatternLibrary      = common.Pattern(read.MustReadDatum("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)"))
+	PatternVersion      = common.Pattern(read.MustReadDatum("(sub-version ...)"))
+	PatternExportRename = common.Pattern(read.MustReadDatum("(rename (internal external) ...)"))
 )
 
 type Library struct {
@@ -86,11 +86,7 @@ func NewLibrary(source common.Datum) (*Library, error) {
 }
 
 func MustNewLibraryFromString(name string, src string) *Library {
-	data := read.MustReadString(src)
-	if len(data) != 1 {
-		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
-	}
-	return MustNewLibrary(data[0])
+	return MustNewLibrary(read.MustReadDatum(src))
 }
 
 func MustNewLibraryFromFile(name string) *Library {
@@ -103,7 +99,10 @@ func MustNewLibraryFromFile(name string) *Library {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load %v: %v", name, err))
 	}
-	data := read.MustRead(f)
+	data, _, err := read.Read(sourcePath, f)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %v: %v", name, err))
+	}
 	if len(data) != 1 {
 		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(data)))
 	}

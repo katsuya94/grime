@@ -1,4 +1,4 @@
-package read
+package common
 
 type SourceLocation struct {
 	File   string
@@ -6,4 +6,9 @@ type SourceLocation struct {
 	Column int
 	Offset int
 	Length int
+}
+
+type SourceLocationTree struct {
+	SourceLocation
+	Children Datum
 }

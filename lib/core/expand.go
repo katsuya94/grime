@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	PatternMacroUseList                = common.Pattern(read.MustReadString("(keyword _ ...)")[0])
-	PatternMacroUseImproperList        = common.Pattern(read.MustReadString("(keyword _ ... . _)")[0])
-	PatternMacroUseSingletonIdentifier = common.Pattern(read.MustReadString("keyword")[0])
-	PatternMacroUseSet                 = common.Pattern(read.MustReadString("(set! keyword _)")[0])
-	PatternApplication                 = common.Pattern(read.MustReadString("(procedure arguments ...)")[0])
+	PatternMacroUseList                = common.Pattern(read.MustReadDatum("(keyword _ ...)"))
+	PatternMacroUseImproperList        = common.Pattern(read.MustReadDatum("(keyword _ ... . _)"))
+	PatternMacroUseSingletonIdentifier = common.Pattern(read.MustReadDatum("keyword"))
+	PatternMacroUseSet                 = common.Pattern(read.MustReadDatum("(set! keyword _)"))
+	PatternApplication                 = common.Pattern(read.MustReadDatum("(procedure arguments ...)"))
 )
 
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {

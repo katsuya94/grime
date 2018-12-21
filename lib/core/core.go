@@ -55,18 +55,18 @@ func init() {
 }
 
 var (
-	PatternQuote                      = common.Pattern(read.MustReadString("(quote datum)")[0])
-	PatternSyntax                     = common.Pattern(read.MustReadString("(syntax datum)")[0])
-	PatternIf                         = common.Pattern(read.MustReadString("(if condition then else)")[0])
-	PatternLet                        = common.Pattern(read.MustReadString("(let (name init) body ...)")[0])
-	PatternBegin                      = common.Pattern(read.MustReadString("(begin body ...)")[0])
-	PatternLambda                     = common.Pattern(read.MustReadString("(lambda (formals ...) body ...)")[0])
-	PatternDefine                     = common.Pattern(read.MustReadString("(~define name value)")[0])
-	PatternDefineSyntax               = common.Pattern(read.MustReadString("(define-syntax name value)")[0])
-	PatternSyntaxCase                 = common.Pattern(read.MustReadString("(syntax-case input (literal ...) clause ...)")[0])
-	PatternSyntaxCaseClause           = common.Pattern(read.MustReadString("(pattern output)")[0])
-	PatternSyntaxCaseClauseWithFender = common.Pattern(read.MustReadString("(pattern fender output)")[0])
-	PatternSet                        = common.Pattern(read.MustReadString("(set! name expression)")[0])
+	PatternQuote                      = common.Pattern(read.MustReadDatum("(quote datum)"))
+	PatternSyntax                     = common.Pattern(read.MustReadDatum("(syntax datum)"))
+	PatternIf                         = common.Pattern(read.MustReadDatum("(if condition then else)"))
+	PatternLet                        = common.Pattern(read.MustReadDatum("(let (name init) body ...)"))
+	PatternBegin                      = common.Pattern(read.MustReadDatum("(begin body ...)"))
+	PatternLambda                     = common.Pattern(read.MustReadDatum("(lambda (formals ...) body ...)"))
+	PatternDefine                     = common.Pattern(read.MustReadDatum("(~define name value)"))
+	PatternDefineSyntax               = common.Pattern(read.MustReadDatum("(define-syntax name value)"))
+	PatternSyntaxCase                 = common.Pattern(read.MustReadDatum("(syntax-case input (literal ...) clause ...)"))
+	PatternSyntaxCaseClause           = common.Pattern(read.MustReadDatum("(pattern output)"))
+	PatternSyntaxCaseClauseWithFender = common.Pattern(read.MustReadDatum("(pattern fender output)"))
+	PatternSet                        = common.Pattern(read.MustReadDatum("(set! name expression)"))
 )
 
 func transformQuote(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

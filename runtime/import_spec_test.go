@@ -292,13 +292,7 @@ func TestImportSpec_resolve(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			data, err := read.ReadString(test.source)
-			if err != nil {
-				t.Fatal(err)
-			} else if len(data) != 1 {
-				t.Fatalf("encountered %v data in pattern", len(data))
-			}
-			spec, err := newImportSpec(common.NewWrappedSyntax(data[0]))
+			spec, err := newImportSpec(common.NewWrappedSyntax(read.MustReadDatum(test.source)))
 			if err != nil {
 				t.Fatal(err)
 			}

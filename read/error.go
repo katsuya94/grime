@@ -1,18 +1,29 @@
 package read
 
-import "fmt"
+import (
+	"fmt"
 
-func Errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("read: "+format, a...)
-}
-
-var ErrUnexpectedEOF = Errorf("unexpected EOF")
+	"github.com/katsuya94/grime/common"
+)
 
 type ReadError struct {
-	SourceLocation
+	common.SourceLocation
 	message string
 }
 
 func (e ReadError) Error() string {
 	return fmt.Sprintf("read: at %v:%v:%v: %v", e.File, e.Line+1, e.Column+1, e.message)
+}
+
+type UnexpectedEOFError struct {
+	ReadError
+}
+
+func NewUnexpectedEOFError(sourceLocation common.SourceLocation) UnexpectedEOFError {
+	return UnexpectedEOFError{
+		ReadError{
+			sourceLocation,
+			"unexpected EOF",
+		},
+	}
 }

@@ -70,16 +70,16 @@ func readREPLData(r io.Reader) ([]common.Datum, error) {
 	for {
 		if scanner.Scan() {
 			source = append(source, scanner.Bytes()...)
-			if data, err := read.ReadBytes(source); err == nil {
+			if data, _, err := read.ReadBytes(source); err == nil {
 				return data, nil
-			} else if err != read.ErrUnexpectedEOF {
+			} else if _, ok := err.(read.UnexpectedEOFError); !ok {
 				return nil, err
 			}
 		} else if err := scanner.Err(); err != nil {
 			return nil, err
 		} else {
 			source = append(source, scanner.Bytes()...)
-			if data, err := read.ReadBytes(source); data == nil && err == nil {
+			if data, _, err := read.ReadBytes(source); data == nil && err == nil {
 				return nil, io.EOF
 			} else {
 				return data, err

@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -34,15 +33,11 @@ func comparable() common.Expression {
 }
 
 func data(source string) []common.Datum {
-	return read.MustReadString(source)
+	return read.MustReadData(source)
 }
 
 func datum(source string) common.Datum {
-	data := data(source)
-	if len(data) != 1 {
-		panic(fmt.Sprintf("read %v data", len(data)))
-	}
-	return data[0]
+	return read.MustReadDatum(source)
 }
 
 func wrap(datum common.Datum) common.WrappedSyntax {

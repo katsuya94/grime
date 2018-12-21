@@ -450,13 +450,7 @@ func TestNewLibrary(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			data, err := read.ReadString(test.source)
-			if err != nil {
-				t.Fatal(err)
-			} else if len(data) != 1 {
-				t.Fatalf("encountered %v data in source", len(data))
-			}
-			actual, err := NewLibrary(data[0])
+			actual, err := NewLibrary(read.MustReadDatum(test.source))
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

@@ -123,7 +123,7 @@ func TestCompile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sourceBody, err := read.ReadString(test.source)
+			sourceBody, _, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
 			}

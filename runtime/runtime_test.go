@@ -116,13 +116,7 @@ func TestRuntime_Execute(t *testing.T) {
 			runtime.MustProvide(core.Library)
 			runtime.MustBind(core.Library.Name(), core.Bindings)
 			for _, librarySource := range test.librarySources {
-				data, err := read.ReadString(librarySource)
-				if err != nil {
-					t.Fatal(err)
-				} else if len(data) != 1 {
-					t.Fatalf("encountered %v data in pattern", len(data))
-				}
-				library, err := NewLibrary(data[0])
+				library, err := NewLibrary(read.MustReadDatum(librarySource))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -131,11 +125,8 @@ func TestRuntime_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			program, err := read.ReadString(test.source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = runtime.Execute(program)
+			program := read.MustReadData(test.source)
+			err := runtime.Execute(program)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

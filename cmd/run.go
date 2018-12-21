@@ -24,7 +24,7 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		topLevelProgram, err := read.Read(f)
+		topLevelProgram, _, err := read.Read(args[0], f)
 		if err != nil {
 			return err
 		}

@@ -300,20 +300,8 @@ func TestMatchSyntax(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			data, err := read.ReadString(test.input)
-			if err != nil {
-				t.Fatal(err)
-			} else if len(data) != 1 {
-				t.Fatalf("encountered %v data in input", len(data))
-			}
-			input := NewWrappedSyntax(data[0])
-			data, err = read.ReadString(test.pattern)
-			if err != nil {
-				t.Fatal(err)
-			} else if len(data) != 1 {
-				t.Fatalf("encountered %v data in pattern", len(data))
-			}
-			pattern := Pattern(data[0])
+			input := NewWrappedSyntax(read.MustReadDatum(test.input))
+			pattern := Pattern(read.MustReadDatum(test.pattern))
 			result, ok, err := MatchSyntax(input, pattern, test.literals)
 			if test.error == "" && err != nil {
 				t.Fatal(err)
