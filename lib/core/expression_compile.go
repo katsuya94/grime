@@ -180,7 +180,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			case common.Null, common.Void:
 				return Literal{datum}, nil
 			default:
-				return nil, fmt.Errorf("compile: unhandled literal %#v", datum)
+				return nil, fmt.Errorf("compile: unhandled literal %v", common.Write(datum))
 			}
 		}
 	default:
