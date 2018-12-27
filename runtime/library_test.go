@@ -59,10 +59,24 @@ func TestNewLibrary(t *testing.T) {
 		},
 		{
 			"non-empty library",
-			"(library (name) (export) (import) 'id)",
+			"(library (name) (export) (import) id)",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				body: []common.Datum{common.Pair{common.Symbol("quote"), common.Pair{common.Symbol("id"), common.Null}}},
+				body: []common.WrappedSyntax{
+					common.NewWrappedSyntax(
+						common.Symbol("id"),
+						&common.SourceLocationTree{
+							common.SourceLocation{
+								File:   "string",
+								Line:   0,
+								Column: 34,
+								Offset: 34,
+								Length: 2,
+							},
+							nil,
+						},
+					),
+				},
 			},
 			"",
 		},
@@ -450,15 +464,23 @@ func TestNewLibrary(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual, err := NewLibrary(read.MustReadDatum(test.source))
+			syntax := read.MustReadSyntax(test.source)
+			actual, err := NewLibrary(syntax)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
 				}
 			} else if err != nil {
 				t.Fatal(err)
-			} else if !reflect.DeepEqual(actual, test.expected) {
-				t.Fatalf("\nexpected: %#v\n     got: %#v", test.expected, actual)
+			} else {
+				null := syntax
+				for null.Datum() != common.Null {
+					null = null.PushDown().(common.Pair).Rest.(common.WrappedSyntax)
+				}
+				test.expected.nullSourceLocationTree = *null.SourceLocationTree()
+				if !reflect.DeepEqual(actual, test.expected) {
+					t.Errorf("\nexpected: %#v\n     got: %#v", test.expected, actual)
+				}
 			}
 		})
 	}

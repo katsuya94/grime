@@ -24,10 +24,10 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		topLevelProgram, _, err := read.Read(args[0], f)
+		topLevelProgram, nullSourceLocationTree, err := read.Read(args[0], f)
 		if err != nil {
 			return err
 		}
-		return rt.Execute(topLevelProgram)
+		return rt.Execute(topLevelProgram, nullSourceLocationTree)
 	},
 }

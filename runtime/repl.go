@@ -15,7 +15,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	for {
 		fmt.Fprintf(w, "grime:%v> ", len(forms))
 		eof := false
-		syntaxes, err := readREPLSyntaxes(r)
+		syntaxes, nullSourceLocationTree, err := readREPLSyntaxes(r)
 		if err == io.EOF {
 			if len(forms) == 0 {
 				break
@@ -27,7 +27,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		body := common.Body(syntaxes...)
+		body := common.Body(nullSourceLocationTree, syntaxes...)
 		for phase, locations := range bindings {
 			for name, location := range locations {
 				body = body.SetAt(name, phase, location)
@@ -62,26 +62,26 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	}
 }
 
-func readREPLSyntaxes(r io.Reader) ([]common.WrappedSyntax, error) {
+func readREPLSyntaxes(r io.Reader) ([]common.WrappedSyntax, common.SourceLocationTree, error) {
 	var source []byte
 	scanner := bufio.NewScanner(r)
 	scanner.Split(splitReplLines)
 	for {
 		if scanner.Scan() {
 			source = append(source, scanner.Bytes()...)
-			if syntaxes, err := read.ReadBytes(source); err == nil {
-				return syntaxes, nil
+			if syntaxes, nullSourceLocationTree, err := read.ReadBytes(source); err == nil {
+				return syntaxes, nullSourceLocationTree, nil
 			} else if _, ok := err.(read.UnexpectedEOFError); !ok {
-				return nil, err
+				return nil, common.SourceLocationTree{}, err
 			}
 		} else if err := scanner.Err(); err != nil {
-			return nil, err
+			return nil, common.SourceLocationTree{}, err
 		} else {
 			source = append(source, scanner.Bytes()...)
-			if syntaxes, err := read.ReadBytes(source); syntaxes == nil && err == nil {
-				return nil, io.EOF
+			if syntaxes, nullSourceLocationTree, err := read.ReadBytes(source); syntaxes == nil && err == nil {
+				return nil, nullSourceLocationTree, io.EOF
 			} else {
-				return syntaxes, err
+				return syntaxes, common.SourceLocationTree{}, err
 			}
 		}
 	}

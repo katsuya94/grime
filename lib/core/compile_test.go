@@ -122,11 +122,8 @@ func TestCompile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			syntaxes, err := read.ReadString(test.source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			body := common.Body(syntaxes...)
+			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
+			body := common.Body(nullSourceLocationTree, syntaxes...)
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)
@@ -135,7 +132,7 @@ func TestCompile(t *testing.T) {
 			// Make lambda, syntax available at phase 1
 			body = body.SetAt(common.Symbol("lambda"), 1, Bindings[0][common.Symbol("lambda")])
 			body = body.SetAt(common.Symbol("syntax"), 1, Bindings[0][common.Symbol("syntax")])
-			_, _, err = Compile(body)
+			_, _, err := Compile(body)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

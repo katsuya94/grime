@@ -237,11 +237,8 @@ func TestEvaluateExpression(t *testing.T) {
 			if test.val != "" {
 				expected = read.MustReadDatum(test.val)
 			}
-			syntaxes, err := read.ReadString(test.source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			body := common.Body(syntaxes...)
+			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
+			body := common.Body(nullSourceLocationTree, syntaxes...)
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)

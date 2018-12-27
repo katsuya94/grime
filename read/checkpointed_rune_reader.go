@@ -61,7 +61,11 @@ func (c *CheckpointedRuneReader) Return() {
 
 func (c *CheckpointedRuneReader) Line() int {
 	line := c.line
-	for j := 0; j < c.i; j++ {
+	n := c.i
+	if n > len(c.buf) {
+		n = len(c.buf)
+	}
+	for j := 0; j < n; j++ {
 		if c.buf[j] == '\n' {
 			line++
 		}
@@ -71,13 +75,18 @@ func (c *CheckpointedRuneReader) Line() int {
 
 func (c *CheckpointedRuneReader) Column() int {
 	column := c.column
-	for j := 0; j < c.i; j++ {
+	n := c.i
+	if n > len(c.buf) {
+		n = len(c.buf)
+	}
+	for j := 0; j < n; j++ {
 		if c.buf[j] == '\n' {
 			column = 0
 		} else {
 			column++
 		}
 	}
+	column += c.i - n
 	return column
 }
 

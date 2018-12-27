@@ -55,7 +55,7 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 	}
 }
 
-func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
+func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax, nullSourceLocationTree common.SourceLocationTree) error {
 	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
@@ -73,6 +73,7 @@ func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax) error {
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	library.body = topLevelProgram[1:]
+	library.nullSourceLocationTree = nullSourceLocationTree
 	err = r.Provide(&library)
 	if err != nil {
 		return err
@@ -90,11 +91,11 @@ func (r *Runtime) ExecuteFile(name string) error {
 	if err != nil {
 		return err
 	}
-	syntaxes, err := read.Read(sourcePath, f)
+	syntaxes, nullSourceLocationTree, err := read.Read(sourcePath, f)
 	if err != nil {
 		return err
 	}
-	return r.Execute(syntaxes)
+	return r.Execute(syntaxes, nullSourceLocationTree)
 }
 
 func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingSet, error) {
@@ -171,8 +172,8 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, nil))
-	body := common.Body(syntaxes...)
+	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree))
+	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {

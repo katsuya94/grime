@@ -19,11 +19,12 @@ var (
 )
 
 type Library struct {
-	name        []common.Symbol
-	version     []subVersion
-	importSpecs []importSpec
-	exportSpecs []identifierBinding
-	body        []common.WrappedSyntax
+	name                   []common.Symbol
+	version                []subVersion
+	importSpecs            []importSpec
+	exportSpecs            []identifierBinding
+	body                   []common.WrappedSyntax
+	nullSourceLocationTree common.SourceLocationTree
 }
 
 func NewLibrary(source common.WrappedSyntax) (*Library, error) {
@@ -84,11 +85,16 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 	for _, d := range result[common.Symbol("body")].([]interface{}) {
 		library.body = append(library.body, d.(common.WrappedSyntax))
 	}
+	null := source
+	for null.Datum() != common.Null {
+		null = null.PushDown().(common.Pair).Rest.(common.WrappedSyntax)
+	}
+	library.nullSourceLocationTree = *null.SourceLocationTree()
 	return &library, nil
 }
 
 func MustNewLibraryFromReader(name string, r io.Reader) *Library {
-	syntaxes, err := read.Read(name, r)
+	syntaxes, _, err := read.Read(name, r)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load %v: %v", name, err))
 	}

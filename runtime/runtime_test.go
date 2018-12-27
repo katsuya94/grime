@@ -116,7 +116,7 @@ func TestRuntime_Execute(t *testing.T) {
 			runtime.MustProvide(core.Library)
 			runtime.MustBind(core.Library.Name(), core.Bindings)
 			for _, librarySource := range test.librarySources {
-				library, err := NewLibrary(read.MustReadDatum(librarySource))
+				library, err := NewLibrary(read.MustReadSyntax(librarySource))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -125,8 +125,8 @@ func TestRuntime_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			program := read.MustReadData(test.source)
-			err := runtime.Execute(program)
+			program, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
+			err := runtime.Execute(program, nullSourceLocationTree)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

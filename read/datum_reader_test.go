@@ -1,6 +1,7 @@
 package read
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -151,7 +152,7 @@ func TestRead(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			syntaxes, err := ReadString(test.source)
+			syntaxes, nullSourceLocationTree, err := ReadString(test.source)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -172,6 +173,10 @@ func TestRead(t *testing.T) {
 				}
 				if !reflect.DeepEqual(sourceLocationTrees, test.sourceLocationTrees) {
 					t.Errorf("\nexpected: %#v\n     got: %#v", test.sourceLocationTrees, sourceLocationTrees)
+				}
+				expectedNullSourceLocationTree := slt(sl(fmt.Sprintf("0:%d:%d:0", len(test.source)+1, len(test.source)+1)), nil)
+				if !reflect.DeepEqual(nullSourceLocationTree, expectedNullSourceLocationTree) {
+					t.Errorf("\nexpected: %#v\n     got: %#v", expectedNullSourceLocationTree, nullSourceLocationTree)
 				}
 			}
 		})

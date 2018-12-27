@@ -292,7 +292,7 @@ func TestImportSpec_resolve(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			spec, err := newImportSpec(common.NewWrappedSyntax(read.MustReadDatum(test.source)))
+			spec, err := newImportSpec(read.MustReadSyntax(test.source))
 			if err != nil {
 				t.Fatal(err)
 			}
