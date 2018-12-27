@@ -6,7 +6,6 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 func TestCompile(t *testing.T) {
@@ -123,11 +122,11 @@ func TestCompile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sourceBody, _, err := read.ReadString(test.source)
+			syntaxes, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
 			}
-			body := common.NewWrappedSyntax(util.List(sourceBody...))
+			body := common.Body(syntaxes...)
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)

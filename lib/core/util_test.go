@@ -41,7 +41,7 @@ func datum(source string) common.Datum {
 }
 
 func wrap(datum common.Datum) common.WrappedSyntax {
-	return common.NewWrappedSyntax(datum)
+	return common.NewWrappedSyntax(datum, nil)
 }
 
 func assertNoError(t *testing.T, err error) {

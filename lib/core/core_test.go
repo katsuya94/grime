@@ -7,7 +7,6 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 func TestEvaluateExpression(t *testing.T) {
@@ -238,11 +237,11 @@ func TestEvaluateExpression(t *testing.T) {
 			if test.val != "" {
 				expected = read.MustReadDatum(test.val)
 			}
-			sourceBody, _, err := read.ReadString(test.source)
+			syntaxes, err := read.ReadString(test.source)
 			if err != nil {
 				t.Fatal(err)
 			}
-			body := common.NewWrappedSyntax(util.List(sourceBody...))
+			body := common.Body(syntaxes...)
 			for phase, locations := range Bindings {
 				for name, location := range locations {
 					body = body.SetAt(name, phase, location)
