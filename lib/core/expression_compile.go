@@ -96,7 +96,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	case ReferenceForm:
 		name, location := form.Identifier.IdentifierAt(compiler.Phase)
 		if location == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v", name)
+			return nil, fmt.Errorf("compile: unbound identifier %v at %v", name, form.Identifier.SourceLocation())
 		}
 		variable, ok := location.(*common.Variable)
 		if !ok {
@@ -106,7 +106,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	case SetForm:
 		name, location := form.Identifier.IdentifierAt(compiler.Phase)
 		if location == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v", name)
+			return nil, fmt.Errorf("compile: unbound identifier %v at %v", name, form.Identifier.SourceLocation())
 		}
 		variable, ok := location.(*common.Variable)
 		if !ok {

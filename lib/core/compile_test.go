@@ -57,12 +57,12 @@ func TestCompile(t *testing.T) {
 		{
 			"lambda does not leak enclosing context",
 			"((~let (x 'foo) (lambda () x))) x",
-			"compile: unbound identifier x",
+			"compile: unbound identifier x at string:1:33",
 		},
 		{
 			"lambda does not leak arguments",
 			"((lambda (x) x) 'foo) x",
-			"compile: unbound identifier x",
+			"compile: unbound identifier x at string:1:23",
 		},
 		{
 			"define-syntax",

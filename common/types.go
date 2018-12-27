@@ -156,6 +156,9 @@ func (d WrappedSyntax) Datum() Datum {
 }
 
 func (d WrappedSyntax) SourceLocation() SourceLocation {
+	if d.sourceLocationTree == nil {
+		return SourceLocation{}
+	}
 	return d.sourceLocationTree.SourceLocation
 }
 

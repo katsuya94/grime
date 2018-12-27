@@ -12,7 +12,7 @@ type ReadError struct {
 }
 
 func (e ReadError) Error() string {
-	return fmt.Sprintf("read: at %v:%v:%v: %v", e.File, e.Line+1, e.Column+1, e.message)
+	return fmt.Sprintf("read: at %v: %v", e.String(), e.message)
 }
 
 type UnexpectedEOFError struct {

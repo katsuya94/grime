@@ -307,7 +307,7 @@ func TestExpressionCompile_ReferenceUnbound(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	identifier := wrap(datum("id"))
 	_, err := ExpressionCompile(compiler, ReferenceForm{identifier})
-	assertEquals(t, err.Error(), "compile: unbound identifier id")
+	assertEquals(t, err.Error(), "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_ReferenceNonVariable(t *testing.T) {
@@ -335,7 +335,7 @@ func TestExpressionCompile_SetUnbound(t *testing.T) {
 	identifier := wrap(datum("id"))
 	valueExpression := comparable()
 	_, err := ExpressionCompile(compiler, SetForm{identifier, valueExpression})
-	assertEquals(t, err.Error(), "compile: unbound identifier id")
+	assertEquals(t, err.Error(), "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_SetNonVariable(t *testing.T) {

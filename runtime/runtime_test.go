@@ -73,7 +73,7 @@ func TestRuntime_Execute(t *testing.T) {
 			(import (test))
 			(hello-world)
 			`,
-			"runtime: compile: unbound identifier hello-world",
+			"runtime: compile: unbound identifier hello-world at string:3:5",
 		},
 		{
 			"hello world import renamed",
@@ -107,7 +107,7 @@ func TestRuntime_Execute(t *testing.T) {
 			(import (rename (test) (hello-world greeting)))
 			(hello-world)
 			`,
-			"runtime: compile: unbound identifier hello-world",
+			"runtime: compile: unbound identifier hello-world at string:3:5",
 		},
 	}
 	for _, test := range tests {
