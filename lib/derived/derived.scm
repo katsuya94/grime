@@ -18,6 +18,9 @@
   (import
     (for (core) run)
     (for (only (core)
+           quote
+           write
+
            syntax
            begin
            ~let
@@ -50,6 +53,10 @@
 
   (define-syntax let*
     (lambda (x)
+      (write 'let*)
+      (write #\newline)
+      (write x)
+      (write #\newline)
       (syntax-case x ()
         [(_ () b1 b2 ...) #'(begin b1 b2 ...)]
         [(_ ((i1 e1) (i2 e2) ...) b1 b2 ...)
@@ -71,6 +78,10 @@
 
   (define-syntax let
     (lambda (x)
+      (write 'let)
+      (write #\newline)
+      (write x)
+      (write #\newline)
       (syntax-case x ()
        [(_ ((i e) ...) b1 b2 ...)
         (with-syntax
@@ -100,6 +111,10 @@
 
   (define-syntax or
     (lambda (x)
+      (write 'or)
+      (write #\newline)
+      (write x)
+      (write #\newline)
       (syntax-case x ()
         [(_ ) #'#f]
         [(_ e) #'e]
