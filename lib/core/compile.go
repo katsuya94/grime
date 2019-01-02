@@ -1,8 +1,23 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/katsuya94/grime/common"
 )
+
+type ExpressionCompileError struct {
+	err            error
+	context        string
+	sourceLocation common.SourceLocation
+}
+
+func (err ExpressionCompileError) Error() string {
+	if (err.sourceLocation == common.SourceLocation{}) {
+		return err.err.Error()
+	}
+	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
+}
 
 type BodyCompiler func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error)
 type ExpressionCompiler func(compiler Compiler, form common.Datum) (common.Expression, error)

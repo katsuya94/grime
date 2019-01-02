@@ -96,6 +96,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	case ReferenceForm:
 		name, location := form.Identifier.IdentifierAt(compiler.Phase)
 		if location == nil {
+			panic(fmt.Sprintf("%v", form.Identifier.LexicalSubstitutions()))
 			return nil, fmt.Errorf("compile: unbound identifier %v at %v", name, form.Identifier.SourceLocation())
 		}
 		variable, ok := location.(*common.Variable)

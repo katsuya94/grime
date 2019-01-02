@@ -147,6 +147,15 @@ func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSy
 	return WrappedSyntax{make(map[identifier]Location), nil, 0, d, sourceLocationTree}
 }
 
+// TODO: delete
+func (d WrappedSyntax) LexicalSubstitutions() string {
+	s := ""
+	for id := range d.lexicalSubstitutions {
+		s += fmt.Sprintf("%v@%v\n", id.name, id.marks)
+	}
+	return s
+}
+
 func (d WrappedSyntax) Write() string {
 	return fmt.Sprintf("#<syntax: %v>", Write(d.datum))
 }

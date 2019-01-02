@@ -47,22 +47,22 @@ func TestCompile(t *testing.T) {
 		{
 			"body forms after expression in begin",
 			"(begin 'foo (~define x 'bar))",
-			"compile: unexpected form in expression context: #<core.DefineForm>",
+			"in body expression expanded from string:1:1: in body expression expanded from string:1:13: compile: unexpected form in expression context: #<core.DefineForm>",
 		},
 		{
 			"empty lambda",
 			"(lambda ())",
-			"unexpected final form",
+			"in body expression expanded from string:1:1: unexpected final form",
 		},
 		{
 			"lambda does not leak enclosing context",
 			"((~let (x 'foo) (lambda () x))) x",
-			"compile: unbound identifier x at string:1:33",
+			"in body expression expanded from string:1:33: compile: unbound identifier x at string:1:33",
 		},
 		{
 			"lambda does not leak arguments",
 			"((lambda (x) x) 'foo) x",
-			"compile: unbound identifier x at string:1:23",
+			"in body expression expanded from string:1:23: compile: unbound identifier x at string:1:23",
 		},
 		{
 			"define-syntax",
@@ -87,37 +87,37 @@ func TestCompile(t *testing.T) {
 		{
 			"ellipsis outside pair",
 			"(syntax-case #'foo () (_ #'...))",
-			"compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
 		},
 		{
 			"ellipsis in first position",
 			"(syntax-case #'foo () (_ #'(...)))",
-			"compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
 		},
 		{
 			"ellipsis in rest position",
 			"(syntax-case #'foo () (id #'(id . ...)))",
-			"compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
 		},
 		{
 			"not enough ellipsis",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'(id ...)))",
-			"compile: encountered unexpanded pattern variable",
+			"in body expression expanded from string:1:1: compile: encountered unexpanded pattern variable",
 		},
 		{
 			"not enough ellipsis nested",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'((id) ...)))",
-			"compile: encountered unexpanded pattern variable",
+			"in body expression expanded from string:1:1: compile: encountered unexpanded pattern variable",
 		},
 		{
 			"no pattern variable",
 			"(syntax-case #'(foo) () ((_ ...) #'(bar ...)))",
-			"compile: syntax subtemplate must contain a pattern variable",
+			"in body expression expanded from string:1:1: compile: syntax subtemplate must contain a pattern variable",
 		},
 		{
 			"no pattern variable determining expansion count",
 			"(syntax-case #'(foo) () ((id ...) #'(id ... ...)))",
-			"compile: syntax subtemplate must contain a pattern variable determining expansion count",
+			"in body expression expanded from string:1:1: compile: syntax subtemplate must contain a pattern variable determining expansion count",
 		},
 	}
 	for _, test := range tests {

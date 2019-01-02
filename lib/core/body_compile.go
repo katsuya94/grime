@@ -8,10 +8,15 @@ import (
 
 func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
 	var (
-		i                   int
-		definitionVariables []*common.Variable
-		definitionForms     []common.Datum
+		i                         int
+		sourceLocations           []common.SourceLocation
+		definitionVariables       []*common.Variable
+		definitionForms           []common.Datum
+		definitionSourceLocations []common.SourceLocation
 	)
+	for _, form := range forms {
+		sourceLocations = append(sourceLocations, sourceLocation(form))
+	}
 	// Expand and handle definitions, deferring expansion of variable definitions.
 	for i = 0; i < len(forms); i++ {
 		processed := false
@@ -28,7 +33,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 				}
 				expression, err := compiler.Next().ExpressionCompile(form)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}
 				value, err := common.EvaluateOnce(expression)
 				if err != nil {
@@ -45,6 +50,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 				variable := &common.Variable{}
 				definitionVariables = append(definitionVariables, variable)
 				definitionForms = append(definitionForms, form)
+				definitionSourceLocations = append(definitionSourceLocations, sourceLocations[i])
 				err := define(v.Identifier, compiler.Phase, variable, &form, forms[i+1:], definitionForms, &defined)
 				if err != nil {
 					return nil, nil, err
@@ -56,10 +62,21 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 					expression = true
 					break
 				}
+				beginSourceLocation := sourceLocations[i]
 				following := forms[i+1:]
+				followingSourceLocations := sourceLocations[i+1:]
 				forms = forms[0:i]
+				sourceLocations = sourceLocations[0:i]
 				forms = append(forms, v.Forms...)
+				for _, form := range v.Forms {
+					sl := sourceLocation(form)
+					if (sl == common.SourceLocation{}) {
+						sl = beginSourceLocation
+					}
+					sourceLocations = append(sourceLocations, sl)
+				}
 				forms = append(forms, following...)
+				sourceLocations = append(sourceLocations, followingSourceLocations...)
 				i--
 				processed = true
 			case LetSyntaxForm:
@@ -85,7 +102,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 	for i := range definitionVariables {
 		expression, err := compiler.ExpressionCompile(definitionForms[i])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, ExpressionCompileError{err, "right-hand side of definition", definitionSourceLocations[i]}
 		}
 		expressions = append(expressions, Define{definitionVariables[i], expression})
 	}
@@ -93,10 +110,10 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 	if len(forms[i:]) == 0 {
 		return nil, nil, common.ErrUnexpectedFinalForm
 	}
-	for _, form := range forms[i:] {
-		expression, err := compiler.ExpressionCompile(form)
+	for j := i; j < len(forms); j++ {
+		expression, err := compiler.ExpressionCompile(forms[j])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, ExpressionCompileError{err, "body expression", sourceLocations[j]}
 		}
 		expressions = append(expressions, expression)
 	}
@@ -107,6 +124,13 @@ func BodyCompile(compiler Compiler, forms []common.Datum, defined []common.Wrapp
 		expression = expressions[0]
 	}
 	return expression, defined, nil
+}
+
+func sourceLocation(form common.Datum) common.SourceLocation {
+	if form, ok := form.(common.WrappedSyntax); ok {
+		return form.SourceLocation()
+	}
+	return common.SourceLocation{}
 }
 
 func define(identifier common.WrappedSyntax, phase int, location common.Location, form *common.Datum, rest []common.Datum, deferred []common.Datum, defined *[]common.WrappedSyntax) error {
