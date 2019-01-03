@@ -193,6 +193,8 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 }
 
 func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	fmt.Println("syntax-case")
+	fmt.Println(common.Write(args[0]))
 	result, ok, err := common.MatchSyntax(args[0], PatternSyntaxCase, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -432,6 +434,8 @@ func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Ev
 		identifier := generateTemporary()
 		temporaries = common.Pair{identifier, temporaries}
 	}
+	fmt.Println("generateTemporaries")
+	fmt.Println(common.Write(temporaries))
 	return common.CallC(c, temporaries)
 }
 
