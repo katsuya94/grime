@@ -8,11 +8,6 @@ import (
 
 type Datum interface{}
 
-type Writable interface {
-	Datum
-	Write() string
-}
-
 // Procedure represents a callable value.
 type Procedure interface {
 	Datum
@@ -115,6 +110,77 @@ func formatRest(d Datum) string {
 		}
 		return fmt.Sprintf(" . %v)", Write(d))
 	}
+}
+
+// WrappedSyntax represents syntax along with its lexical context.
+type WrappedSyntax struct {
+	scopeList          *scopeList
+	datum              Datum
+	marks              markSet
+	sourceLocationTree *SourceLocationTree
+}
+
+func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
+	return WrappedSyntax{
+		datum:              d,
+		sourceLocationTree: sourceLocationTree,
+	}
+}
+
+func (d WrappedSyntax) Write() string {
+	return fmt.Sprintf("#<syntax: %v>", Write(d.datum))
+}
+
+func (d WrappedSyntax) Datum() Datum {
+	return d.datum
+}
+
+func (d WrappedSyntax) Push(scope *Scope) WrappedSyntax {
+	d.scopeList = &scopeList{scope, d.scopeList}
+	return d
+}
+
+func (d WrappedSyntax) Identifier() (Identifier, bool) {
+	if _, ok := d.datum.(Symbol); !ok {
+		return Identifier{}, false
+	}
+	return Identifier(d), true
+}
+
+func (d WrappedSyntax) SourceLocation() SourceLocation {
+	if d.sourceLocationTree == nil {
+		return SourceLocation{}
+	}
+	return d.sourceLocationTree.SourceLocation
+}
+
+func (d WrappedSyntax) SourceLocationTree() *SourceLocationTree {
+	return d.sourceLocationTree
+}
+
+func (d WrappedSyntax) PushDown() Datum {
+	switch datum := d.datum.(type) {
+	case Pair:
+		var (
+			firstSourceLocationTree *SourceLocationTree
+			restSourceLocationTree  *SourceLocationTree
+		)
+		if d.sourceLocationTree != nil {
+			first := d.sourceLocationTree.Children.(Pair).First.(SourceLocationTree)
+			firstSourceLocationTree = &first
+			rest := d.sourceLocationTree.Children.(Pair).Rest.(SourceLocationTree)
+			restSourceLocationTree = &rest
+		}
+		return Pair{d.pushOnto(datum.First, firstSourceLocationTree), d.pushOnto(datum.Rest, restSourceLocationTree)}
+	default:
+		panic(fmt.Sprintf("unhandled syntax #<%T>", datum))
+	}
+}
+
+func (d WrappedSyntax) pushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
+	d.datum = datum
+	d.sourceLocationTree = sourceLocationTree
+	return d
 }
 
 // Function represents a Go function.

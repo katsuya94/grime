@@ -39,13 +39,3 @@ func TestIsSyntaxPairRestNotSyntax(t *testing.T) {
 func TestIsSyntaxPairBothNotSyntax(t *testing.T) {
 	require.False(t, IsSyntax(Pair{datum("thing"), datum("stuff")}))
 }
-
-func TestWrappedSyntax_IsIdentifierSymbol(t *testing.T) {
-	require.True(t, wrap(datum("thing")).IsIdentifier())
-}
-
-func TestWrappedSyntax_IsIdentifierNonSymbol(t *testing.T) {
-	require.False(t, wrap(datum("#f")).IsIdentifier())
-}
-
-// TODO: consider using alias types to get signature syntax.Identifier().Location()
