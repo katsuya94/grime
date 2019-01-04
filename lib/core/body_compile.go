@@ -30,12 +30,12 @@ func BodyCompile(compiler Compiler, forms []common.Datum, scope *common.Scope) (
 				if err != nil {
 					return nil, err
 				}
-				rhsScope := common.NewScope(0)
+				rhsScope := common.NewScope()
 				err = rhsScope.Set(v.Identifier, keyword)
 				if err != nil {
 					return nil, err
 				}
-				form := common.Syntax{v.Form}.Push(rhsScope).Next().Datum
+				form := common.Syntax{v.Form}.Push(rhsScope, common.LEXICAL).Next().Datum
 				expression, err := compiler.ExpressionCompile(form)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}

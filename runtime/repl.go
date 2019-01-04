@@ -30,7 +30,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 		body := common.Body(nullSourceLocationTree, syntaxes...)
 		scopes := make(map[int]*common.Scope, len(bindings))
 		for phase, locations := range bindings {
-			scopes[phase] = common.NewScope(phase)
+			scopes[phase] = common.NewScope()
 			for name, location := range locations {
 				err := scopes[phase].Set(common.NewIdentifier(name), location)
 				if err != nil {
@@ -38,7 +38,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 					continue
 				}
 			}
-			body = body.Push(scopes[phase])
+			body = body.Push(scopes[phase], phase)
 		}
 		expression, err := compiler(body, scopes[0])
 		if err == common.ErrUnexpectedFinalForm && !eof {

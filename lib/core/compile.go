@@ -62,6 +62,7 @@ func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, erro
 }
 
 func Compile(body common.WrappedSyntax, scope *common.Scope) (common.Expression, error) {
+	body = body.Push(scope, common.LEXICAL)
 	var forms []common.Datum
 	for {
 		_, ok := body.Datum().(common.Pair)

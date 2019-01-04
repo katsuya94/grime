@@ -28,10 +28,10 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		return SyntaxTemplate{template, patternVariables}, nil
 	case BeginForm:
-		scope := common.NewScope(0)
+		scope := common.NewScope()
 		forms := make([]common.Datum, len(form.Forms))
 		for i := range form.Forms {
-			forms[i] = common.Syntax{form.Forms[i]}.Push(scope).Datum
+			forms[i] = common.Syntax{form.Forms[i]}.Push(scope, common.LEXICAL).Datum
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -58,14 +58,14 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			return nil, err
 		}
 		variable := &common.Variable{}
-		scope := common.NewScope(0)
+		scope := common.NewScope()
 		err = scope.Set(form.Identifier, variable)
 		if err != nil {
 			return nil, err
 		}
 		forms := make([]common.Datum, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.Syntax{form.Body[i]}.Push(scope).Datum
+			forms[i] = common.Syntax{form.Body[i]}.Push(scope, common.LEXICAL).Datum
 		}
 		bodyExpression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -88,7 +88,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
 		var variables []*common.Variable
-		scope := common.NewScope(0)
+		scope := common.NewScope()
 		for _, formal := range form.Formals {
 			variable := &common.Variable{}
 			err := scope.Set(formal, variable)
@@ -99,7 +99,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		forms := make([]common.Datum, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.Syntax{form.Body[i]}.Push(scope).Datum
+			forms[i] = common.Syntax{form.Body[i]}.Push(scope, common.LEXICAL).Datum
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -162,7 +162,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 				return nil, err
 			}
 			bindings := make(map[common.Symbol]*common.PatternVariable)
-			scope := common.NewScope(0)
+			scope := common.NewScope()
 			for name, n := range patternVariables {
 				patternVariable := &common.PatternVariable{nil, n}
 				bindings[name] = patternVariable
@@ -171,8 +171,8 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 					return nil, err
 				}
 			}
-			fender := common.Syntax{form.Fenders[i]}.Push(scope).Datum
-			output := common.Syntax{form.Outputs[i]}.Push(scope).Datum
+			fender := common.Syntax{form.Fenders[i]}.Push(scope, common.LEXICAL).Datum
+			output := common.Syntax{form.Outputs[i]}.Push(scope, common.LEXICAL).Datum
 			fenderExpression, err := compiler.ExpressionCompile(fender)
 			if err != nil {
 				return nil, err

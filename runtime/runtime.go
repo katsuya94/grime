@@ -174,7 +174,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	}
 	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree))
 	scopes := make(map[int]*common.Scope)
-	scopes[0] = common.NewScope(0)
+	scopes[0] = common.NewScope()
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
@@ -191,9 +191,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 					phases[importLevel+exportLevel] = struct{}{}
 				}
 				for phase := range phases {
+					if phase < 0 {
+						continue
+					}
 					_, ok := scopes[phase]
 					if !ok {
-						scopes[phase] = common.NewScope(phase)
+						scopes[phase] = common.NewScope()
 					}
 					err := scopes[phase].Set(common.NewIdentifier(name), location)
 					if err != nil {
@@ -204,10 +207,11 @@ func (r *Runtime) instantiate(prov *provision) error {
 		}
 	}
 	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
-	for _, scope := range scopes {
-		body = body.Push(scope)
+	for phase, scope := range scopes {
+		body = body.Push(scope, phase)
 	}
-	expression, err := r.compiler(body, scopes[0])
+	scope := common.NewScope()
+	expression, err := r.compiler(body, scope)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}

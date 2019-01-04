@@ -42,7 +42,7 @@ func wrap(datum common.Datum) common.WrappedSyntax {
 }
 
 func set(datum common.Datum, name common.Symbol, location common.Location) common.Datum {
-	scope := common.NewScope(0)
+	scope := common.NewScope(common.LEXICAL)
 	scope.Set(common.NewIdentifier(name), location)
 	return common.Syntax{datum}.Push(scope).Datum
 }

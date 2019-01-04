@@ -18,7 +18,14 @@
   (import
     (for (only (core)
            define-syntax
-           null?)
+           null?
+           pair?
+           proc?
+           error
+           if
+           car
+           cdr
+           lambda)
          run)
     (for (only (core)
            syntax
@@ -32,10 +39,8 @@
            identifier?
            list
            generate-temporaries
-           if
-           pair?
            not
-           proc?)
+           if)
          expand))
 
   (define-syntax define

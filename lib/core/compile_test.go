@@ -66,7 +66,7 @@ func TestCompile(t *testing.T) {
 		},
 		{
 			"define-syntax",
-			"(define-syntax id (lambda (stx) #''foo)) (id)",
+			"(define-syntax id (lambda (stx) #'123)) (id)",
 			"",
 		},
 		{
@@ -126,19 +126,19 @@ func TestCompile(t *testing.T) {
 			body := common.Body(nullSourceLocationTree, syntaxes...)
 			scopes := make(map[int]*common.Scope)
 			for phase, locations := range Bindings {
-				scopes[phase] = common.NewScope(phase)
+				scopes[phase] = common.NewScope()
 				for name, location := range locations {
 					scopes[phase].Set(common.NewIdentifier(name), location)
 				}
 			}
 			// Make lambda, syntax available at phase 1
 			if _, ok := scopes[1]; !ok {
-				scopes[1] = common.NewScope(1)
+				scopes[1] = common.NewScope()
 			}
 			scopes[1].Set(common.NewIdentifier(common.Symbol("lambda")), Bindings[0][common.Symbol("lambda")])
 			scopes[1].Set(common.NewIdentifier(common.Symbol("syntax")), Bindings[0][common.Symbol("syntax")])
-			for _, scope := range scopes {
-				body = body.Push(scope)
+			for phase, scope := range scopes {
+				body = body.Push(scope, phase)
 			}
 			_, err := Compile(body, scopes[0])
 			if test.error != "" {

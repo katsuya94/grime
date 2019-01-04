@@ -39,6 +39,7 @@ var Bindings = common.BindingSet{
 		common.Symbol("identifier?"):          &common.Variable{common.Function(identifier)},
 		common.Symbol("generate-temporaries"): &common.Variable{common.Function(generateTemporaries)},
 		common.Symbol("list"):                 &common.Variable{common.Function(list)},
+		common.Symbol("debug"):                &common.Variable{common.Function(debug)},
 	},
 }
 
@@ -427,8 +428,6 @@ func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Ev
 		identifier := generateTemporary()
 		temporaries = common.Pair{identifier, temporaries}
 	}
-	fmt.Println("generateTemporaries")
-	fmt.Println(common.Write(temporaries))
 	return common.CallC(c, temporaries)
 }
 
@@ -438,4 +437,12 @@ func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 		list = common.Pair{args[i], list}
 	}
 	return common.CallC(c, list)
+}
+
+func debug(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 1 {
+		return common.ErrorC(fmt.Errorf("debug: wrong arity"))
+	}
+	fmt.Println(fmt.Sprintf("%#v\n", args[0]))
+	return common.CallC(c, common.Void)
 }

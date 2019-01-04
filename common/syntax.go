@@ -2,18 +2,19 @@ package common
 
 import "fmt"
 
+const LEXICAL = -1
+
 type binding struct {
 	marks    markSet
 	location Location
 }
 
 type Scope struct {
-	phase    int
 	bindings map[Symbol][]binding
 }
 
-func NewScope(phase int) *Scope {
-	return &Scope{phase, make(map[Symbol][]binding)}
+func NewScope() *Scope {
+	return &Scope{make(map[Symbol][]binding)}
 }
 
 func (s Scope) Get(id Identifier) Location {
@@ -30,7 +31,7 @@ func (s Scope) Set(id Identifier, location Location) error {
 	bindings, _ := s.bindings[id.Name()]
 	for _, binding := range bindings {
 		if binding.marks.equal(id.marks) {
-			return fmt.Errorf("already defined at phase %v: %v", s.phase, id.Name())
+			return fmt.Errorf("already defined: %v", id.Name())
 		}
 	}
 	s.bindings[id.Name()] = append(bindings, binding{
@@ -55,6 +56,7 @@ func (s Scope) Bindings() map[Symbol]Location {
 type scopeList struct {
 	*Scope
 	*scopeList
+	phase int
 }
 
 type Identifier struct {
@@ -71,7 +73,7 @@ func (id Identifier) Name() Symbol {
 
 func (id Identifier) Location() Location {
 	for l := id.scopeList; l != nil; l = l.scopeList {
-		if l.phase != id.phase {
+		if l.phase != LEXICAL && l.phase != id.phase {
 			continue
 		}
 		location := l.Get(id)
@@ -98,15 +100,15 @@ type Syntax struct {
 	Datum
 }
 
-func (s Syntax) Push(scope *Scope) Syntax {
+func (s Syntax) Push(scope *Scope, phase int) Syntax {
 	switch d := s.Datum.(type) {
 	case WrappedSyntax:
-		return Syntax{d.Push(scope)}
+		return Syntax{d.Push(scope, phase)}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope).Datum,
-				Syntax{d.Rest}.Push(scope).Datum,
+				Syntax{d.First}.Push(scope, phase).Datum,
+				Syntax{d.Rest}.Push(scope, phase).Datum,
 			},
 		}
 	default:
