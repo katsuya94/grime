@@ -28,12 +28,19 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			continue
 		}
 		body := common.Body(nullSourceLocationTree, syntaxes...)
+		scopes := make(map[int]*common.Scope, len(bindings))
 		for phase, locations := range bindings {
+			scopes[phase] = common.NewScope(phase)
 			for name, location := range locations {
-				body = body.SetAt(name, phase, location)
+				err := scopes[phase].Set(common.NewIdentifier(name), location)
+				if err != nil {
+					fmt.Fprintf(w, "error: %v\n", err)
+					continue
+				}
 			}
+			body = body.Push(scopes[phase])
 		}
-		expression, definitions, err := compiler(body)
+		expression, err := compiler(body, scopes[0])
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}
@@ -48,13 +55,9 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			continue
 		}
 		bindings = make(common.BindingSet, len(bindings))
-		for _, definition := range definitions {
-			for _, phase := range definition.Phases() {
-				_, ok := bindings[phase]
-				if !ok {
-					bindings[phase] = make(map[common.Symbol]common.Location)
-				}
-				name, location := definition.IdentifierAt(phase)
+		for phase, scope := range scopes {
+			bindings[phase] = make(map[common.Symbol]common.Location)
+			for name, location := range scope.Bindings() {
 				bindings[phase][name] = location
 			}
 		}

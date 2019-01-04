@@ -1,3 +1,3 @@
 package common
 
-type Compiler func(WrappedSyntax) (Expression, []WrappedSyntax, error)
+type Compiler func(WrappedSyntax, *Scope) (Expression, error)

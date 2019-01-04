@@ -12,8 +12,8 @@ type Scope struct {
 	bindings map[Symbol][]binding
 }
 
-func NewScope(phase int) Scope {
-	return Scope{phase, make(map[Symbol][]binding)}
+func NewScope(phase int) *Scope {
+	return &Scope{phase, make(map[Symbol][]binding)}
 }
 
 func (s Scope) Get(id Identifier) Location {
@@ -40,12 +40,28 @@ func (s Scope) Set(id Identifier, location Location) error {
 	return nil
 }
 
+func (s Scope) Bindings() map[Symbol]Location {
+	m := make(map[Symbol]Location)
+	for name, bindings := range s.bindings {
+		for _, binding := range bindings {
+			if binding.marks.equal(markSet{}) {
+				m[name] = binding.location
+			}
+		}
+	}
+	return m
+}
+
 type scopeList struct {
 	*Scope
 	*scopeList
 }
 
 type Identifier WrappedSyntax
+
+func NewIdentifier(name Symbol) Identifier {
+	return Identifier(NewWrappedSyntax(name, nil))
+}
 
 func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)

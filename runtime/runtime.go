@@ -173,7 +173,8 @@ func (r *Runtime) instantiate(prov *provision) error {
 		resolutions = append(resolutions, resolution)
 	}
 	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree))
-	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
+	scopes := make(map[int]*common.Scope)
+	scopes[0] = common.NewScope(0)
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
@@ -185,20 +186,28 @@ func (r *Runtime) instantiate(prov *provision) error {
 		}
 		for exportLevel, locations := range bindings {
 			for name, location := range locations {
-				levelSet := make(map[int]bool)
+				phases := make(map[int]struct{})
 				for _, importLevel := range resolutions[i].levels {
-					levelSet[importLevel+exportLevel] = true
+					phases[importLevel+exportLevel] = struct{}{}
 				}
-				for level := range levelSet {
-					if body.GetAt(name, level) != nil {
-						return fmt.Errorf("duplicate import at level %v: %v", level, name)
+				for phase := range phases {
+					scope, ok := scopes[phase]
+					if !ok {
+						scope = common.NewScope(phase)
 					}
-					body = body.SetAt(name, level, location)
+					err := scope.Set(common.NewIdentifier(name), location)
+					if err != nil {
+						return instantiationError{prov.library.name, err}
+					}
 				}
 			}
 		}
 	}
-	expression, definitions, err := r.compiler(body)
+	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
+	for _, scope := range scopes {
+		body = body.Push(scope)
+	}
+	expression, err := r.compiler(body, scopes[0])
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
@@ -206,16 +215,16 @@ func (r *Runtime) instantiate(prov *provision) error {
 	prov.bindings = make(common.BindingSet)
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false
-		for _, identifier := range definitions {
-			if exportSpec.internal != identifier.IdentifierName() {
-				continue
-			}
-			for _, phase := range identifier.Phases() {
+		for phase, scope := range scopes {
+			prov.bindings[phase] = make(map[common.Symbol]common.Location)
+			for name, location := range scope.Bindings() {
+				if exportSpec.internal != name {
+					continue
+				}
 				_, ok := prov.bindings[phase]
 				if !ok {
 					prov.bindings[phase] = make(map[common.Symbol]common.Location)
 				}
-				_, location := identifier.IdentifierAt(phase)
 				prov.bindings[phase][exportSpec.external] = location
 				exported = true
 			}
