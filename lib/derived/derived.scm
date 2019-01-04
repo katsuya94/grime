@@ -17,20 +17,10 @@
     cond)
   (import
     (for (only (core)
-           ; TODO: remove
-           ~define
-           lambda
-           ~let
-           begin
-
            define-syntax
            null?)
          run)
     (for (only (core)
-           ; TODO: remove
-           quote
-           write
-
            syntax
            begin
            ~let
@@ -81,10 +71,6 @@
 
   (define-syntax with-syntax
     (lambda (x)
-      (write 'with-syntax)
-      (write #\newline)
-      (write x)
-      (write #\newline)
       (syntax-case x ()
         [(_ ((p e0) ...) e1 e2 ...)
          #'(syntax-case (list e0 ...) ()
@@ -92,10 +78,6 @@
 
   (define-syntax let
     (lambda (x)
-      (write 'let)
-      (write #\newline)
-      (write x)
-      (write #\newline)
       (syntax-case x ()
        [(_ ((i e) ...) b1 b2 ...)
         (with-syntax
@@ -125,19 +107,12 @@
 
   (define-syntax or
     (lambda (x)
-      (write 'or)
-      (write #\newline)
-      (write x)
-      (write #\newline)
       (syntax-case x ()
         [(_ ) #'#f]
         [(_ e) #'e]
         [(_ e1 e2 e3 ...)
          #'(let ([t e1])
              (if t t (or e2 e3 ...)))])))
-
-  (define x (with-syntax ([(_ . y) #'(stuff . things)])
-    #'y))
   
   (define (list? x)
     (or (null? x) (pair? x)))

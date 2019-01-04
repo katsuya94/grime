@@ -1,9 +1,6 @@
 package core_test
 
 import (
-	"reflect"
-	"testing"
-
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
@@ -48,22 +45,4 @@ func set(datum common.Datum, name common.Symbol, location common.Location) commo
 	scope := common.NewScope(0)
 	scope.Set(common.NewIdentifier(name), location)
 	return common.Syntax{datum}.Push(scope).Datum
-}
-
-func assertNoError(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func assertDeepEquals(t *testing.T, actual, expected interface{}) {
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\n     got: %#v\n", expected, actual)
-	}
-}
-
-func assertEquals(t *testing.T, actual, expected interface{}) {
-	if actual != expected {
-		t.Fatalf("\nexpected: %#v\n     got: %#v\n", expected, actual)
-	}
 }

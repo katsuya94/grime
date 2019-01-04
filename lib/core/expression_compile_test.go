@@ -232,11 +232,11 @@ func TestExpressionCompile_If(t *testing.T) {
 	thenExpression := comparable()
 	elseExpression := comparable()
 	expression, err := ExpressionCompile(compiler, IfForm{conditionExpression, thenExpression, elseExpression})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	ifExpression := expression.(If)
-	assertEquals(t, ifExpression.Condition, conditionExpression)
-	assertEquals(t, ifExpression.Then, thenExpression)
-	assertEquals(t, ifExpression.Else, elseExpression)
+	require.Exactly(t, conditionExpression, ifExpression.Condition)
+	require.Exactly(t, thenExpression, ifExpression.Then)
+	require.Exactly(t, elseExpression, ifExpression.Else)
 }
 
 func TestExpressionCompile_Let(t *testing.T) {
@@ -251,11 +251,11 @@ func TestExpressionCompile_Let(t *testing.T) {
 		return bodyExpression, nil
 	}}
 	expression, err := ExpressionCompile(compiler, LetForm{id, initExpression, []common.Datum{wrap(datum("id"))}})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	letExpression := expression.(Let)
-	assertEquals(t, letExpression.Variable, location)
-	assertEquals(t, letExpression.Init, initExpression)
-	assertEquals(t, letExpression.Body, bodyExpression)
+	require.Exactly(t, location, letExpression.Variable)
+	require.Exactly(t, initExpression, letExpression.Init)
+	require.Exactly(t, bodyExpression, letExpression.Body)
 }
 
 func TestExpressionCompile_Application(t *testing.T) {
@@ -264,12 +264,12 @@ func TestExpressionCompile_Application(t *testing.T) {
 	argument0Expression := comparable()
 	argument1Expression := comparable()
 	expression, err := ExpressionCompile(compiler, ApplicationForm{procedureExpression, []common.Datum{argument0Expression, argument1Expression}})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	applicationExpression := expression.(Application)
-	assertEquals(t, applicationExpression.Procedure, procedureExpression)
-	assertEquals(t, len(applicationExpression.Arguments), 2)
-	assertEquals(t, applicationExpression.Arguments[0], argument0Expression)
-	assertEquals(t, applicationExpression.Arguments[1], argument1Expression)
+	require.Exactly(t, procedureExpression, applicationExpression.Procedure, procedureExpression)
+	require.Exactly(t, 2, len(applicationExpression.Arguments))
+	require.Exactly(t, argument0Expression, applicationExpression.Arguments[0])
+	require.Exactly(t, argument1Expression, applicationExpression.Arguments[1])
 }
 
 func TestExpressionCompile_Lambda(t *testing.T) {
@@ -287,13 +287,13 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 		return bodyExpression, nil
 	}}
 	expression, err := ExpressionCompile(compiler, LambdaForm{[]common.Identifier{id0, id1}, []common.Datum{common.Pair{id0.WrappedSyntax, id1.WrappedSyntax}}})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	literalExpression := expression.(Literal)
 	lambda := literalExpression.Datum.(common.Lambda)
-	assertEquals(t, len(lambda.Variables), 2)
-	assertEquals(t, lambda.Variables[0], location0)
-	assertEquals(t, lambda.Variables[1], location1)
-	assertEquals(t, lambda.Body, bodyExpression)
+	require.Exactly(t, 2, len(lambda.Variables))
+	require.Exactly(t, location0, lambda.Variables[0])
+	require.Exactly(t, location1, lambda.Variables[1])
+	require.Exactly(t, bodyExpression, lambda.Body)
 }
 
 func TestExpressionCompile_Reference(t *testing.T) {
@@ -301,16 +301,16 @@ func TestExpressionCompile_Reference(t *testing.T) {
 	variable := &common.Variable{}
 	id, _ := set(wrap(datum("id")), common.Symbol("id"), variable).(common.WrappedSyntax).Identifier()
 	expression, err := ExpressionCompile(compiler, ReferenceForm{id})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	reference := expression.(Reference)
-	assertEquals(t, reference.Variable, variable)
+	require.Exactly(t, variable, reference.Variable)
 }
 
 func TestExpressionCompile_ReferenceUnbound(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	id, _ := wrap(datum("id")).Identifier()
 	_, err := ExpressionCompile(compiler, ReferenceForm{id})
-	assertEquals(t, err.Error(), "compile: unbound identifier id at (unknown)")
+	require.EqualError(t, err, "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_ReferenceNonVariable(t *testing.T) {
@@ -318,7 +318,7 @@ func TestExpressionCompile_ReferenceNonVariable(t *testing.T) {
 	location := &common.Keyword{}
 	id, _ := set(wrap(datum("id")), common.Symbol("id"), location).(common.WrappedSyntax).Identifier()
 	_, err := ExpressionCompile(compiler, ReferenceForm{id})
-	assertEquals(t, err.Error(), "compile: non-variable identifier id in expression context")
+	require.EqualError(t, err, "compile: non-variable identifier id in expression context")
 }
 
 func TestExpressionCompile_Set(t *testing.T) {
@@ -327,10 +327,10 @@ func TestExpressionCompile_Set(t *testing.T) {
 	id, _ := set(wrap(datum("id")), common.Symbol("id"), variable).(common.WrappedSyntax).Identifier()
 	valueExpression := comparable()
 	expression, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
-	assertNoError(t, err)
+	require.NoError(t, err)
 	reference := expression.(Set)
-	assertEquals(t, reference.Variable, variable)
-	assertEquals(t, reference.Expression, valueExpression)
+	require.Exactly(t, variable, reference.Variable)
+	require.Exactly(t, valueExpression, reference.Expression)
 }
 
 func TestExpressionCompile_SetUnbound(t *testing.T) {
@@ -338,7 +338,7 @@ func TestExpressionCompile_SetUnbound(t *testing.T) {
 	id, _ := wrap(datum("id")).Identifier()
 	valueExpression := comparable()
 	_, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
-	assertEquals(t, err.Error(), "compile: unbound identifier id at (unknown)")
+	require.EqualError(t, err, "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_SetNonVariable(t *testing.T) {
@@ -347,7 +347,7 @@ func TestExpressionCompile_SetNonVariable(t *testing.T) {
 	id, _ := set(wrap(datum("id")), common.Symbol("id"), location).(common.WrappedSyntax).Identifier()
 	valueExpression := comparable()
 	_, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
-	assertEquals(t, err.Error(), "compile: non-variable identifier id in assignment")
+	require.EqualError(t, err, "compile: non-variable identifier id in assignment")
 }
 
 func TestExpressionCompile_SyntaxCase(t *testing.T) {
@@ -357,41 +357,41 @@ func TestExpressionCompile_SyntaxCase(t *testing.T) {
 func TestExpressionCompile_LiteralBoolean(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(datum("#f")))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, datum("#f"))
+	require.NoError(t, err)
+	require.Exactly(t, datum("#f"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNumber(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(datum("123")))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, datum("123"))
+	require.NoError(t, err)
+	require.Exactly(t, datum("123"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralCharacter(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(datum(`#\x`)))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, datum(`#\x`))
+	require.NoError(t, err)
+	require.Exactly(t, datum(`#\x`), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralString(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(datum(`"thing"`)))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, datum(`"thing"`))
+	require.NoError(t, err)
+	require.Exactly(t, datum(`"thing"`), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNull(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(datum("()")))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, datum("()"))
+	require.NoError(t, err)
+	require.Exactly(t, datum("()"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralVoid(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, wrap(common.Void))
-	assertNoError(t, err)
-	assertEquals(t, expression.(Literal).Datum, common.Void)
+	require.NoError(t, err)
+	require.Exactly(t, common.Void, expression.(Literal).Datum)
 }
