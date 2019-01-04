@@ -25,13 +25,18 @@ func BodyCompile(compiler Compiler, forms []common.Datum, scope *common.Scope) (
 			form := forms[i]
 			switch v := form.(type) {
 			case DefineSyntaxForm:
-				form := v.Form
 				keyword := &common.Keyword{}
 				err := scope.Set(v.Identifier, keyword)
 				if err != nil {
 					return nil, err
 				}
-				expression, err := compiler.Next().ExpressionCompile(form)
+				rhsScope := common.NewScope(0)
+				err = rhsScope.Set(v.Identifier, keyword)
+				if err != nil {
+					return nil, err
+				}
+				form := common.Syntax{v.Form}.Push(rhsScope).Next().Datum
+				expression, err := compiler.ExpressionCompile(form)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}

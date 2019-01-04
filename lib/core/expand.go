@@ -16,18 +16,18 @@ var (
 )
 
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
-	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSet, map[common.Symbol]common.Location{
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
 	}); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseImproperList, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseImproperList, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, compiler.Phase, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
 	if result, ok, err := common.MatchSyntax(form, PatternApplication, nil); err != nil {
@@ -47,7 +47,7 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	return nil, false, nil
 }
 
-func expandMacroMatching(form common.Datum, phase int, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
+func expandMacroMatching(form common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
 	result, ok, err := common.MatchSyntax(form, pattern, literals)
 	if err != nil {
 		return nil, false, err

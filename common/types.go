@@ -117,6 +117,7 @@ type WrappedSyntax struct {
 	scopeList          *scopeList
 	datum              Datum
 	marks              markSet
+	phase              int
 	sourceLocationTree *SourceLocationTree
 }
 
@@ -158,6 +159,7 @@ func (d WrappedSyntax) SourceLocationTree() *SourceLocationTree {
 	return d.sourceLocationTree
 }
 
+// TODO: move this to a method on Syntax, requiring a rework of MatchSyntax
 func (d WrappedSyntax) PushDown() Datum {
 	switch datum := d.datum.(type) {
 	case Pair:
@@ -180,6 +182,11 @@ func (d WrappedSyntax) PushDown() Datum {
 func (d WrappedSyntax) pushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree
+	return d
+}
+
+func (d WrappedSyntax) Next() WrappedSyntax {
+	d.phase++
 	return d
 }
 

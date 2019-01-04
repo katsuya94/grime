@@ -218,7 +218,6 @@ func TestExpressionCompile_Begin(t *testing.T) {
 	form := BeginForm{[]common.Datum{}}
 	expected := comparable()
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error) {
-		require.Exactly(t, 0, compiler.Phase)
 		return expected, nil
 	}}
 	expression, err := ExpressionCompile(compiler, form)
@@ -245,7 +244,6 @@ func TestExpressionCompile_Let(t *testing.T) {
 	bodyExpression := comparable()
 	var location common.Location
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error) {
-		require.Exactly(t, 0, compiler.Phase)
 		id, _ := forms[0].(common.WrappedSyntax).Identifier()
 		location = id.Location()
 		return bodyExpression, nil
@@ -279,7 +277,6 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	var location0 common.Location
 	var location1 common.Location
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error) {
-		require.Exactly(t, 0, compiler.Phase)
 		id0, _ := forms[0].(common.Pair).First.(common.WrappedSyntax).Identifier()
 		id1, _ := forms[0].(common.Pair).Rest.(common.WrappedSyntax).Identifier()
 		location0 = id0.Location()

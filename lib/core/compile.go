@@ -27,7 +27,6 @@ type Compiler struct {
 	BodyCompiler       BodyCompiler
 	ExpressionCompiler ExpressionCompiler
 	Expander           Expander
-	Phase              int
 }
 
 func NewCompiler() Compiler {
@@ -35,7 +34,6 @@ func NewCompiler() Compiler {
 		BodyCompiler:       BodyCompile,
 		ExpressionCompiler: ExpressionCompile,
 		Expander:           Expand,
-		Phase:              0,
 	}
 }
 
@@ -61,11 +59,6 @@ func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, erro
 		}
 		form = expanded
 	}
-}
-
-func (compiler Compiler) Next() Compiler {
-	compiler.Phase += 1
-	return compiler
 }
 
 func Compile(body common.WrappedSyntax, scope *common.Scope) (common.Expression, error) {

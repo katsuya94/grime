@@ -71,6 +71,9 @@ func (id Identifier) Name() Symbol {
 
 func (id Identifier) Location() Location {
 	for l := id.scopeList; l != nil; l = l.scopeList {
+		if l.phase != id.phase {
+			continue
+		}
 		location := l.Get(id)
 		if location != nil {
 			return location
@@ -104,6 +107,26 @@ func (s Syntax) Push(scope *Scope) Syntax {
 			Pair{
 				Syntax{d.First}.Push(scope).Datum,
 				Syntax{d.Rest}.Push(scope).Datum,
+			},
+		}
+	default:
+		// TODO: is the Null case necessary if list endings are usually wrapped?
+		if d == Null {
+			return Syntax{Null}
+		}
+		panic("unhandled syntax")
+	}
+}
+
+func (s Syntax) Next() Syntax {
+	switch d := s.Datum.(type) {
+	case WrappedSyntax:
+		return Syntax{d.Next()}
+	case Pair:
+		return Syntax{
+			Pair{
+				Syntax{d.First}.Next().Datum,
+				Syntax{d.Rest}.Next().Datum,
 			},
 		}
 	default:

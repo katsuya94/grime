@@ -29,10 +29,13 @@
            syntax-case
            ...
            _
-           write
            identifier?
            list
-           generate-temporaries)
+           generate-temporaries
+           if
+           pair?
+           not
+           proc?)
          expand))
 
   (define-syntax define
@@ -53,10 +56,6 @@
 
   (define-syntax let*
     (lambda (x)
-      (write 'let*)
-      (write #\newline)
-      (write x)
-      (write #\newline)
       (syntax-case x ()
         [(_ () b1 b2 ...) #'(begin b1 b2 ...)]
         [(_ ((i1 e1) (i2 e2) ...) b1 b2 ...)

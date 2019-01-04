@@ -15,7 +15,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	case QuoteForm:
 		return Literal{form.Datum}, nil
 	case SyntaxForm:
-		template, patternVariablesUnexpanded, err := compileTemplate(form.Datum, compiler.Phase)
+		template, patternVariablesUnexpanded, err := compileTemplate(form.Datum)
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +153,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(form.Patterns[i], compiler.Phase)
+			pattern, err := compilePattern(form.Patterns[i])
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +204,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	}
 }
 
-func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.PatternVariable]int, error) {
+func compileTemplate(datum common.Datum) (common.Datum, map[*common.PatternVariable]int, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {
 		datum = syntax.Datum()
@@ -266,7 +266,7 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		}
 		firstTemplate := first
 		restTemplate := rest
-		firstCompiled, firstPatternVariables, err := compileTemplate(firstTemplate, phase)
+		firstCompiled, firstPatternVariables, err := compileTemplate(firstTemplate)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -274,7 +274,7 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
 		}
-		restCompiled, restPatternVariables, err := compileTemplate(restTemplate, phase)
+		restCompiled, restPatternVariables, err := compileTemplate(restTemplate)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -318,7 +318,7 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 	}
 }
 
-func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
+func compilePattern(datum common.Datum) (common.Datum, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {
 		datum = syntax.Datum()
@@ -352,11 +352,11 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 			firstPattern = datum.First
 			restPattern = datum.Rest
 		}
-		first, err := compilePattern(firstPattern, phase)
+		first, err := compilePattern(firstPattern)
 		if err != nil {
 			return nil, err
 		}
-		rest, err := compilePattern(restPattern, phase)
+		rest, err := compilePattern(restPattern)
 		if err != nil {
 			return nil, err
 		}

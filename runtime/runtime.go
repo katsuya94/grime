@@ -191,11 +191,11 @@ func (r *Runtime) instantiate(prov *provision) error {
 					phases[importLevel+exportLevel] = struct{}{}
 				}
 				for phase := range phases {
-					scope, ok := scopes[phase]
+					_, ok := scopes[phase]
 					if !ok {
-						scope = common.NewScope(phase)
+						scopes[phase] = common.NewScope(phase)
 					}
-					err := scope.Set(common.NewIdentifier(name), location)
+					err := scopes[phase].Set(common.NewIdentifier(name), location)
 					if err != nil {
 						return instantiationError{prov.library.name, err}
 					}
