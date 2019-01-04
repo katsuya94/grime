@@ -40,8 +40,9 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
 	}
-	if syntax, ok := form.(common.WrappedSyntax); ok && syntax.IsIdentifier() {
-		return ReferenceForm{syntax}, true, nil
+	id, ok := common.Syntax{form}.Identifier()
+	if ok {
+		return ReferenceForm{id}, true, nil
 	}
 	return nil, false, nil
 }
@@ -53,14 +54,11 @@ func expandMacroMatching(form common.Datum, phase int, pattern common.Datum, lit
 	} else if !ok {
 		return nil, false, nil
 	}
-	identifier, ok := result[common.Symbol("keyword")].(common.WrappedSyntax)
+	id, ok := common.Syntax{result[common.Symbol("keyword")]}.Identifier()
 	if !ok {
 		return nil, false, nil
 	}
-	if !identifier.IsIdentifier() {
-		return nil, false, nil
-	}
-	_, location := identifier.IdentifierAt(phase)
+	location := id.Location()
 	if location == nil {
 		return nil, false, nil
 	}

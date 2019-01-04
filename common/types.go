@@ -144,7 +144,7 @@ func (d WrappedSyntax) Identifier() (Identifier, bool) {
 	if _, ok := d.datum.(Symbol); !ok {
 		return Identifier{}, false
 	}
-	return Identifier(d), true
+	return Identifier{d}, true
 }
 
 func (d WrappedSyntax) SourceLocation() SourceLocation {

@@ -3,20 +3,20 @@ package core
 import "github.com/katsuya94/grime/common"
 
 type DefineSyntaxForm struct {
-	Identifier common.WrappedSyntax
+	Identifier common.Identifier
 	Form       common.Datum
 }
 
 type SyntaxCaseForm struct {
 	Input    common.Datum
-	Literals []common.WrappedSyntax
+	Literals []common.Identifier
 	Patterns []common.Datum
 	Fenders  []common.Datum
 	Outputs  []common.Datum
 }
 
 type DefineForm struct {
-	Identifier common.WrappedSyntax
+	Identifier common.Identifier
 	Form       common.Datum
 }
 
@@ -27,7 +27,7 @@ type IfForm struct {
 }
 
 type LetForm struct {
-	Identifier common.WrappedSyntax
+	Identifier common.Identifier
 	Init       common.Datum
 	Body       []common.Datum
 }
@@ -44,17 +44,17 @@ type ApplicationForm struct {
 }
 
 type LambdaForm struct {
-	Formals []common.WrappedSyntax
+	Formals []common.Identifier
 	Body    []common.Datum
 }
 
 type SetForm struct {
-	Identifier common.WrappedSyntax
+	Identifier common.Identifier
 	Form       common.Datum
 }
 
 type ReferenceForm struct {
-	Identifier common.WrappedSyntax
+	Identifier common.Identifier
 }
 
 type QuoteForm struct {

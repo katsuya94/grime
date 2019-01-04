@@ -22,22 +22,22 @@ func TestCompile(t *testing.T) {
 		{
 			"duplicate definitions: define, define",
 			"(~define foo 'id) (~define foo 'thing)",
-			"compile: foo: already defined",
+			"already defined at phase 0: foo",
 		},
 		{
 			"duplicate definitions: define, define-syntax",
 			"(~define foo 'id) (define-syntax foo (lambda (x) #''thing))",
-			"compile: foo: already defined",
+			"already defined at phase 0: foo",
 		},
 		{
 			"duplicate definitions: define-syntax, define",
 			"(define-syntax foo (lambda (x) #''thing))  (~define foo 'thing)",
-			"compile: foo: already defined",
+			"already defined at phase 0: foo",
 		},
 		{
 			"duplicate definitions: define-syntax, define-syntax",
 			"(define-syntax foo (lambda (x) #''thing)) (define-syntax foo (lambda (x) #''thing))",
-			"compile: foo: already defined",
+			"already defined at phase 0: foo",
 		},
 		{
 			"empty begin in definition context",
@@ -124,15 +124,23 @@ func TestCompile(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
+			scopes := make(map[int]*common.Scope)
 			for phase, locations := range Bindings {
+				scopes[phase] = common.NewScope(phase)
 				for name, location := range locations {
-					body = body.SetAt(name, phase, location)
+					scopes[phase].Set(common.NewIdentifier(name), location)
 				}
 			}
 			// Make lambda, syntax available at phase 1
-			body = body.SetAt(common.Symbol("lambda"), 1, Bindings[0][common.Symbol("lambda")])
-			body = body.SetAt(common.Symbol("syntax"), 1, Bindings[0][common.Symbol("syntax")])
-			_, _, err := Compile(body)
+			if _, ok := scopes[1]; !ok {
+				scopes[1] = common.NewScope(1)
+			}
+			scopes[1].Set(common.NewIdentifier(common.Symbol("lambda")), Bindings[0][common.Symbol("lambda")])
+			scopes[1].Set(common.NewIdentifier(common.Symbol("syntax")), Bindings[0][common.Symbol("syntax")])
+			for _, scope := range scopes {
+				body = body.Push(scope)
+			}
+			_, err := Compile(body, scopes[0])
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

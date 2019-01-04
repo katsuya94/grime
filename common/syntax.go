@@ -57,10 +57,12 @@ type scopeList struct {
 	*scopeList
 }
 
-type Identifier WrappedSyntax
+type Identifier struct {
+	WrappedSyntax
+}
 
 func NewIdentifier(name Symbol) Identifier {
-	return Identifier(NewWrappedSyntax(name, nil))
+	return Identifier{NewWrappedSyntax(name, nil)}
 }
 
 func (id Identifier) Name() Symbol {
@@ -100,8 +102,8 @@ func (s Syntax) Push(scope *Scope) Syntax {
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope),
-				Syntax{d.Rest}.Push(scope),
+				Syntax{d.First}.Push(scope).Datum,
+				Syntax{d.Rest}.Push(scope).Datum,
 			},
 		}
 	default:

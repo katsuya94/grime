@@ -211,7 +211,6 @@ func (r *Runtime) instantiate(prov *provision) error {
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
-	// TODO: rethink relationship between compiler and runtime for passing back defs
 	prov.bindings = make(common.BindingSet)
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false

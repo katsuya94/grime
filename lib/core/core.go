@@ -10,7 +10,37 @@ import (
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
 
-var Bindings common.BindingSet
+var Bindings = common.BindingSet{
+	0: map[common.Symbol]common.Location{
+		common.Symbol("quote"):                &common.Keyword{common.Function(transformQuote)},
+		common.Symbol("syntax"):               &common.Keyword{common.Function(transformSyntax)},
+		common.Symbol("if"):                   &common.Keyword{common.Function(transformIf)},
+		common.Symbol("~let"):                 &common.Keyword{common.Function(transformLet)},
+		common.Symbol("begin"):                &common.Keyword{common.Function(transformBegin)},
+		common.Symbol("lambda"):               &common.Keyword{common.Function(transformLambda)},
+		common.Symbol("~define"):              &common.Keyword{common.Function(transformDefine)},
+		common.Symbol("define-syntax"):        &common.Keyword{common.Function(transformDefineSyntax)},
+		common.Symbol("syntax-case"):          &common.Keyword{common.Function(transformSyntaxCase)},
+		common.Symbol("set!"):                 setKeyword,
+		common.Symbol("_"):                    underscoreKeyword,
+		common.Symbol("..."):                  ellipsisKeyword,
+		common.Symbol("not"):                  &common.Variable{common.Function(not)},
+		common.Symbol("cons"):                 &common.Variable{common.Function(cons)},
+		common.Symbol("car"):                  &common.Variable{common.Function(car)},
+		common.Symbol("cdr"):                  &common.Variable{common.Function(cdr)},
+		common.Symbol("null?"):                &common.Variable{common.Function(null)},
+		common.Symbol("pair?"):                &common.Variable{common.Function(pair)},
+		common.Symbol("proc?"):                &common.Variable{common.Function(proc)},
+		common.Symbol("write"):                &common.Variable{common.Function(write)},
+		common.Symbol("call/cc"):              &common.Variable{common.Function(callWithCurrentContinuation)},
+		common.Symbol("error"):                &common.Variable{common.Function(err)},
+		common.Symbol("eqv?"):                 &common.Variable{common.Function(eqv)},
+		common.Symbol("syntax->datum"):        &common.Variable{common.Function(syntaxDatum)},
+		common.Symbol("identifier?"):          &common.Variable{common.Function(identifier)},
+		common.Symbol("generate-temporaries"): &common.Variable{common.Function(generateTemporaries)},
+		common.Symbol("list"):                 &common.Variable{common.Function(list)},
+	},
+}
 
 var (
 	setKeyword        = &common.Keyword{common.Function(transformSet)}
@@ -21,38 +51,6 @@ var (
 		return nil, fmt.Errorf("cannot expand ellipsis")
 	})}
 )
-
-func init() {
-	env := common.EmptyEnvironment
-	env = env.MustDefine(common.Symbol("quote"), []int{0}, &common.Keyword{common.Function(transformQuote)})
-	env = env.MustDefine(common.Symbol("syntax"), []int{0}, &common.Keyword{common.Function(transformSyntax)})
-	env = env.MustDefine(common.Symbol("if"), []int{0}, &common.Keyword{common.Function(transformIf)})
-	env = env.MustDefine(common.Symbol("~let"), []int{0}, &common.Keyword{common.Function(transformLet)})
-	env = env.MustDefine(common.Symbol("begin"), []int{0}, &common.Keyword{common.Function(transformBegin)})
-	env = env.MustDefine(common.Symbol("lambda"), []int{0}, &common.Keyword{common.Function(transformLambda)})
-	env = env.MustDefine(common.Symbol("~define"), []int{0}, &common.Keyword{common.Function(transformDefine)})
-	env = env.MustDefine(common.Symbol("define-syntax"), []int{0}, &common.Keyword{common.Function(transformDefineSyntax)})
-	env = env.MustDefine(common.Symbol("syntax-case"), []int{0}, &common.Keyword{common.Function(transformSyntaxCase)})
-	env = env.MustDefine(common.Symbol("set!"), []int{0}, setKeyword)
-	env = env.MustDefine(common.Symbol("_"), []int{0}, underscoreKeyword)
-	env = env.MustDefine(common.Symbol("..."), []int{0}, ellipsisKeyword)
-	env = env.MustDefine(common.Symbol("not"), []int{0}, &common.Variable{common.Function(not)})
-	env = env.MustDefine(common.Symbol("cons"), []int{0}, &common.Variable{common.Function(cons)})
-	env = env.MustDefine(common.Symbol("car"), []int{0}, &common.Variable{common.Function(car)})
-	env = env.MustDefine(common.Symbol("cdr"), []int{0}, &common.Variable{common.Function(cdr)})
-	env = env.MustDefine(common.Symbol("null?"), []int{0}, &common.Variable{common.Function(null)})
-	env = env.MustDefine(common.Symbol("pair?"), []int{0}, &common.Variable{common.Function(pair)})
-	env = env.MustDefine(common.Symbol("proc?"), []int{0}, &common.Variable{common.Function(proc)})
-	env = env.MustDefine(common.Symbol("write"), []int{0}, &common.Variable{common.Function(write)})
-	env = env.MustDefine(common.Symbol("call/cc"), []int{0}, &common.Variable{common.Function(callWithCurrentContinuation)})
-	env = env.MustDefine(common.Symbol("error"), []int{0}, &common.Variable{common.Function(err)})
-	env = env.MustDefine(common.Symbol("eqv?"), []int{0}, &common.Variable{common.Function(eqv)})
-	env = env.MustDefine(common.Symbol("syntax->datum"), []int{0}, &common.Variable{common.Function(syntaxDatum)})
-	env = env.MustDefine(common.Symbol("identifier?"), []int{0}, &common.Variable{common.Function(identifier)})
-	env = env.MustDefine(common.Symbol("generate-temporaries"), []int{0}, &common.Variable{common.Function(generateTemporaries)})
-	env = env.MustDefine(common.Symbol("list"), []int{0}, &common.Variable{common.Function(list)})
-	Bindings = env.Bindings()
-}
 
 var (
 	PatternQuote                      = common.Pattern(read.MustReadDatum("(quote datum)"))
@@ -111,11 +109,8 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
-	syntax, ok := result[common.Symbol("name")].(common.WrappedSyntax)
+	id, ok := common.Syntax{result[common.Symbol("name")]}.Identifier()
 	if !ok {
-		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
-	}
-	if !syntax.IsIdentifier() {
 		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
 	init := result[common.Symbol("init")]
@@ -123,7 +118,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
 		forms = append(forms, form)
 	}
-	return common.CallC(c, LetForm{syntax, init, forms})
+	return common.CallC(c, LetForm{id, init, forms})
 }
 
 func transformBegin(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -147,13 +142,13 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 	}
-	var formals []common.WrappedSyntax
+	var formals []common.Identifier
 	for _, syntax := range result[common.Symbol("formals")].([]interface{}) {
-		identifier, ok := syntax.(common.WrappedSyntax)
-		if !(ok && identifier.IsIdentifier()) {
+		id, ok := common.Syntax{syntax}.Identifier()
+		if !ok {
 			return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
-		formals = append(formals, identifier)
+		formals = append(formals, id)
 	}
 	var forms []common.Datum
 	for _, form := range result[common.Symbol("body")].([]interface{}) {
@@ -169,12 +164,12 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
 	}
-	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-	if !(ok && identifier.IsIdentifier()) {
+	id, ok := common.Syntax{result[common.Symbol("name")]}.Identifier()
+	if !ok {
 		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
 	}
 	form := result[common.Symbol("value")]
-	return common.CallC(c, DefineForm{identifier, form})
+	return common.CallC(c, DefineForm{id, form})
 }
 
 func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -184,17 +179,15 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
-	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-	if !(ok && identifier.IsIdentifier()) {
+	id, ok := common.Syntax{result[common.Symbol("name")]}.Identifier()
+	if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
 	form := result[common.Symbol("value")]
-	return common.CallC(c, DefineSyntaxForm{identifier, form})
+	return common.CallC(c, DefineSyntaxForm{id, form})
 }
 
 func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	fmt.Println("syntax-case")
-	fmt.Println(common.Write(args[0]))
 	result, ok, err := common.MatchSyntax(args[0], PatternSyntaxCase, nil)
 	if err != nil {
 		return common.ErrorC(err)
@@ -202,13 +195,13 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 		return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 	}
 	input := result[common.Symbol("input")]
-	var literals []common.WrappedSyntax
+	var literals []common.Identifier
 	for _, literal := range result[common.Symbol("literal")].([]interface{}) {
-		identifier, ok := literal.(common.WrappedSyntax)
-		if !(ok && identifier.IsIdentifier()) {
+		id, ok := common.Syntax{literal}.Identifier()
+		if !ok {
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
-		literals = append(literals, identifier)
+		literals = append(literals, id)
 	}
 	var (
 		patterns []common.Datum
@@ -250,12 +243,12 @@ func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
-	identifier, ok := result[common.Symbol("name")].(common.WrappedSyntax)
-	if !(ok && identifier.IsIdentifier()) {
+	id, ok := common.Syntax{result[common.Symbol("name")]}.Identifier()
+	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
 	form := result[common.Symbol("expression")]
-	return common.CallC(c, SetForm{identifier, form})
+	return common.CallC(c, SetForm{id, form})
 }
 
 func not(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -394,8 +387,8 @@ func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationR
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("identifier?: wrong arity"))
 	}
-	syntax, ok := args[0].(common.WrappedSyntax)
-	return common.CallC(c, common.Boolean(ok && syntax.IsIdentifier()))
+	_, ok := common.Syntax{args[0]}.Identifier()
+	return common.CallC(c, common.Boolean(ok))
 }
 
 var temporaryIdentifiers int

@@ -19,7 +19,7 @@ func (err ExpressionCompileError) Error() string {
 	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
 }
 
-type BodyCompiler func(compiler Compiler, forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error)
+type BodyCompiler func(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error)
 type ExpressionCompiler func(compiler Compiler, form common.Datum) (common.Expression, error)
 type Expander func(compiler Compiler, form common.Datum) (common.Datum, bool, error)
 
@@ -39,8 +39,8 @@ func NewCompiler() Compiler {
 	}
 }
 
-func (compiler Compiler) BodyCompile(forms []common.Datum, defined []common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
-	return compiler.BodyCompiler(compiler, forms, defined)
+func (compiler Compiler) BodyCompile(forms []common.Datum, scope *common.Scope) (common.Expression, error) {
+	return compiler.BodyCompiler(compiler, forms, scope)
 }
 
 func (compiler Compiler) ExpressionCompile(form common.Datum) (common.Expression, error) {
@@ -68,8 +68,7 @@ func (compiler Compiler) Next() Compiler {
 	return compiler
 }
 
-func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSyntax, error) {
-	defined := body.DefinedAt(0)
+func Compile(body common.WrappedSyntax, scope *common.Scope) (common.Expression, error) {
 	var forms []common.Datum
 	for {
 		_, ok := body.Datum().(common.Pair)
@@ -80,5 +79,5 @@ func Compile(body common.WrappedSyntax) (common.Expression, []common.WrappedSynt
 		forms = append(forms, pair.First)
 		body = pair.Rest.(common.WrappedSyntax)
 	}
-	return NewCompiler().BodyCompile(forms, defined)
+	return NewCompiler().BodyCompile(forms, scope)
 }

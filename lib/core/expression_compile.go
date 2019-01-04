@@ -28,7 +28,12 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		return SyntaxTemplate{template, patternVariables}, nil
 	case BeginForm:
-		expression, _, err := compiler.BodyCompile(form.Forms, nil)
+		scope := common.NewScope(0)
+		forms := make([]common.Datum, len(form.Forms))
+		for i := range form.Forms {
+			forms[i] = common.Syntax{form.Forms[i]}.Push(scope).Datum
+		}
+		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
@@ -53,12 +58,16 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			return nil, err
 		}
 		variable := &common.Variable{}
-		name, _ := form.Identifier.IdentifierAt(compiler.Phase)
-		forms := form.Body
-		for i := range forms {
-			forms[i] = syntaxSet(forms[i], name, variable)
+		scope := common.NewScope(0)
+		err = scope.Set(form.Identifier, variable)
+		if err != nil {
+			return nil, err
 		}
-		bodyExpression, _, err := compiler.BodyCompile(forms, nil)
+		forms := make([]common.Datum, len(form.Body))
+		for i := range form.Body {
+			forms[i] = common.Syntax{form.Body[i]}.Push(scope).Datum
+		}
+		bodyExpression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
@@ -79,38 +88,42 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
 		var variables []*common.Variable
-		forms := form.Body
+		scope := common.NewScope(0)
 		for _, formal := range form.Formals {
-			name, _ := formal.IdentifierAt(compiler.Phase)
 			variable := &common.Variable{}
-			for i := range forms {
-				forms[i] = syntaxSet(forms[i], name, variable)
+			err := scope.Set(formal, variable)
+			if err != nil {
+				return nil, err
 			}
 			variables = append(variables, variable)
 		}
-		expression, _, err := compiler.BodyCompile(forms, nil)
+		forms := make([]common.Datum, len(form.Body))
+		for i := range form.Body {
+			forms[i] = common.Syntax{form.Body[i]}.Push(scope).Datum
+		}
+		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
 		return Literal{common.Lambda{variables, expression}}, nil
 	case ReferenceForm:
-		name, location := form.Identifier.IdentifierAt(compiler.Phase)
+		location := form.Identifier.Location()
 		if location == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v at %v", name, form.Identifier.SourceLocation())
+			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
 		variable, ok := location.(*common.Variable)
 		if !ok {
-			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", name)
+			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", form.Identifier.Name())
 		}
 		return Reference{variable}, nil
 	case SetForm:
-		name, location := form.Identifier.IdentifierAt(compiler.Phase)
+		location := form.Identifier.Location()
 		if location == nil {
-			return nil, fmt.Errorf("compile: unbound identifier %v at %v", name, form.Identifier.SourceLocation())
+			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
 		variable, ok := location.(*common.Variable)
 		if !ok {
-			return nil, fmt.Errorf("compile: non-variable identifier %v in assignment", name)
+			return nil, fmt.Errorf("compile: non-variable identifier %v in assignment", form.Identifier.Name())
 		}
 		expression, err := compiler.ExpressionCompile(form.Form)
 		if err != nil {
@@ -124,14 +137,14 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		literals := make(map[common.Symbol]common.Location)
 		for _, literal := range form.Literals {
-			name, location := literal.IdentifierAt(compiler.Phase)
+			location := literal.Location()
 			if location == underscoreKeyword {
 				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}
 			if location == ellipsisKeyword {
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
-			literals[name] = location
+			literals[literal.Name()] = location
 		}
 		var (
 			patterns                []common.Datum
@@ -149,14 +162,17 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 				return nil, err
 			}
 			bindings := make(map[common.Symbol]*common.PatternVariable)
-			fender := form.Fenders[i]
-			output := form.Outputs[i]
+			scope := common.NewScope(0)
 			for name, n := range patternVariables {
 				patternVariable := &common.PatternVariable{nil, n}
 				bindings[name] = patternVariable
-				fender = syntaxSet(fender, name, patternVariable)
-				output = syntaxSet(output, name, patternVariable)
+				err := scope.Set(common.NewIdentifier(name), patternVariable)
+				if err != nil {
+					return nil, err
+				}
 			}
+			fender := common.Syntax{form.Fenders[i]}.Push(scope).Datum
+			output := common.Syntax{form.Outputs[i]}.Push(scope).Datum
 			fenderExpression, err := compiler.ExpressionCompile(fender)
 			if err != nil {
 				return nil, err
@@ -198,9 +214,10 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 		return syntax, map[*common.PatternVariable]int{}, nil
 	case common.Symbol:
 		if !isSyntax {
-			return nil, nil, fmt.Errorf("compile: encountered unwrapped symbol in syntax template")
+			panic("encountered unwrapped symbol in syntax template")
 		}
-		_, location := syntax.IdentifierAt(phase)
+		id, _ := syntax.Identifier()
+		location := id.Location()
 		if patternVariable, ok := location.(*common.PatternVariable); ok {
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
 		}
@@ -237,15 +254,11 @@ func compileTemplate(datum common.Datum, phase int) (common.Datum, map[*common.P
 				}
 				pair = rest.(common.Pair)
 			}
-			identifier, ok := pair.First.(common.WrappedSyntax)
+			id, ok := common.Syntax{pair.First}.Identifier()
 			if !ok {
 				break
 			}
-			if !identifier.IsIdentifier() {
-				break
-			}
-			_, location := identifier.IdentifierAt(phase)
-			if location != ellipsisKeyword {
+			if id.Location() != ellipsisKeyword {
 				break
 			}
 			ellipsis++
@@ -315,9 +328,10 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 		return datum, nil
 	case common.Symbol:
 		if !isSyntax {
-			return nil, fmt.Errorf("compile: encountered unwrapped symbol in pattern")
+			panic("encountered unwrapped symbol in pattern")
 		}
-		_, location := syntax.IdentifierAt(phase)
+		id, _ := syntax.Identifier()
+		location := id.Location()
 		if location == underscoreKeyword {
 			return common.Underscore, nil
 		}
@@ -353,13 +367,4 @@ func compilePattern(datum common.Datum, phase int) (common.Datum, error) {
 		}
 		return nil, fmt.Errorf("compile: unhandled pattern form: %v", common.Write(datum))
 	}
-}
-
-// syntaxSet sets a substitution for on the given form if the given form is a wrapped syntax object.
-func syntaxSet(form common.Datum, name common.Symbol, location common.Location) common.Datum {
-	syntax, ok := form.(common.WrappedSyntax)
-	if ok {
-		form = syntax.Set(name, location)
-	}
-	return form
 }

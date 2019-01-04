@@ -5,7 +5,13 @@ import (
 )
 
 type mark struct {
-	SourceLocation
+	*mark
+}
+
+func newMark() *mark {
+	m := &mark{}
+	m.mark = m
+	return m
 }
 
 type markSet []*mark
