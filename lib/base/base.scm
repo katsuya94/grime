@@ -3,7 +3,6 @@
     quote
     syntax
     if
-    ~let ; TODO remove after implementing syntax hygiene
     begin
     lambda
     define
@@ -47,7 +46,7 @@
     (for (except (derived) syntax-rules) run)
     (for (only (core) syntax syntax-case _ ...) expand)
     (for (only (core) set!) run expand)
-    (for (except (core) syntax syntax-case _ ...) run))
+    (for (except (core) syntax syntax-case _ ... set!) run))
 
   (define (eq? l r)
     (eqv? l r))

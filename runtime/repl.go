@@ -28,7 +28,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			continue
 		}
 		body := common.Body(nullSourceLocationTree, syntaxes...)
-		scopes := make(map[int]*common.Scope, len(bindings))
+		scopes := make(map[int]common.BaseScope, len(bindings))
 		for phase, locations := range bindings {
 			scopes[phase] = common.NewScope()
 			for name, location := range locations {

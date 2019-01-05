@@ -136,7 +136,7 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) Push(scope *Scope, phase int) WrappedSyntax {
+func (d WrappedSyntax) Push(scope Scope, phase int) WrappedSyntax {
 	d.scopeList = &scopeList{scope, d.scopeList, phase}
 	return d
 }

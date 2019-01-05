@@ -239,7 +239,7 @@ func TestEvaluateExpression(t *testing.T) {
 			}
 			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
-			scopes := make(map[int]*common.Scope)
+			scopes := make(map[int]common.Scope)
 			for phase, locations := range Bindings {
 				scopes[phase] = common.NewScope()
 				for name, location := range locations {

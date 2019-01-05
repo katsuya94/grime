@@ -40,7 +40,8 @@
            list
            generate-temporaries
            not
-           if)
+           if
+           set!)
          expand))
 
   (define-syntax define

@@ -3,7 +3,6 @@
     quote
     syntax
     if
-    ~let
     begin
     lambda
     define

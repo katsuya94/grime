@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func BodyCompile(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error) {
+func BodyCompile(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error) {
 	var (
 		i                         int
 		sourceLocations           []common.SourceLocation

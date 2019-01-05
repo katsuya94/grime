@@ -173,7 +173,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		resolutions = append(resolutions, resolution)
 	}
 	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree))
-	scopes := make(map[int]*common.Scope)
+	scopes := make(map[int]common.BaseScope)
 	scopes[0] = common.NewScope()
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
@@ -210,8 +210,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for phase, scope := range scopes {
 		body = body.Push(scope, phase)
 	}
-	scope := common.NewScope()
-	expression, err := r.compiler(body, scope)
+	expression, err := r.compiler(body, scopes[0])
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
@@ -219,7 +218,6 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false
 		for phase, scope := range scopes {
-			prov.bindings[phase] = make(map[common.Symbol]common.Location)
 			for name, location := range scope.Bindings() {
 				if exportSpec.internal != name {
 					continue

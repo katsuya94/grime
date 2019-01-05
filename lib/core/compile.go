@@ -19,7 +19,7 @@ func (err ExpressionCompileError) Error() string {
 	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
 }
 
-type BodyCompiler func(compiler Compiler, forms []common.Datum, scope *common.Scope) (common.Expression, error)
+type BodyCompiler func(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error)
 type ExpressionCompiler func(compiler Compiler, form common.Datum) (common.Expression, error)
 type Expander func(compiler Compiler, form common.Datum) (common.Datum, bool, error)
 
@@ -37,7 +37,7 @@ func NewCompiler() Compiler {
 	}
 }
 
-func (compiler Compiler) BodyCompile(forms []common.Datum, scope *common.Scope) (common.Expression, error) {
+func (compiler Compiler) BodyCompile(forms []common.Datum, scope common.Scope) (common.Expression, error) {
 	return compiler.BodyCompiler(compiler, forms, scope)
 }
 
@@ -61,7 +61,8 @@ func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, erro
 	}
 }
 
-func Compile(body common.WrappedSyntax, scope *common.Scope) (common.Expression, error) {
+func Compile(body common.WrappedSyntax, scope common.Scope) (common.Expression, error) {
+	scope = common.NewProxyScope(scope)
 	body = body.Push(scope, common.LEXICAL)
 	var forms []common.Datum
 	for {
