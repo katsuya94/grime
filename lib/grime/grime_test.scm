@@ -6,6 +6,14 @@
 (define (assert-equal actual expected)
   (assert-true (equal? actual expected)))
 
+(define-syntax unhygienic1
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ e) #'(let [(x 5)] e)])))
+
+#;(define-syntax unhygienic2
+  (syntax-rules ()
+    [(_ e) (let [(x 5)] e)]))
 
 (define x #f)
 
@@ -61,3 +69,8 @@
 (let [(x 'foo) (y x)]
   (assert-equal x 'foo)
   (assert-equal y #f))
+
+; TODO should fail because of hygiene
+(write (unhygienic1 x))
+(error "hi")
+#;(write (unhygienic2 x))

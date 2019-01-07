@@ -312,6 +312,7 @@ func (e SyntaxTemplate) Evaluate(c common.Continuation) (common.EvaluationResult
 }
 
 func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVariable]interface{}) (common.Datum, error) {
+	fmt.Printf("evaluateSyntaxTemplate %v %v\n", common.Write(datum), bindings)
 	switch datum := datum.(type) {
 	case common.WrappedSyntax:
 		return datum, nil
@@ -354,6 +355,9 @@ func evaluateSubtemplate(subtemplate Subtemplate, bindings map[*common.PatternVa
 			return nil, err
 		}
 		return []common.Datum{datum}, nil
+	}
+	if _, ok := bindings[subtemplate.PatternVariables[0]].([]interface{}); !ok {
+		return nil, fmt.Errorf("SPECIAL ERROR")
 	}
 	n := len(bindings[subtemplate.PatternVariables[0]].([]interface{}))
 	for _, patternVariable := range subtemplate.PatternVariables {

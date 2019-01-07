@@ -84,11 +84,14 @@
   (define-syntax let
     (lambda (x)
       (syntax-case x ()
-       [(_ ((i e) ...) b1 b2 ...)
-        (with-syntax
-          ([(t ...) (generate-temporaries #'(i ...))])
-          #'(let* ((t e) ...)
-              (let* ((i t) ...) b1 b2 ...)))])))
+        [(_ v ((i e) ...) b1 b2 ...)
+         #'(letrec* ((v (lambda (i ...) b1 b2 ...)))
+             (let ((i e) ...) b1 b2 ...))]
+        [(_ ((i e) ...) b1 b2 ...)
+         (with-syntax
+           ([(t ...) (generate-temporaries #'(i ...))])
+           #'(let* ((t e) ...)
+               (let* ((i t) ...) b1 b2 ...)))])))
   
   ; TODO letrec should detect usages of variables before definition
   (define-syntax letrec
@@ -140,10 +143,9 @@
          #'(lambda (x)
              (syntax-case x (lit ...)
                [(_ . p) #'t] ...))])))
-  
+
   (define-syntax cond
-    (lambda (x) #f) ; pending named let
-    #;(lambda (x)
+    (lambda (x)
       (syntax-case x ()
         [(_ c1 c2 ...)
          (let f ([c1 #'c1] [c2* #'(c2 ...)])
