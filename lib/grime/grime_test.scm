@@ -9,8 +9,8 @@
 (define-syntax unhygienic
   (lambda (stx)
     (syntax-case stx ()
-      [(_ s e)
-       (with-syntax [(y (datum->syntax #'s 'y))]
+      [(k e)
+       (with-syntax [(y (datum->syntax #'k 'y))]
          #'(let [(y 'dirty)] e))])))
 
 (define-syntax syntax-rules-test-simple
@@ -74,7 +74,7 @@
 
 ; datum->syntax
 
-(unhygienic id
+(unhygienic
   (assert-equal y 'dirty))
 
 ; syntax-rules
