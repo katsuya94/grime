@@ -13,6 +13,10 @@
        (with-syntax [(y (datum->syntax #'s 'y))]
          #'(let [(y 'dirty)] e))])))
 
+(define-syntax syntax-rules-test-simple
+  (syntax-rules ()
+    [(_) 'foo]))
+
 (define x #f)
 
 ; when
@@ -72,3 +76,7 @@
 
 (unhygienic id
   (assert-equal y 'dirty))
+
+; syntax-rules
+
+(assert-equal (syntax-rules-test-simple) 'foo)
