@@ -41,6 +41,10 @@ func (nullType) Write() string {
 	return "()"
 }
 
+func (nullType) Mark(m *M) Marker {
+	return Null
+}
+
 // Underscore is a value used in patterns as a non-capturing wildcard.
 var Underscore = &underscoreType{}
 
@@ -112,6 +116,13 @@ func formatRest(d Datum) string {
 	}
 }
 
+func (d Pair) Mark(m *M) Marker {
+	return Pair{
+		Mark(d.First, m),
+		Mark(d.Rest, m),
+	}
+}
+
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
 	scopeList          *scopeList
@@ -138,6 +149,16 @@ func (d WrappedSyntax) Datum() Datum {
 
 func (d WrappedSyntax) Push(scope Scope, phase int) WrappedSyntax {
 	d.scopeList = &scopeList{scope, d.scopeList, phase}
+	return d
+}
+
+func (d WrappedSyntax) Next() WrappedSyntax {
+	d.phase++
+	return d
+}
+
+func (d WrappedSyntax) Mark(m *M) Marker {
+	d.marks = d.marks.xor(m)
 	return d
 }
 
@@ -182,11 +203,6 @@ func (d WrappedSyntax) PushDown() Datum {
 func (d WrappedSyntax) pushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree
-	return d
-}
-
-func (d WrappedSyntax) Next() WrappedSyntax {
-	d.phase++
 	return d
 }
 

@@ -9,11 +9,11 @@
 (define-syntax unhygienic1
   (lambda (stx)
     (syntax-case stx ()
-      [(_ e) #'(let [(x 5)] e)])))
+      [(_ e) #'(let [(y 5)] e)])))
 
 #;(define-syntax unhygienic2
   (syntax-rules ()
-    [(_ e) (let [(x 5)] e)]))
+    [(_ e) (let [(y 5)] e)]))
 
 (define x #f)
 
@@ -71,6 +71,6 @@
   (assert-equal y #f))
 
 ; TODO should fail because of hygiene
-(write (unhygienic1 x))
+(write (unhygienic1 y))
 (error "hi")
-#;(write (unhygienic2 x))
+#;(write (unhygienic2 y))

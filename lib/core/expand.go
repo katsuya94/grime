@@ -16,6 +16,9 @@ var (
 )
 
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
+	// TODO: what happens if we limit this to WrappedSyntax only?
+	// r6rs-lib 12.3 seems to imply that transformers should only take wrapped syntax objects,
+	// however macro uses would then often be unable to expand into macro uses
 	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet, map[common.Symbol]common.Location{
 		common.Symbol("set!"): setKeyword,
 	}); ok || err != nil {
@@ -69,11 +72,13 @@ func expandMacroMatching(form common.Datum, pattern common.Datum, literals map[c
 	if keyword.Transformer == nil {
 		return nil, false, fmt.Errorf("expand: cannot use keyword before definition")
 	}
+	mark := common.NewMark()
+	input := common.Mark(form, mark)
 	output, err := common.WithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return keyword.Transformer.Call(escape, form)
+		return keyword.Transformer.Call(escape, input)
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	return output, true, nil
+	return common.Mark(output, mark), true, nil
 }

@@ -4,19 +4,28 @@ import (
 	"unsafe"
 )
 
-type mark struct {
-	*mark
+type Marker interface {
+	Datum
+	Mark(m *M) Marker
 }
 
-func newMark() *mark {
-	m := &mark{}
-	m.mark = m
+func Mark(d Datum, m *M) Marker {
+	return d.(Marker).Mark(m)
+}
+
+type M struct {
+	*M
+}
+
+func NewMark() *M {
+	m := &M{}
+	m.M = m
 	return m
 }
 
-type markSet []*mark
+type markSet []*M
 
-func (s markSet) add(m *mark) markSet {
+func (s markSet) add(m *M) markSet {
 	i := 0
 	j := len(s)
 	for {
@@ -38,7 +47,7 @@ func (s markSet) add(m *mark) markSet {
 	}
 }
 
-func (s markSet) xor(m *mark) markSet {
+func (s markSet) xor(m *M) markSet {
 	i := 0
 	j := len(s)
 	for {
@@ -70,6 +79,26 @@ func (s markSet) equal(other markSet) bool {
 	}
 	for i := range s {
 		if s[i] != other[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (s markSet) subset(other markSet) bool {
+	if len(other) > len(s) {
+		return false
+	}
+	i := 0
+	for _, m := range other {
+		found := false
+		for ; i < len(s); i++ {
+			if m == s[i] {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return false
 		}
 	}

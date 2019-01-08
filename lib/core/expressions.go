@@ -312,7 +312,6 @@ func (e SyntaxTemplate) Evaluate(c common.Continuation) (common.EvaluationResult
 }
 
 func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVariable]interface{}) (common.Datum, error) {
-	fmt.Printf("evaluateSyntaxTemplate %v %v\n", common.Write(datum), bindings)
 	switch datum := datum.(type) {
 	case common.WrappedSyntax:
 		return datum, nil

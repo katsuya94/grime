@@ -23,7 +23,7 @@ func NewScope() BaseScope {
 func (b BaseScope) Get(id Identifier) Location {
 	bindings, _ := b[id.Name()]
 	for _, binding := range bindings {
-		if binding.marks.equal(id.marks) {
+		if id.marks.subset(binding.marks) {
 			return binding.location
 		}
 	}
@@ -33,7 +33,7 @@ func (b BaseScope) Get(id Identifier) Location {
 func (b BaseScope) Set(id Identifier, location Location) error {
 	bindings, _ := b[id.Name()]
 	for _, binding := range bindings {
-		if binding.marks.equal(id.marks) {
+		if id.marks.subset(binding.marks) {
 			return fmt.Errorf("already defined: %v", id.Name())
 		}
 	}
@@ -48,7 +48,7 @@ func (b BaseScope) Bindings() map[Symbol]Location {
 	m := make(map[Symbol]Location)
 	for name, bindings := range b {
 		for _, binding := range bindings {
-			if binding.marks.equal(markSet{}) {
+			if (markSet{}).subset(binding.marks) {
 				m[name] = binding.location
 			}
 		}
@@ -106,6 +106,10 @@ func (id Identifier) Location() Location {
 		}
 	}
 	return nil
+}
+
+func (id Identifier) Mark(m *M) Identifier {
+	return Identifier{id.WrappedSyntax.Mark(m).(WrappedSyntax)}
 }
 
 // IsSyntax determines whether a Datum is a Syntax object.

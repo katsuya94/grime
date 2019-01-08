@@ -40,31 +40,6 @@ func TestCompile(t *testing.T) {
 			"already defined: foo",
 		},
 		{
-			"empty begin in definition context",
-			"(begin) 'foo",
-			"",
-		},
-		{
-			"body forms after expression in begin",
-			"(begin 'foo (~define x 'bar))",
-			"in body expression expanded from string:1:1: in body expression expanded from string:1:13: compile: unexpected form in expression context: #<core.DefineForm>",
-		},
-		{
-			"empty lambda",
-			"(lambda ())",
-			"in body expression expanded from string:1:1: unexpected final form",
-		},
-		{
-			"lambda does not leak enclosing context",
-			"((~let (x 'foo) (lambda () x))) x",
-			"in body expression expanded from string:1:33: compile: unbound identifier x at string:1:33",
-		},
-		{
-			"lambda does not leak arguments",
-			"((lambda (x) x) 'foo) x",
-			"in body expression expanded from string:1:23: compile: unbound identifier x at string:1:23",
-		},
-		{
 			"define-syntax",
 			"(define-syntax id (lambda (stx) #'123)) (id)",
 			"",
