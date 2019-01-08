@@ -36,6 +36,7 @@ var Bindings = common.BindingSet{
 		common.Symbol("error"):                &common.Variable{common.Function(err)},
 		common.Symbol("eqv?"):                 &common.Variable{common.Function(eqv)},
 		common.Symbol("syntax->datum"):        &common.Variable{common.Function(syntaxDatum)},
+		common.Symbol("datum->syntax"):        &common.Variable{common.Function(datumSyntax)},
 		common.Symbol("identifier?"):          &common.Variable{common.Function(identifier)},
 		common.Symbol("generate-temporaries"): &common.Variable{common.Function(generateTemporaries)},
 		common.Symbol("list"):                 &common.Variable{common.Function(list)},
@@ -380,8 +381,22 @@ func syntaxDatumRecursive(syntax common.Datum) (common.Datum, error) {
 		}
 		return common.Pair{first, rest}, nil
 	default:
+		if syntax == common.Null {
+			return common.Null, nil
+		}
 		return nil, fmt.Errorf("syntax->datum: expected syntax")
 	}
+}
+
+func datumSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	if len(args) != 2 {
+		return common.ErrorC(fmt.Errorf("datum->syntax: wrong arity"))
+	}
+	id, ok := common.Syntax{args[0]}.Identifier()
+	if !ok {
+		return common.ErrorC(fmt.Errorf("datum->syntax: expected identifier"))
+	}
+	return common.CallC(c, id.PushOnto(args[1], nil))
 }
 
 func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

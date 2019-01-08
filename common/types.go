@@ -194,13 +194,13 @@ func (d WrappedSyntax) PushDown() Datum {
 			rest := d.sourceLocationTree.Children.(Pair).Rest.(SourceLocationTree)
 			restSourceLocationTree = &rest
 		}
-		return Pair{d.pushOnto(datum.First, firstSourceLocationTree), d.pushOnto(datum.Rest, restSourceLocationTree)}
+		return Pair{d.PushOnto(datum.First, firstSourceLocationTree), d.PushOnto(datum.Rest, restSourceLocationTree)}
 	default:
 		panic(fmt.Sprintf("unhandled syntax #<%T>", datum))
 	}
 }
 
-func (d WrappedSyntax) pushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
+func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree
 	return d

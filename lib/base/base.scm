@@ -22,6 +22,7 @@
     error
     eqv?
     syntax->datum
+    datum->syntax
     identifier?
     generate-temporaries
     list
