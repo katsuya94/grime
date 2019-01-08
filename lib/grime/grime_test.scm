@@ -11,7 +11,7 @@
     (syntax-case stx ()
       [(_ s e)
        (with-syntax [(y (datum->syntax #'s 'y))]
-         #'(let [(y 6)] e))])))
+         #'(let [(y 'dirty)] e))])))
 
 (define x #f)
 
@@ -68,4 +68,7 @@
   (assert-equal x 'foo)
   (assert-equal y #f))
 
-(write (unhygienic id y))
+; datum->syntax
+
+(unhygienic id
+  (assert-equal y 'dirty))
