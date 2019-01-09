@@ -248,8 +248,6 @@ type syntaxCaseFenderEvaluated struct {
 	continuation            common.Continuation
 	input                   common.Datum
 	literals                map[common.Symbol]common.Location
-	result                  map[common.Symbol]interface{}
-	bindings                map[common.Symbol]*common.PatternVariable
 	output                  common.Expression
 	patterns                []common.Datum
 	patternVariableBindings []map[common.Symbol]*common.PatternVariable
@@ -261,9 +259,6 @@ func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult
 	if d == common.Boolean(false) {
 		return syntaxCaseMatch(c.continuation, c.input, c.literals, c.patterns, c.patternVariableBindings, c.fenders, c.outputs)
 	}
-	for name, match := range c.result {
-		(*c.bindings[name]).Match = match
-	}
 	return common.EvalC(c.continuation, c.output)
 }
 
@@ -273,13 +268,14 @@ func syntaxCaseMatch(continuation common.Continuation, input common.Datum, liter
 		if err != nil {
 			return nil, err
 		} else if ok {
+			for name, match := range result {
+				(*patternVariableBindings[i][name]).Match = match
+			}
 			return common.EvalC(
 				syntaxCaseFenderEvaluated{
 					continuation,
 					input,
 					literals,
-					result,
-					patternVariableBindings[i],
 					outputs[i],
 					patterns[i+1:],
 					patternVariableBindings[i+1:],

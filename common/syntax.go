@@ -1,6 +1,8 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const LEXICAL = -1
 
@@ -128,6 +130,15 @@ type Syntax struct {
 	Datum
 }
 
+func Wrap(datum Datum, sourceLocationTree *SourceLocationTree) Syntax {
+	switch datum := datum.(type) {
+	case Symbol, Pair:
+		return Syntax{NewWrappedSyntax(datum, sourceLocationTree)}
+	default:
+		return Syntax{datum}
+	}
+}
+
 func (s Syntax) Push(scope Scope, phase int) Syntax {
 	switch d := s.Datum.(type) {
 	case WrappedSyntax:
@@ -173,4 +184,36 @@ func (s Syntax) Identifier() (Identifier, bool) {
 		return Identifier{}, false
 	}
 	return wrapped.Identifier()
+}
+
+func (s Syntax) Unwrap() Datum {
+	switch d := s.Datum.(type) {
+	case WrappedSyntax:
+		return d.Datum()
+	case Pair:
+		return Syntax{
+			Pair{
+				Syntax{d.First}.Unwrap(),
+				Syntax{d.Rest}.Unwrap(),
+			},
+		}
+	default:
+		return d
+	}
+}
+
+func (s Syntax) SourceLocation() SourceLocation {
+	syntax, ok := s.Datum.(WrappedSyntax)
+	if !ok {
+		return SourceLocation{}
+	}
+	return syntax.SourceLocation()
+}
+
+func (s Syntax) SourceLocationTree() *SourceLocationTree {
+	syntax, ok := s.Datum.(WrappedSyntax)
+	if !ok {
+		return nil
+	}
+	return syntax.sourceLocationTree
 }

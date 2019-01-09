@@ -17,6 +17,8 @@
     cond)
   (import
     (for (only (core)
+           write ; TODO remove
+
            define-syntax
            null?
            pair?
@@ -126,6 +128,7 @@
     (or (null? x) (pair? x)))
   
   (define (fold-left combine nil lst)
+    (write lst)
     (unless (proc? combine) (error "fold-left: expected proc"))
     (unless (list? lst) (error "fold-left: expected list"))
     (if (null? lst)

@@ -162,11 +162,11 @@ func TestRead(t *testing.T) {
 			} else {
 				var (
 					data                []common.Datum
-					sourceLocationTrees []common.SourceLocationTree
+					sourceLocationTrees []*common.SourceLocationTree
 				)
 				for _, syntax := range syntaxes {
-					data = append(data, syntax.Datum())
-					sourceLocationTrees = append(sourceLocationTrees, *syntax.SourceLocationTree())
+					data = append(data, syntax.Unwrap())
+					sourceLocationTrees = append(sourceLocationTrees, syntax.SourceLocationTree())
 				}
 				if !reflect.DeepEqual(data, test.data) {
 					t.Errorf("\nexpected: %#v\n     got: %#v", test.data, data)

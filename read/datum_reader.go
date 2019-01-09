@@ -23,12 +23,12 @@ func NewDatumReader(filename string, r io.Reader) *DatumReader {
 	return &DatumReader{NewLexemeReader(filename, r)}
 }
 
-func (d *DatumReader) ReadDatum() (common.WrappedSyntax, error) {
+func (d *DatumReader) ReadSyntax() (common.Syntax, error) {
 	datum, sourceLocationTree, err := d.readDatum()
 	if err != nil {
-		return common.WrappedSyntax{}, err
+		return common.Syntax{}, err
 	}
-	return common.NewWrappedSyntax(datum, &sourceLocationTree), nil
+	return common.Wrap(datum, &sourceLocationTree), nil
 }
 
 func (d *DatumReader) readDatum() (common.Datum, common.SourceLocationTree, error) {
@@ -240,13 +240,13 @@ func (d *DatumReader) expectNonEOF() (Lexeme, common.SourceLocation, error) {
 	return lexeme, sourceLocation, nil
 }
 
-func Read(filename string, r io.Reader) ([]common.WrappedSyntax, common.SourceLocationTree, error) {
+func Read(filename string, r io.Reader) ([]common.Syntax, common.SourceLocationTree, error) {
 	datumReader := NewDatumReader(filename, r)
 	var (
-		syntaxes []common.WrappedSyntax
+		syntaxes []common.Syntax
 	)
 	for {
-		syntax, err := datumReader.ReadDatum()
+		syntax, err := datumReader.ReadSyntax()
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -264,11 +264,11 @@ func Read(filename string, r io.Reader) ([]common.WrappedSyntax, common.SourceLo
 	return syntaxes, common.SourceLocationTree{sourceLocation, nil}, nil
 }
 
-func ReadString(s string) ([]common.WrappedSyntax, common.SourceLocationTree, error) {
+func ReadString(s string) ([]common.Syntax, common.SourceLocationTree, error) {
 	return Read("string", strings.NewReader(s))
 }
 
-func MustReadSyntaxes(s string) ([]common.WrappedSyntax, common.SourceLocationTree) {
+func MustReadSyntaxes(s string) ([]common.Syntax, common.SourceLocationTree) {
 	syntaxes, nullSourceLocationTree, err := ReadString(s)
 	if err != nil {
 		panic(err)
@@ -276,7 +276,7 @@ func MustReadSyntaxes(s string) ([]common.WrappedSyntax, common.SourceLocationTr
 	return syntaxes, nullSourceLocationTree
 }
 
-func MustReadSyntax(s string) common.WrappedSyntax {
+func MustReadSyntax(s string) common.Syntax {
 	syntaxes, _ := MustReadSyntaxes(s)
 	if len(syntaxes) != 1 {
 		panic(fmt.Sprintf("encountered %v syntaxes", len(syntaxes)))
@@ -288,15 +288,15 @@ func MustReadData(s string) []common.Datum {
 	syntaxes, _ := MustReadSyntaxes(s)
 	var data []common.Datum
 	for _, syntax := range syntaxes {
-		data = append(data, syntax.Datum())
+		data = append(data, syntax.Unwrap())
 	}
 	return data
 }
 
 func MustReadDatum(s string) common.Datum {
-	return MustReadSyntax(s).Datum()
+	return MustReadSyntax(s).Unwrap()
 }
 
-func ReadBytes(b []byte) ([]common.WrappedSyntax, common.SourceLocationTree, error) {
+func ReadBytes(b []byte) ([]common.Syntax, common.SourceLocationTree, error) {
 	return Read("bytes", bytes.NewReader(b))
 }
