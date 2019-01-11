@@ -65,7 +65,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	}
 }
 
-func readREPLSyntaxes(r io.Reader) ([]common.WrappedSyntax, common.SourceLocationTree, error) {
+func readREPLSyntaxes(r io.Reader) ([]common.Syntax, common.SourceLocationTree, error) {
 	var source []byte
 	scanner := bufio.NewScanner(r)
 	scanner.Split(splitReplLines)

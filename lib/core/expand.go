@@ -33,17 +33,17 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok, err := common.MatchSyntax(form, PatternApplication, nil); err != nil {
+	if result, ok, err := common.MatchSyntax(common.NewSyntax(form), PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
-		procedure := result[common.Symbol("procedure")]
+		procedure := result[common.Symbol("procedure")].(common.Syntax).Form()
 		var arguments []common.Datum
-		for _, argument := range result[common.Symbol("arguments")].([]interface{}) {
-			arguments = append(arguments, argument)
+		for _, syntax := range result[common.Symbol("arguments")].([]interface{}) {
+			arguments = append(arguments, syntax.(common.Syntax).Form())
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
 	}
-	id, ok := common.Syntax{form}.Identifier()
+	id, ok := common.NewSyntax(form).Identifier()
 	if ok {
 		return ReferenceForm{id}, true, nil
 	}
@@ -51,13 +51,13 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 }
 
 func expandMacroMatching(form common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
-	result, ok, err := common.MatchSyntax(form, pattern, literals)
+	result, ok, err := common.MatchSyntax(common.NewSyntax(form), pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
 		return nil, false, nil
 	}
-	id, ok := common.Syntax{result[common.Symbol("keyword")]}.Identifier()
+	id, ok := result[common.Symbol("keyword")].(common.Syntax).Identifier()
 	if !ok {
 		return nil, false, nil
 	}

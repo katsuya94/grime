@@ -55,7 +55,7 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 	}
 }
 
-func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax, nullSourceLocationTree common.SourceLocationTree) error {
+func (r *Runtime) Execute(topLevelProgram []common.Syntax, nullSourceLocationTree common.SourceLocationTree) error {
 	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
 		common.Symbol("import"): nil,
 	})
@@ -66,7 +66,7 @@ func (r *Runtime) Execute(topLevelProgram []common.WrappedSyntax, nullSourceLoca
 	}
 	var library Library
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
-		importSpec, err := newImportSpec(d.(common.WrappedSyntax))
+		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil
 		}
@@ -172,7 +172,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 		subProvs = append(subProvs, subProv)
 		resolutions = append(resolutions, resolution)
 	}
-	syntaxes := append(prov.library.body, common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree))
+	syntaxes := append(prov.library.body, common.NewSyntax(common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree)))
 	scopes := make(map[int]common.BaseScope)
 	scopes[0] = common.NewScope()
 	for i := range subProvs {

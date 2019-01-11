@@ -1,19 +1,22 @@
 package common
 
-func Body(nullSourceLocationTree SourceLocationTree, syntaxes ...WrappedSyntax) WrappedSyntax {
-	list := NewWrappedSyntax(Null, &nullSourceLocationTree)
+func Body(nullSourceLocationTree SourceLocationTree, syntaxes ...Syntax) Syntax {
+	list := NewSyntax(NewWrappedSyntax(Null, &nullSourceLocationTree))
 	for i := len(syntaxes) - 1; i >= 0; i-- {
-		sourceLocationTree := SourceLocationTree{
-			SourceLocation{
-				File:   syntaxes[i].SourceLocation().File,
-				Line:   syntaxes[i].SourceLocation().Line,
-				Column: syntaxes[i].SourceLocation().Column,
-				Offset: syntaxes[i].SourceLocation().Offset,
-				Length: list.SourceLocation().Offset + list.SourceLocation().Length - syntaxes[i].SourceLocation().Offset,
-			},
-			Pair{*syntaxes[i].SourceLocationTree(), *list.SourceLocationTree()},
+		var sourceLocationTree *SourceLocationTree
+		if syntaxes[i].SourceLocationTree() != nil {
+			sourceLocationTree = &SourceLocationTree{
+				SourceLocation{
+					File:   syntaxes[i].SourceLocation().File,
+					Line:   syntaxes[i].SourceLocation().Line,
+					Column: syntaxes[i].SourceLocation().Column,
+					Offset: syntaxes[i].SourceLocation().Offset,
+					Length: list.SourceLocation().Offset + list.SourceLocation().Length - syntaxes[i].SourceLocation().Offset,
+				},
+				Pair{*syntaxes[i].SourceLocationTree(), *list.SourceLocationTree()},
+			}
 		}
-		list = NewWrappedSyntax(Pair{syntaxes[i].Datum(), list.Datum()}, &sourceLocationTree)
+		list = NewSyntax(NewWrappedSyntax(Pair{syntaxes[i].Datum(), list.Datum()}, sourceLocationTree))
 	}
 	return list
 }

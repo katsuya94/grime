@@ -62,19 +62,21 @@ func TestNewLibrary(t *testing.T) {
 			"(library (name) (export) (import) id)",
 			&Library{
 				name: []common.Symbol{common.Symbol("name")},
-				body: []common.WrappedSyntax{
-					common.NewWrappedSyntax(
-						common.Symbol("id"),
-						&common.SourceLocationTree{
-							common.SourceLocation{
-								File:   "string",
-								Line:   0,
-								Column: 34,
-								Offset: 34,
-								Length: 2,
+				body: []common.Syntax{
+					common.NewSyntax(
+						common.NewWrappedSyntax(
+							common.Symbol("id"),
+							&common.SourceLocationTree{
+								common.SourceLocation{
+									File:   "string",
+									Line:   0,
+									Column: 34,
+									Offset: 34,
+									Length: 2,
+								},
+								nil,
 							},
-							nil,
-						},
+						),
 					),
 				},
 			},
@@ -475,7 +477,8 @@ func TestNewLibrary(t *testing.T) {
 			} else {
 				null := syntax
 				for null.Datum() != common.Null {
-					null = null.PushDown().(common.Pair).Rest.(common.WrappedSyntax)
+					pair, _ := null.Pair()
+					null = common.NewSyntax(pair.Rest)
 				}
 				test.expected.nullSourceLocationTree = *null.SourceLocationTree()
 				if !reflect.DeepEqual(actual, test.expected) {

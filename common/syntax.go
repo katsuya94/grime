@@ -127,27 +127,22 @@ func IsSyntax(d Datum) bool {
 }
 
 type Syntax struct {
-	Datum
+	datum Datum
 }
 
-func Wrap(datum Datum, sourceLocationTree *SourceLocationTree) Syntax {
-	switch datum := datum.(type) {
-	case Symbol, Pair:
-		return Syntax{NewWrappedSyntax(datum, sourceLocationTree)}
-	default:
-		return Syntax{datum}
-	}
+func NewSyntax(datum Datum) Syntax {
+	return Syntax{datum}
 }
 
 func (s Syntax) Push(scope Scope, phase int) Syntax {
-	switch d := s.Datum.(type) {
+	switch d := s.datum.(type) {
 	case WrappedSyntax:
 		return Syntax{d.Push(scope, phase)}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope, phase).Datum,
-				Syntax{d.Rest}.Push(scope, phase).Datum,
+				Syntax{d.First}.Push(scope, phase).datum,
+				Syntax{d.Rest}.Push(scope, phase).datum,
 			},
 		}
 	default:
@@ -160,14 +155,14 @@ func (s Syntax) Push(scope Scope, phase int) Syntax {
 }
 
 func (s Syntax) Next() Syntax {
-	switch d := s.Datum.(type) {
+	switch d := s.datum.(type) {
 	case WrappedSyntax:
 		return Syntax{d.Next()}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Next().Datum,
-				Syntax{d.Rest}.Next().Datum,
+				Syntax{d.First}.Next().datum,
+				Syntax{d.Rest}.Next().datum,
 			},
 		}
 	default:
@@ -179,41 +174,64 @@ func (s Syntax) Next() Syntax {
 }
 
 func (s Syntax) Identifier() (Identifier, bool) {
-	wrapped, ok := s.Datum.(WrappedSyntax)
+	wrapped, ok := s.datum.(WrappedSyntax)
 	if !ok {
 		return Identifier{}, false
 	}
 	return wrapped.Identifier()
 }
 
-func (s Syntax) Unwrap() Datum {
-	switch d := s.Datum.(type) {
+// TODO: Rename to Unwrap
+func (s Syntax) Datum() Datum {
+	datum := s.datum
+	if wrapped, ok := datum.(WrappedSyntax); ok {
+		datum = wrapped.Datum()
+	}
+	return datum
+}
+
+// TODO: Rename to Datum
+func (s Syntax) Form() Datum {
+	return s.datum
+}
+
+func (s Syntax) Pair() (Pair, bool) {
+	switch d := s.datum.(type) {
 	case WrappedSyntax:
-		return d.Datum()
-	case Pair:
-		return Syntax{
-			Pair{
-				Syntax{d.First}.Unwrap(),
-				Syntax{d.Rest}.Unwrap(),
-			},
+		pair, ok := d.Datum().(Pair)
+		if !ok {
+			return Pair{}, false
 		}
+		var firstSourceLocationTree, restSourceLocationTree *SourceLocationTree
+		if d.SourceLocationTree() != nil {
+			firstSourceLocationTree = new(SourceLocationTree)
+			*firstSourceLocationTree = d.SourceLocationTree().Children.(Pair).First.(SourceLocationTree)
+			restSourceLocationTree = new(SourceLocationTree)
+			*restSourceLocationTree = d.SourceLocationTree().Children.(Pair).Rest.(SourceLocationTree)
+		}
+		return Pair{
+			d.PushOnto(pair.First, firstSourceLocationTree),
+			d.PushOnto(pair.Rest, restSourceLocationTree),
+		}, true
+	case Pair:
+		return d, true
 	default:
-		return d
+		return Pair{}, false
+	}
+}
+
+func (s Syntax) SourceLocationTree() *SourceLocationTree {
+	switch d := s.datum.(type) {
+	case WrappedSyntax:
+		return d.SourceLocationTree()
+	default:
+		return nil
 	}
 }
 
 func (s Syntax) SourceLocation() SourceLocation {
-	syntax, ok := s.Datum.(WrappedSyntax)
-	if !ok {
+	if s.SourceLocationTree() == nil {
 		return SourceLocation{}
 	}
-	return syntax.SourceLocation()
-}
-
-func (s Syntax) SourceLocationTree() *SourceLocationTree {
-	syntax, ok := s.Datum.(WrappedSyntax)
-	if !ok {
-		return nil
-	}
-	return syntax.sourceLocationTree
+	return s.SourceLocationTree().SourceLocation
 }

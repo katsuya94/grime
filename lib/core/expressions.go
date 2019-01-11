@@ -264,7 +264,7 @@ func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult
 
 func syntaxCaseMatch(continuation common.Continuation, input common.Datum, literals map[common.Symbol]common.Location, patterns []common.Datum, patternVariableBindings []map[common.Symbol]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
 	for i := range patterns {
-		result, ok, err := common.MatchSyntax(input, patterns[i], literals)
+		result, ok, err := common.MatchSyntax(common.NewSyntax(input), patterns[i], literals)
 		if err != nil {
 			return nil, err
 		} else if ok {
@@ -312,7 +312,7 @@ func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVari
 	case common.WrappedSyntax:
 		return datum, nil
 	case PatternVariableReference:
-		return bindings[datum.PatternVariable].(common.Datum), nil
+		return bindings[datum.PatternVariable].(common.Syntax).Form(), nil
 	case common.Pair:
 		if first, ok := datum.First.(Subtemplate); ok {
 			data, err := evaluateSubtemplate(first, bindings)

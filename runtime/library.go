@@ -23,11 +23,11 @@ type Library struct {
 	version                []subVersion
 	importSpecs            []importSpec
 	exportSpecs            []identifierBinding
-	body                   []common.WrappedSyntax
+	body                   []common.Syntax
 	nullSourceLocationTree common.SourceLocationTree
 }
 
-func NewLibrary(source common.WrappedSyntax) (*Library, error) {
+func NewLibrary(source common.Syntax) (*Library, error) {
 	var library Library
 	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
@@ -45,21 +45,21 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 	}
 	i := 0
 	for ; i < len(libraryName); i++ {
-		if name, ok := libraryName[i].(common.WrappedSyntax).Datum().(common.Symbol); ok {
+		if name, ok := libraryName[i].(common.Syntax).Datum().(common.Symbol); ok {
 			library.name = append(library.name, name)
 		} else {
 			break
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := common.MatchSyntax(libraryName[i].(common.WrappedSyntax), PatternVersion, map[common.Symbol]common.Location{})
+		result, ok, err := common.MatchSyntax(libraryName[i].(common.Syntax), PatternVersion, map[common.Symbol]common.Location{})
 		if err != nil {
 			return nil, err
 		} else if !ok {
 			return nil, fmt.Errorf("runtime: malformed library name")
 		}
 		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
-			subV, err := newSubVersion(d.(common.WrappedSyntax))
+			subV, err := newSubVersion(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -69,25 +69,26 @@ func NewLibrary(source common.WrappedSyntax) (*Library, error) {
 		return nil, fmt.Errorf("runtime: malformed library name")
 	}
 	for _, d := range result[common.Symbol("export-spec")].([]interface{}) {
-		exportSpecs, err := newExportSpecs(d.(common.WrappedSyntax))
+		exportSpecs, err := newExportSpecs(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.exportSpecs = append(library.exportSpecs, exportSpecs...)
 	}
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
-		importSpec, err := newImportSpec(d.(common.WrappedSyntax))
+		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
 	for _, d := range result[common.Symbol("body")].([]interface{}) {
-		library.body = append(library.body, d.(common.WrappedSyntax))
+		library.body = append(library.body, d.(common.Syntax))
 	}
 	null := source
 	for null.Datum() != common.Null {
-		null = null.PushDown().(common.Pair).Rest.(common.WrappedSyntax)
+		pair, _ := null.Pair()
+		null = common.NewSyntax(pair.Rest)
 	}
 	library.nullSourceLocationTree = *null.SourceLocationTree()
 	return &library, nil
@@ -121,7 +122,7 @@ func MustNewLibraryFromFile(name string) *Library {
 	return MustNewLibraryFromReader(sourcePath, f)
 }
 
-func MustNewLibrary(source common.WrappedSyntax) *Library {
+func MustNewLibrary(source common.Syntax) *Library {
 	library, err := NewLibrary(source)
 	if err != nil {
 		panic(err)
@@ -154,7 +155,7 @@ func (l *Library) Name() []common.Symbol {
 	return l.name
 }
 
-func newExportSpecs(d common.WrappedSyntax) ([]identifierBinding, error) {
+func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternExportRename, map[common.Symbol]common.Location{
 		common.Symbol("rename"): nil,
 	}); err != nil {
@@ -162,7 +163,7 @@ func newExportSpecs(d common.WrappedSyntax) ([]identifierBinding, error) {
 	} else if ok {
 		var internalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("internal")].([]interface{}) {
-			if id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed export spec")
@@ -170,7 +171,7 @@ func newExportSpecs(d common.WrappedSyntax) ([]identifierBinding, error) {
 		}
 		var externalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("external")].([]interface{}) {
-			if id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed export spec")

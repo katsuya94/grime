@@ -35,7 +35,7 @@ func TestMatchSyntax(t *testing.T) {
 			"foo",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"): NewWrappedSyntax(Symbol("foo"), nil),
+				Symbol("id"): NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
 			},
 			"",
 		},
@@ -46,7 +46,7 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"): NewWrappedSyntax(Pair{Symbol("foo"), Null}, nil),
+				Symbol("id"): NewSyntax(NewWrappedSyntax(Pair{Symbol("foo"), Null}, nil)),
 			},
 			"",
 		},
@@ -57,8 +57,8 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo bar)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"):   NewWrappedSyntax(Symbol("foo"), nil),
-				Symbol("name"): NewWrappedSyntax(Symbol("bar"), nil),
+				Symbol("id"):   NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 			},
 			"",
 		},
@@ -69,8 +69,8 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo . bar)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"):   NewWrappedSyntax(Symbol("foo"), nil),
-				Symbol("name"): NewWrappedSyntax(Symbol("bar"), nil),
+				Symbol("id"):   NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 			},
 			"",
 		},
@@ -81,8 +81,8 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo bar)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"):   NewWrappedSyntax(Symbol("foo"), nil),
-				Symbol("name"): NewWrappedSyntax(Pair{Symbol("bar"), Null}, nil),
+				Symbol("id"):   NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Pair{Symbol("bar"), Null}, nil)),
 			},
 			"",
 		},
@@ -93,8 +93,8 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo (bar))",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"):   NewWrappedSyntax(Symbol("foo"), nil),
-				Symbol("name"): NewWrappedSyntax(Symbol("bar"), nil),
+				Symbol("id"):   NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 			},
 			"",
 		},
@@ -106,8 +106,8 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					NewWrappedSyntax(Symbol("foo"), nil),
-					NewWrappedSyntax(Symbol("bar"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 				},
 			},
 			"",
@@ -120,10 +120,10 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					NewWrappedSyntax(Symbol("foo"), nil),
-					NewWrappedSyntax(Symbol("bar"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 				},
-				Symbol("name"): NewWrappedSyntax(Symbol("baz"), nil),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 			},
 			"",
 		},
@@ -135,10 +135,10 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					NewWrappedSyntax(Symbol("foo"), nil),
-					NewWrappedSyntax(Symbol("bar"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 				},
-				Symbol("name"): NewWrappedSyntax(Symbol("baz"), nil),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 			},
 			"",
 		},
@@ -150,11 +150,11 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					NewWrappedSyntax(Symbol("foo"), nil),
-					NewWrappedSyntax(Symbol("bar"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
 				},
-				Symbol("name"): NewWrappedSyntax(Symbol("baz"), nil),
-				Symbol("key"):  NewWrappedSyntax(Symbol("qux"), nil),
+				Symbol("name"): NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
+				Symbol("key"):  NewSyntax(NewWrappedSyntax(Symbol("qux"), nil)),
 			},
 			"",
 		},
@@ -165,10 +165,10 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo bar baz)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"): NewWrappedSyntax(Symbol("foo"), nil),
+				Symbol("id"): NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
 				Symbol("name"): []interface{}{
-					NewWrappedSyntax(Symbol("bar"), nil),
-					NewWrappedSyntax(Symbol("baz"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 				},
 			},
 			"",
@@ -180,12 +180,12 @@ func TestMatchSyntax(t *testing.T) {
 			"(foo bar baz . qux)",
 			true,
 			map[Symbol]interface{}{
-				Symbol("id"): NewWrappedSyntax(Symbol("foo"), nil),
+				Symbol("id"): NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
 				Symbol("name"): []interface{}{
-					NewWrappedSyntax(Symbol("bar"), nil),
-					NewWrappedSyntax(Symbol("baz"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 				},
-				Symbol("key"): NewWrappedSyntax(Symbol("qux"), nil),
+				Symbol("key"): NewSyntax(NewWrappedSyntax(Symbol("qux"), nil)),
 			},
 			"",
 		},
@@ -197,10 +197,10 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					[]interface{}{NewWrappedSyntax(Symbol("foo"), nil)},
+					[]interface{}{NewSyntax(NewWrappedSyntax(Symbol("foo"), nil))},
 					[]interface{}{
-						NewWrappedSyntax(Symbol("bar"), nil),
-						NewWrappedSyntax(Symbol("baz"), nil),
+						NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
+						NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 					},
 				},
 			},
@@ -225,12 +225,12 @@ func TestMatchSyntax(t *testing.T) {
 			true,
 			map[Symbol]interface{}{
 				Symbol("id"): []interface{}{
-					NewWrappedSyntax(Symbol("foo"), nil),
-					NewWrappedSyntax(Symbol("baz"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("foo"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("baz"), nil)),
 				},
 				Symbol("name"): []interface{}{
-					NewWrappedSyntax(Symbol("bar"), nil),
-					NewWrappedSyntax(Symbol("qux"), nil),
+					NewSyntax(NewWrappedSyntax(Symbol("bar"), nil)),
+					NewSyntax(NewWrappedSyntax(Symbol("qux"), nil)),
 				},
 			},
 			"",
@@ -301,7 +301,7 @@ func TestMatchSyntax(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			input := NewWrappedSyntax(read.MustReadDatum(test.input), nil)
+			input := NewSyntax(NewWrappedSyntax(read.MustReadDatum(test.input), nil))
 			pattern := Pattern(read.MustReadDatum(test.pattern))
 			result, ok, err := MatchSyntax(input, pattern, test.literals)
 			if test.error == "" && err != nil {

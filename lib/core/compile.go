@@ -61,18 +61,19 @@ func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, erro
 	}
 }
 
-func Compile(body common.WrappedSyntax, scope common.Scope) (common.Expression, error) {
+func Compile(body common.Syntax, scope common.Scope) (common.Expression, error) {
 	scope = common.NewProxyScope(scope)
 	body = body.Push(scope, common.LEXICAL)
 	var forms []common.Datum
 	for {
-		_, ok := body.Datum().(common.Pair)
+		pair, ok := body.Pair()
 		if !ok {
 			break
 		}
-		pair := body.PushDown().(common.Pair)
-		forms = append(forms, pair.First)
-		body = pair.Rest.(common.WrappedSyntax)
+		first := common.NewSyntax(pair.First)
+		rest := common.NewSyntax(pair.Rest)
+		forms = append(forms, first.Form())
+		body = rest
 	}
 	return NewCompiler().BodyCompile(forms, scope)
 }

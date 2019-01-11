@@ -35,19 +35,19 @@ type importSpec struct {
 	levels    []int
 }
 
-func newImportSpec(d common.WrappedSyntax) (importSpec, error) {
+func newImportSpec(d common.Syntax) (importSpec, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternImportSpecFor, map[common.Symbol]common.Location{
 		common.Symbol("for"): nil,
 	}); err != nil {
 		return importSpec{}, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.WrappedSyntax))
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return importSpec{}, err
 		}
 		var levels []int
 		for _, d := range result[common.Symbol("import-level")].([]interface{}) {
-			level, err := newImportLevel(d.(common.WrappedSyntax))
+			level, err := newImportLevel(d.(common.Syntax))
 			if err != nil {
 				return importSpec{}, err
 			}
@@ -77,13 +77,13 @@ func (spec importSpec) libraryName() []common.Symbol {
 	return spec.importSet.libraryName()
 }
 
-func newImportLevel(d common.WrappedSyntax) (int, error) {
+func newImportLevel(d common.Syntax) (int, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternImportLevelMeta, map[common.Symbol]common.Location{
 		common.Symbol("meta"): nil,
 	}); err != nil {
 		return 0, err
 	} else if ok {
-		number, ok := result[common.Symbol("n")].(common.WrappedSyntax).Datum().(common.Number)
+		number, ok := result[common.Symbol("n")].(common.Syntax).Datum().(common.Number)
 		if !ok {
 			return 0, fmt.Errorf("runtime: malformed import level")
 		}
@@ -115,26 +115,26 @@ type importSet interface {
 	libraryName() []common.Symbol
 }
 
-func newImportSet(d common.WrappedSyntax) (importSet, error) {
+func newImportSet(d common.Syntax) (importSet, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternImportSetLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		return newLibraryReference(result[common.Symbol("library-reference")].(common.WrappedSyntax))
+		return newLibraryReference(result[common.Symbol("library-reference")].(common.Syntax))
 	}
 	if result, ok, err := common.MatchSyntax(d, PatternImportSetOnly, map[common.Symbol]common.Location{
 		common.Symbol("only"): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.WrappedSyntax))
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
 		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
-			id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol)
+			id, ok := d.(common.Syntax).Datum().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
 			}
@@ -147,13 +147,13 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.WrappedSyntax))
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
 		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
-			id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol)
+			id, ok := d.(common.Syntax).Datum().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
 			}
@@ -166,11 +166,11 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.WrappedSyntax))
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
-		id, ok := result[common.Symbol("identifier")].(common.WrappedSyntax).Datum().(common.Symbol)
+		id, ok := result[common.Symbol("identifier")].(common.Syntax).Datum().(common.Symbol)
 		if !ok {
 			return nil, fmt.Errorf("runtime: malformed import set")
 		}
@@ -181,13 +181,13 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.WrappedSyntax))
+		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var externalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("external")].([]interface{}) {
-			if id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -195,7 +195,7 @@ func newImportSet(d common.WrappedSyntax) (importSet, error) {
 		}
 		var internalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("internal")].([]interface{}) {
-			if id, ok := d.(common.WrappedSyntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -443,7 +443,7 @@ type importSetLibraryReference struct {
 	versionReference versionReference
 }
 
-func newLibraryReference(d common.WrappedSyntax) (importSetLibraryReference, error) {
+func newLibraryReference(d common.Syntax) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
 	result, ok, err := common.MatchSyntax(d, PatternLibraryReference, map[common.Symbol]common.Location{})
 	if err != nil {
@@ -457,7 +457,7 @@ func newLibraryReference(d common.WrappedSyntax) (importSetLibraryReference, err
 	}
 	i := 0
 	for ; i < len(libraryName); i++ {
-		if name, ok := libraryName[i].(common.WrappedSyntax).Datum().(common.Symbol); ok {
+		if name, ok := libraryName[i].(common.Syntax).Datum().(common.Symbol); ok {
 			ref.name = append(ref.name, name)
 		} else {
 			break
@@ -465,7 +465,7 @@ func newLibraryReference(d common.WrappedSyntax) (importSetLibraryReference, err
 	}
 	ref.versionReference = versionReferenceSubVersionReferences{}
 	if i == len(libraryName)-1 {
-		vRef, err := newVersionReference(libraryName[i].(common.WrappedSyntax))
+		vRef, err := newVersionReference(libraryName[i].(common.Syntax))
 		if err != nil {
 			return importSetLibraryReference{}, err
 		}
@@ -489,7 +489,7 @@ type versionReference interface {
 	resolve(*Library) bool
 }
 
-func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
+func newVersionReference(d common.Syntax) (versionReference, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceAnd, map[common.Symbol]common.Location{
 		common.Symbol("and"): nil,
 	}); err != nil {
@@ -497,7 +497,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 	} else if ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
-			vRef, err := newVersionReference(d.(common.WrappedSyntax))
+			vRef, err := newVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -512,7 +512,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 	} else if ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
-			vRef, err := newVersionReference(d.(common.WrappedSyntax))
+			vRef, err := newVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -525,7 +525,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		vRef, err := newVersionReference(result[common.Symbol("version-reference")].(common.WrappedSyntax))
+		vRef, err := newVersionReference(result[common.Symbol("version-reference")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -536,7 +536,7 @@ func newVersionReference(d common.WrappedSyntax) (versionReference, error) {
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d.(common.WrappedSyntax))
+			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -601,13 +601,13 @@ type subVersionReference interface {
 	resolve(subVersion) bool
 }
 
-func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error) {
+func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
 	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Location{
 		common.Symbol(">="): nil,
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.WrappedSyntax))
+		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +618,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.WrappedSyntax))
+		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -631,7 +631,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d.(common.WrappedSyntax))
+			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -646,7 +646,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 	} else if ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
-			subVRef, err := newSubVersionReference(d.(common.WrappedSyntax))
+			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
 			}
@@ -659,7 +659,7 @@ func newSubVersionReference(d common.WrappedSyntax) (subVersionReference, error)
 	}); err != nil {
 		return nil, err
 	} else if ok {
-		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")].(common.WrappedSyntax))
+		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -728,7 +728,7 @@ func (ref subVersion) resolve(subV subVersion) bool {
 	return subV == ref
 }
 
-func newSubVersion(d common.WrappedSyntax) (subVersion, error) {
+func newSubVersion(d common.Syntax) (subVersion, error) {
 	number, ok := d.Datum().(common.Number)
 	if !ok {
 		return 0, fmt.Errorf("runtime: malformed sub-version")

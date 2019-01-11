@@ -15,7 +15,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 	case QuoteForm:
 		return Literal{form.Datum}, nil
 	case SyntaxForm:
-		template, patternVariablesUnexpanded, err := compileTemplate(form.Datum)
+		template, patternVariablesUnexpanded, err := compileTemplate(common.NewSyntax(form.Datum))
 		if err != nil {
 			return nil, err
 		}
@@ -31,7 +31,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		scope := common.NewScope()
 		forms := make([]common.Datum, len(form.Forms))
 		for i := range form.Forms {
-			forms[i] = common.Syntax{form.Forms[i]}.Push(scope, common.LEXICAL).Datum
+			forms[i] = common.NewSyntax(form.Forms[i]).Push(scope, common.LEXICAL).Form()
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -65,7 +65,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		forms := make([]common.Datum, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.Syntax{form.Body[i]}.Push(scope, common.LEXICAL).Datum
+			forms[i] = common.NewSyntax(form.Body[i]).Push(scope, common.LEXICAL).Form()
 		}
 		bodyExpression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -99,7 +99,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		}
 		forms := make([]common.Datum, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.Syntax{form.Body[i]}.Push(scope, common.LEXICAL).Datum
+			forms[i] = common.NewSyntax(form.Body[i]).Push(scope, common.LEXICAL).Form()
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -171,8 +171,8 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 					return nil, err
 				}
 			}
-			fender := common.Syntax{form.Fenders[i]}.Push(scope, common.LEXICAL).Datum
-			output := common.Syntax{form.Outputs[i]}.Push(scope, common.LEXICAL).Datum
+			fender := common.NewSyntax(form.Fenders[i]).Push(scope, common.LEXICAL).Form()
+			output := common.NewSyntax(form.Outputs[i]).Push(scope, common.LEXICAL).Form()
 			fenderExpression, err := compiler.ExpressionCompile(fender)
 			if err != nil {
 				return nil, err
@@ -200,23 +200,12 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			}
 		}
 	default:
-		return nil, fmt.Errorf("compile: unexpected form in expression context: %v", common.Write(form))
+		return nil, fmt.Errorf("compile: unexpected form in expression context: %v %#v", common.Write(form), form)
 	}
 }
 
-func compileTemplate(datum common.Datum) (common.Datum, map[*common.PatternVariable]int, error) {
-	syntax, isSyntax := datum.(common.WrappedSyntax)
-	if isSyntax {
-		datum = syntax.Datum()
-	}
-	switch datum := datum.(type) {
-	case common.Boolean, common.Number, common.Character, common.String:
-		return syntax, map[*common.PatternVariable]int{}, nil
-	case common.Symbol:
-		if !isSyntax {
-			panic("encountered unwrapped symbol in syntax template")
-		}
-		id, _ := syntax.Identifier()
+func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVariable]int, error) {
+	if id, ok := syntax.Identifier(); ok {
 		location := id.Location()
 		if patternVariable, ok := location.(*common.PatternVariable); ok {
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
@@ -224,37 +213,18 @@ func compileTemplate(datum common.Datum) (common.Datum, map[*common.PatternVaria
 		if location == ellipsisKeyword {
 			return nil, nil, fmt.Errorf("compile: improper use of ellipsis in syntax template")
 		}
-		return syntax, map[*common.PatternVariable]int{}, nil
-	case common.Pair:
+		return syntax.Form(), map[*common.PatternVariable]int{}, nil
+	}
+	if pair, ok := syntax.Pair(); ok {
+		first := common.NewSyntax(pair.First)
+		rest := common.NewSyntax(pair.Rest)
 		ellipsis := 0
-		var (
-			first common.Datum
-			rest  common.Datum
-		)
-		if isSyntax {
-			pair := syntax.PushDown().(common.Pair)
-			first = pair.First
-			rest = pair.Rest
-		} else {
-			first = datum.First
-			rest = datum.Rest
-		}
 		for {
-			var pair common.Pair
-			if syntax, ok := rest.(common.WrappedSyntax); ok {
-				_, ok := syntax.Datum().(common.Pair)
-				if !ok {
-					break
-				}
-				pair = syntax.PushDown().(common.Pair)
-			} else {
-				_, ok := rest.(common.Pair)
-				if !ok {
-					break
-				}
-				pair = rest.(common.Pair)
+			pair, ok := rest.Pair()
+			if !ok {
+				break
 			}
-			id, ok := common.Syntax{pair.First}.Identifier()
+			id, ok := common.NewSyntax(pair.First).Identifier()
 			if !ok {
 				break
 			}
@@ -262,25 +232,23 @@ func compileTemplate(datum common.Datum) (common.Datum, map[*common.PatternVaria
 				break
 			}
 			ellipsis++
-			rest = pair.Rest
+			rest = common.NewSyntax(pair.Rest)
 		}
-		firstTemplate := first
-		restTemplate := rest
-		firstCompiled, firstPatternVariables, err := compileTemplate(firstTemplate)
+		firstCompiled, firstPatternVariables, err := compileTemplate(first)
 		if err != nil {
 			return nil, nil, err
 		}
-		_, firstStatic := firstCompiled.(common.WrappedSyntax)
+		firstStatic := common.IsSyntax(firstCompiled)
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
 		}
-		restCompiled, restPatternVariables, err := compileTemplate(restTemplate)
+		restCompiled, restPatternVariables, err := compileTemplate(rest)
 		if err != nil {
 			return nil, nil, err
 		}
-		_, restStatic := restCompiled.(common.WrappedSyntax)
+		restStatic := common.IsSyntax(restCompiled)
 		if firstStatic && restStatic {
-			return syntax, map[*common.PatternVariable]int{}, nil
+			return syntax.Form(), map[*common.PatternVariable]int{}, nil
 		}
 		if ellipsis > 0 {
 			var expansionPatternVariables []*common.PatternVariable
@@ -310,12 +278,8 @@ func compileTemplate(datum common.Datum) (common.Datum, map[*common.PatternVaria
 			patternVariables[patternVariable] = rest
 		}
 		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil
-	default:
-		if datum == common.Null {
-			return syntax, map[*common.PatternVariable]int{}, nil
-		}
-		return nil, nil, fmt.Errorf("compile: unexpected syntax template form: %v", common.Write(datum))
 	}
+	return syntax.Form(), map[*common.PatternVariable]int{}, nil
 }
 
 func compilePattern(datum common.Datum) (common.Datum, error) {

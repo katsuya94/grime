@@ -28,7 +28,7 @@ func (d *DatumReader) ReadSyntax() (common.Syntax, error) {
 	if err != nil {
 		return common.Syntax{}, err
 	}
-	return common.Wrap(datum, &sourceLocationTree), nil
+	return common.NewSyntax(common.NewWrappedSyntax(datum, &sourceLocationTree)), nil
 }
 
 func (d *DatumReader) readDatum() (common.Datum, common.SourceLocationTree, error) {
@@ -288,13 +288,13 @@ func MustReadData(s string) []common.Datum {
 	syntaxes, _ := MustReadSyntaxes(s)
 	var data []common.Datum
 	for _, syntax := range syntaxes {
-		data = append(data, syntax.Unwrap())
+		data = append(data, syntax.Datum())
 	}
 	return data
 }
 
 func MustReadDatum(s string) common.Datum {
-	return MustReadSyntax(s).Unwrap()
+	return MustReadSyntax(s).Datum()
 }
 
 func ReadBytes(b []byte) ([]common.Syntax, common.SourceLocationTree, error) {

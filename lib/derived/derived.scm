@@ -17,9 +17,9 @@
     cond)
   (import
     (for (only (core)
-           write ; TODO remove
-
+           syntax
            define-syntax
+           identifier?
            null?
            pair?
            proc?
@@ -27,7 +27,8 @@
            if
            car
            cdr
-           lambda)
+           lambda
+           syntax-case)
          run)
     (for (only (core)
            syntax
@@ -128,7 +129,6 @@
     (or (null? x) (pair? x)))
   
   (define (fold-left combine nil lst)
-    (write lst)
     (unless (proc? combine) (error "fold-left: expected proc"))
     (unless (list? lst) (error "fold-left: expected list"))
     (if (null? lst)
@@ -137,12 +137,19 @@
 
   (define (for-all proc lst)
     (fold-left (lambda (b x) (and b (proc x))) #t lst))
+  
+  ; grime treats #'() and '() as discrete values making the default for-all
+  ; incompatible with the syntax object
+  (define (for-all-identifier ids)
+    (syntax-case ids ()
+      [() #t]
+      [(id . rest) (and (identifier? #'id) (for-all-identifier #'rest))]))
 
   (define-syntax syntax-rules
     (lambda (x)
       (syntax-case x ()
         [(_ (lit ...) [(k . p) t] ...)
-         (for-all identifier? #'(lit ... k ...))
+         (for-all-identifier #'(lit ... k ...))
          #'(lambda (x)
              (syntax-case x (lit ...)
                [(_ . p) #'t] ...))])))
