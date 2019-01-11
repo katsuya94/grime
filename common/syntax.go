@@ -79,6 +79,41 @@ func (p ProxyScope) Set(id Identifier, location Location) error {
 	return p.BaseScope.Set(id, location)
 }
 
+type FlushScope struct {
+	BaseScope
+	Scope
+}
+
+func NewFlushScope(s Scope) FlushScope {
+	return FlushScope{NewScope(), s}
+}
+
+func (f FlushScope) Get(id Identifier) Location {
+	location := f.BaseScope.Get(id)
+	if location != nil {
+		return location
+	}
+	return f.Scope.Get(id)
+}
+
+func (f FlushScope) Set(id Identifier, location Location) error {
+	l := f.Scope.Get(id)
+	if l != nil {
+		return fmt.Errorf("already defined: %v", id.Name())
+	}
+	l = f.Scope.Get(id)
+	if l != nil {
+		return fmt.Errorf("already defined: %v", id.Name())
+	}
+	return f.BaseScope.Set(id, location)
+}
+
+func (p FlushScope) Flush() {
+	for name, location := range p.BaseScope.Bindings() {
+		p.Scope.Set(NewIdentifier(name), location)
+	}
+}
+
 type scopeList struct {
 	Scope
 	*scopeList

@@ -11,40 +11,45 @@ import (
 )
 
 func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w io.Writer) {
-	var forms []common.Datum
+	scopes := make(map[int]common.BaseScope, len(bindings))
+	for phase, locations := range bindings {
+		scopes[phase] = common.NewScope()
+		for name, location := range locations {
+			err := scopes[phase].Set(common.NewIdentifier(name), location)
+			if err != nil {
+				fmt.Fprintf(w, "error: %v\n", err)
+				continue
+			}
+		}
+	}
+	var program []common.Syntax
 	for {
-		fmt.Fprintf(w, "grime:%v> ", len(forms))
+		fmt.Fprintf(w, "grime:%v> ", len(program))
 		eof := false
 		syntaxes, nullSourceLocationTree, err := readREPLSyntaxes(r)
 		if err == io.EOF {
-			if len(forms) == 0 {
+			if len(program) == 0 {
 				break
 			} else {
 				eof = true
 			}
 		} else if err != nil {
-			forms = nil
+			program = nil
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		body := common.Body(nullSourceLocationTree, syntaxes...)
-		scopes := make(map[int]common.BaseScope, len(bindings))
-		for phase, locations := range bindings {
-			scopes[phase] = common.NewScope()
-			for name, location := range locations {
-				err := scopes[phase].Set(common.NewIdentifier(name), location)
-				if err != nil {
-					fmt.Fprintf(w, "error: %v\n", err)
-					continue
-				}
-			}
-			body = body.Push(scopes[phase], phase)
+		program = append(program, syntaxes...)
+		body := common.Body(nullSourceLocationTree, program...)
+		for phase, scope := range scopes {
+			body = body.Push(scope, phase)
 		}
-		expression, err := compiler(body, scopes[0])
+		scope := common.NewFlushScope(scopes[0])
+		expression, err := compiler(body, scope)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}
-		forms = nil
+		program = nil
+		scope.Flush()
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
@@ -53,13 +58,6 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
-		}
-		bindings = make(common.BindingSet, len(bindings))
-		for phase, scope := range scopes {
-			bindings[phase] = make(map[common.Symbol]common.Location)
-			for name, location := range scope.Bindings() {
-				bindings[phase][name] = location
-			}
 		}
 		fmt.Fprintln(w, common.Write(result))
 	}
