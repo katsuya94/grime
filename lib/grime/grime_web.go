@@ -15,7 +15,6 @@ func init() {
     quote
     syntax
     if
-    ~let
     begin
     lambda
     define
@@ -35,6 +34,7 @@ func init() {
     error
     eqv?
     syntax->datum
+    datum->syntax
     identifier?
     generate-temporaries
     list

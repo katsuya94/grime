@@ -12,6 +12,7 @@ func init() {
 	Library = runtime.MustNewLibraryFromString("derived", `
 (library (derived)
   (export
+    define
     when
     unless
     let*
@@ -27,20 +28,42 @@ func init() {
     syntax-rules
     cond)
   (import
-    (for (core) run)
+    (for (only (core)
+           syntax
+           define-syntax
+           identifier?
+           null?
+           pair?
+           proc?
+           error
+           if
+           car
+           cdr
+           lambda
+           syntax-case)
+         run)
     (for (only (core)
            syntax
            begin
            ~let
+           ~define
            lambda
            syntax-case
            ...
            _
-           write
            identifier?
            list
-           generate-temporaries)
+           generate-temporaries
+           not
+           if
+           set!)
          expand))
+
+  (define-syntax define
+    (lambda (x)
+      (syntax-case x ()
+        [(_ (name formals ...) body ...) #'(~define name (lambda (formals ...) body ...))]
+        [(_ name value) #'(~define name value)])))
   
   (define-syntax when
     (lambda (x)
@@ -76,11 +99,14 @@ func init() {
   (define-syntax let
     (lambda (x)
       (syntax-case x ()
-       [(_ ((i e) ...) b1 b2 ...)
-        (with-syntax
-          ([(t ...) (generate-temporaries #'(i ...))])
-          #'(let* ((t e) ...)
-              (let* ((i t) ...) b1 b2 ...)))])))
+        [(_ v ((i e) ...) b1 b2 ...)
+         #'(letrec* ((v (lambda (i ...) b1 b2 ...)))
+             (let ((i e) ...) b1 b2 ...))]
+        [(_ ((i e) ...) b1 b2 ...)
+         (with-syntax
+           ([(t ...) (generate-temporaries #'(i ...))])
+           #'(let* ((t e) ...)
+               (let* ((i t) ...) b1 b2 ...)))])))
   
   ; TODO letrec should detect usages of variables before definition
   (define-syntax letrec
@@ -123,19 +149,25 @@ func init() {
 
   (define (for-all proc lst)
     (fold-left (lambda (b x) (and b (proc x))) #t lst))
+  
+  ; grime treats #'() and '() as discrete values making the default for-all
+  ; incompatible with the syntax object
+  (define (for-all-identifier ids)
+    (syntax-case ids ()
+      [() #t]
+      [(id . rest) (and (identifier? #'id) (for-all-identifier #'rest))]))
 
   (define-syntax syntax-rules
     (lambda (x)
       (syntax-case x ()
         [(_ (lit ...) [(k . p) t] ...)
-         (for-all identifier? #'(lit ... k ...))
+         (for-all-identifier #'(lit ... k ...))
          #'(lambda (x)
              (syntax-case x (lit ...)
                [(_ . p) #'t] ...))])))
 
   (define-syntax cond
-    (lambda (x) #f) ; pending named let
-    #;(lambda (x)
+    (lambda (x)
       (syntax-case x ()
         [(_ c1 c2 ...)
          (let f ([c1 #'c1] [c2* #'(c2 ...)])

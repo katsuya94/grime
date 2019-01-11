@@ -15,7 +15,6 @@ func init() {
     quote
     syntax
     if
-    ~let ; TODO remove after implementing syntax hygiene
     begin
     lambda
     define
@@ -35,6 +34,7 @@ func init() {
     error
     eqv?
     syntax->datum
+    datum->syntax
     identifier?
     generate-temporaries
     list
@@ -59,7 +59,7 @@ func init() {
     (for (except (derived) syntax-rules) run)
     (for (only (core) syntax syntax-case _ ...) expand)
     (for (only (core) set!) run expand)
-    (for (except (core) syntax syntax-case _ ...) run))
+    (for (except (core) syntax syntax-case _ ... set!) run))
 
   (define (eq? l r)
     (eqv? l r))
