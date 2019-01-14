@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/types"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
@@ -18,18 +19,20 @@ var goFileTemplate = template.Must(template.New("goFile").Parse(`
 package {{.Name}}
 
 import (
-	{{.Name}} "{{.PkgPath}}"
-	"fmt"
-	"reflect"
-	"strings"
-	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/runtime"
+{{range .StandardImports -}}
+	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"{{"\n"}}
+{{- end -}}
+{{if ne (len .OtherImports) 0}}
+{{range .OtherImports -}}
+	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"{{"\n"}}
+{{- end -}}
+{{end -}}
 )
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{
-	{{range .PkgPathSegments -}}
-	common.Symbol("{{.}}"),
-	{{end -}}
+{{range .PkgPathSegments -}}
+	{{"\t"}}common.Symbol("{{.}}"),{{"\n"}}
+{{- end -}}
 }, []int{})
 
 var Bindings = common.BindingSet{
@@ -92,11 +95,19 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 
 type goPackage struct {
 	*packages.Package
-	funcs []*goFunc
+	imports goImportSet
+	funcs   []*goFunc
 }
 
 func newGoPackage(pkg *packages.Package) *goPackage {
-	return &goPackage{pkg, nil}
+	goImportSet := newGoImportSet()
+	goImportSet.add("fmt")
+	goImportSet.add("reflect")
+	goImportSet.add("strings")
+	goImportSet.add("github.com/katsuya94/grime/common")
+	goImportSet.add("github.com/katsuya94/grime/runtime")
+	goImportSet.add(pkg.PkgPath)
+	return &goPackage{pkg, goImportSet, nil}
 }
 
 func (pkg *goPackage) PkgPathSegments() []string {
@@ -120,6 +131,69 @@ func (pkg *goPackage) Funcs() []*goFunc {
 		}
 	}
 	return pkg.funcs
+}
+
+func (pkg *goPackage) StandardImports() []*goImport {
+	return pkg.imports.imports(true)
+}
+
+func (pkg *goPackage) OtherImports() []*goImport {
+	return pkg.imports.imports(false)
+}
+
+type goImportSet map[string]string
+
+func newGoImportSet() goImportSet {
+	return goImportSet{}
+}
+
+func (set goImportSet) add(pkgPath string) {
+	for _, p := range set {
+		if p == pkgPath {
+			return
+		}
+	}
+	parts := strings.Split(pkgPath, "/")
+	name := parts[len(parts)-1]
+	for {
+		if _, ok := set[name]; !ok {
+			break
+		}
+		name = fmt.Sprintf("_%s", name)
+	}
+	set[name] = pkgPath
+}
+
+func (set goImportSet) imports(standard bool) []*goImport {
+	mapping := map[string]string{}
+	for name, pkgPath := range set {
+		parts := strings.Split(pkgPath, "/")
+		if (len(parts) == 1) == standard {
+			if name == parts[len(parts)-1] {
+				mapping[pkgPath] = ""
+			} else {
+				mapping[pkgPath] = name
+			}
+		}
+	}
+	pkgPaths := []string{}
+	for pkgPath := range mapping {
+		pkgPaths = append(pkgPaths, pkgPath)
+	}
+	sort.Strings(pkgPaths)
+	imports := []*goImport{}
+	for _, pkgPath := range pkgPaths {
+		imports = append(imports, &goImport{
+			Name:    mapping[pkgPath],
+			PkgPath: pkgPath,
+		})
+	}
+	return imports
+}
+
+type goImport struct {
+	Name    string
+	PkgPath string
 }
 
 type goFunc struct {
