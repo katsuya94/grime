@@ -20,26 +20,26 @@ package {{.Name}}
 
 import (
 {{range .StandardImports -}}
-	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"{{"\n"}}
-{{- end -}}
+	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"
+{{end -}}
 {{if ne (len .OtherImports) 0}}
 {{range .OtherImports -}}
-	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"{{"\n"}}
-{{- end -}}
+	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"
+{{end -}}
 {{end -}}
 )
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{
 {{range .PkgPathSegments -}}
-	{{"\t"}}common.Symbol("{{.}}"),{{"\n"}}
-{{- end -}}
+	{{"\t"}}common.Symbol("{{.}}"),
+{{end -}}
 }, []int{})
 
 var Bindings = common.BindingSet{
 	0: map[common.Symbol]common.Location{
 	{{range .Funcs -}}
-		{{"\t"}}common.Symbol("{{.QualifiedName}}"): &common.Variable{common.Function({{.InternalName}})},{{"\n\t"}}
-	{{- end -}}
+		{{"\t"}}common.Symbol("{{.QualifiedName}}"): &common.Variable{common.Function({{.InternalName}})},
+	{{end -}}
 	},
 }
 
@@ -85,8 +85,8 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		{{.Name}}...,
 		{{- else -}}
 		{{.Name}},
-		{{- end -}}{{"\n\t"}}
-	{{- end -}}
+		{{- end}}
+	{{end -}}
 	)
 	return common.CallC(c, common.Void)
 }
@@ -220,6 +220,7 @@ func (f *goFunc) Params() []*goVar {
 		params := signature.Params()
 		for i := 0; i < params.Len(); i++ {
 			f.params = append(f.params, newGoVar(f.pkg, params.At(i)))
+
 		}
 		if signature.Variadic() {
 			f.params[len(f.params)-1].Variadic = true
@@ -251,6 +252,7 @@ type goVar struct {
 }
 
 func newGoVar(pkg *goPackage, v *types.Var) *goVar {
+	pkg.imports.add()
 	return &goVar{v, pkg, false}
 }
 
