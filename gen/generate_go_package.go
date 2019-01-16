@@ -95,42 +95,36 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 
 type goPackage struct {
 	*packages.Package
-	imports goImportSet
-	funcs   []*goFunc
+	imports *goImportSet
+	Funcs   []*goFunc
 }
 
 func newGoPackage(pkg *packages.Package) *goPackage {
-	goImportSet := newGoImportSet()
-	goImportSet.add("fmt")
-	goImportSet.add("reflect")
-	goImportSet.add("strings")
-	goImportSet.add("github.com/katsuya94/grime/common")
-	goImportSet.add("github.com/katsuya94/grime/runtime")
-	goImportSet.add(pkg.PkgPath)
-	return &goPackage{pkg, goImportSet, nil}
+	imports := newGoImportSet()
+	imports.add(pkg.PkgPath)
+	imports.add("fmt")
+	imports.add("reflect")
+	imports.add("strings")
+	imports.add("github.com/katsuya94/grime/common")
+	imports.add("github.com/katsuya94/grime/runtime")
+	funcs := []*goFunc{}
+	scope := pkg.Types.Scope()
+	for _, name := range scope.Names() {
+		f, ok := scope.Lookup(name).(*types.Func)
+		if !ok || !f.Exported() {
+			continue
+		}
+		if f.Type().(*types.Signature).Recv() != nil {
+			fmt.Printf("skipping %v because of receiver\n", f)
+			continue
+		}
+		funcs = append(funcs, newGoFunc(imports, f))
+	}
+	return &goPackage{pkg, imports, funcs}
 }
 
 func (pkg *goPackage) PkgPathSegments() []string {
 	return strings.Split(pkg.PkgPath, "/")
-}
-
-func (pkg *goPackage) Funcs() []*goFunc {
-	if pkg.funcs == nil {
-		pkg.funcs = []*goFunc{}
-		scope := pkg.Types.Scope()
-		for _, name := range scope.Names() {
-			f, ok := scope.Lookup(name).(*types.Func)
-			if !ok || !f.Exported() {
-				continue
-			}
-			if f.Type().(*types.Signature).Recv() != nil {
-				fmt.Printf("skipping %v because of receiver\n", f)
-				continue
-			}
-			pkg.funcs = append(pkg.funcs, newGoFunc(pkg, f))
-		}
-	}
-	return pkg.funcs
 }
 
 func (pkg *goPackage) StandardImports() []*goImport {
@@ -141,32 +135,43 @@ func (pkg *goPackage) OtherImports() []*goImport {
 	return pkg.imports.imports(false)
 }
 
-type goImportSet map[string]string
-
-func newGoImportSet() goImportSet {
-	return goImportSet{}
+type goImportSet struct {
+	pkgPaths map[string]string
+	names    map[string]string
 }
 
-func (set goImportSet) add(pkgPath string) {
-	for _, p := range set {
-		if p == pkgPath {
-			return
-		}
+func newGoImportSet() *goImportSet {
+	return &goImportSet{map[string]string{}, map[string]string{}}
+}
+
+func (set *goImportSet) add(pkgPath string) {
+	if pkgPath == "" {
+		return
 	}
-	parts := strings.Split(pkgPath, "/")
-	name := parts[len(parts)-1]
+	if _, ok := set.names[pkgPath]; ok {
+		return
+	}
+	name := defaultPkgName(pkgPath)
 	for {
-		if _, ok := set[name]; !ok {
+		if _, ok := set.pkgPaths[name]; !ok {
 			break
 		}
 		name = fmt.Sprintf("_%s", name)
 	}
-	set[name] = pkgPath
+	set.pkgPaths[name] = pkgPath
+	set.names[pkgPath] = name
 }
 
-func (set goImportSet) imports(standard bool) []*goImport {
+func (set *goImportSet) get(pkgPath string) string {
+	if pkgPath == "" {
+		return ""
+	}
+	return set.names[pkgPath]
+}
+
+func (set *goImportSet) imports(standard bool) []*goImport {
 	mapping := map[string]string{}
-	for name, pkgPath := range set {
+	for name, pkgPath := range set.pkgPaths {
 		parts := strings.Split(pkgPath, "/")
 		if (len(parts) == 1) == standard {
 			if name == parts[len(parts)-1] {
@@ -198,12 +203,17 @@ type goImport struct {
 
 type goFunc struct {
 	*types.Func
-	pkg    *goPackage
-	params []*goVar
+	Params []*goVar
 }
 
-func newGoFunc(pkg *goPackage, f *types.Func) *goFunc {
-	return &goFunc{f, pkg, nil}
+func newGoFunc(imports *goImportSet, f *types.Func) *goFunc {
+	params := []*goVar{}
+	signature := f.Type().(*types.Signature)
+	for i := 0; i < signature.Params().Len(); i++ {
+		variadic := signature.Variadic() && i == signature.Params().Len()-1
+		params = append(params, newGoVar(imports, signature.Params().At(i), variadic))
+	}
+	return &goFunc{f, params}
 }
 
 func (f *goFunc) InternalName() string {
@@ -213,25 +223,9 @@ func (f *goFunc) InternalName() string {
 	return internalName
 }
 
-func (f *goFunc) Params() []*goVar {
-	if f.params == nil {
-		f.params = []*goVar{}
-		signature := f.Type().(*types.Signature)
-		params := signature.Params()
-		for i := 0; i < params.Len(); i++ {
-			f.params = append(f.params, newGoVar(f.pkg, params.At(i)))
-
-		}
-		if signature.Variadic() {
-			f.params[len(f.params)-1].Variadic = true
-		}
-	}
-	return f.params
-}
-
 func (f *goFunc) ParamTypes() string {
 	var paramTypes []string
-	for _, param := range f.Params() {
+	for _, param := range f.Params {
 		if param.Variadic {
 			paramTypes = append(paramTypes, fmt.Sprintf("...%v", param.Type().(*types.Slice).Elem()))
 		} else {
@@ -242,34 +236,45 @@ func (f *goFunc) ParamTypes() string {
 }
 
 func (f *goFunc) QualifiedName() string {
-	return QualifiedName(f.FullName())
+	pkgPath, name := splitName(f.FullName())
+	return fmt.Sprintf("%v.%v", defaultPkgName(pkgPath), name)
+}
+
+func defaultPkgName(pkgPath string) string {
+	parts := strings.Split(pkgPath, "/")
+	return parts[len(parts)-1]
 }
 
 type goVar struct {
 	*types.Var
-	pkg      *goPackage
-	Variadic bool
+	QualifiedType string
+	Variadic      bool
 }
 
-func newGoVar(pkg *goPackage, v *types.Var) *goVar {
-	pkg.imports.add()
-	return &goVar{v, pkg, false}
-}
-
-func (v *goVar) QualifiedType() string {
-	if v.Variadic {
-		return QualifiedName(v.Type().(*types.Slice).Elem().String())
+func newGoVar(imports *goImportSet, v *types.Var, variadic bool) *goVar {
+	t := v.Type()
+	if variadic {
+		t = t.(*types.Slice).Elem()
 	}
-	return QualifiedName(v.Type().String())
+	pkgPath, name := splitName(t.String())
+	imports.add(pkgPath)
+	qualifiedType := qualifiedName(imports.get(pkgPath), name)
+	return &goVar{v, qualifiedType, variadic}
 }
 
-func QualifiedName(name string) string {
+func splitName(name string) (string, string) {
 	a := strings.Split(name, ".")
 	if len(a) == 1 {
-		return a[0]
+		return "", a[0]
 	}
-	b := strings.Split(a[0], "/")
-	return fmt.Sprintf("%v.%v", b[len(b)-1], a[1])
+	return a[0], a[1]
+}
+
+func qualifiedName(pkgName string, name string) string {
+	if pkgName == "" {
+		return name
+	}
+	return fmt.Sprintf("%v.%v", pkgName, name)
 }
 
 func generateGoPackage(pattern string) (bool, error) {
