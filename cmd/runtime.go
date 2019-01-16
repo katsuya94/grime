@@ -31,7 +31,7 @@ func newRuntime() (*runtime.Runtime, error) {
 			return nil, err
 		}
 		if libraryBinding.bindings != nil {
-			err := rt.Bind(core.Library.Name(), core.Bindings)
+			err := rt.Bind(libraryBinding.library.Name(), libraryBinding.bindings)
 			if err != nil {
 				return nil, err
 			}

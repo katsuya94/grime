@@ -58,13 +58,29 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 	if valid {
 		{{if $param.Variadic -}}
 		for _, arg := range args[{{$i}}:] {
+			{{if ne $param.CoercibleType "" -}}
+			coerced := arg
+			if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
+				coerced = {{$param.QualifiedType}}(coercible)
+			}
+			elem, ok := coerced.({{$param.QualifiedType}})
+			{{else -}}
 			elem, ok := arg.({{$param.QualifiedType}})
+			{{end -}}
 			valid = valid && ok
 			{{$param.Name}} = append({{$param.Name}}, elem)
 		}
 	{{else -}}
 		var ok bool
+		{{if ne $param.CoercibleType "" -}}
+		coerced := args[{{$i}}]
+		if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
+			coerced = {{$param.QualifiedType}}(coercible)
+		}
+		{{$param.Name}}, ok = coerced.({{$param.QualifiedType}})
+		{{else -}}
 		{{$param.Name}}, ok = args[{{$i}}].({{$param.QualifiedType}})
+		{{end -}}
 		valid = valid && ok
 	{{end -}}
 	}
@@ -77,7 +93,7 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected ({{.ParamTypes}}) got (%v)", strings.Join(argTypes, ", ")))
 	}
 	{{end -}}
-	{{.QualifiedName}}(
+	{{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}{{if gt (len .Results) 0}} := {{end}}{{.QualifiedName}}(
 	{{range .Params -}}
 		{{"\t"}}{{if .Variadic -}}
 		{{.Name}}...,
@@ -86,7 +102,7 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		{{- end}}
 	{{end -}}
 	)
-	return common.CallC(c, common.Void)
+	return common.CallC(c, util.List({{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}))
 }
 {{end}}
 `))
@@ -99,12 +115,13 @@ type goPackage struct {
 
 func newGoPackage(pkg *packages.Package) *goPackage {
 	imports := newGoImportSet()
-	imports.add(pkg.PkgPath)
 	imports.add("fmt")
 	imports.add("reflect")
 	imports.add("strings")
 	imports.add("github.com/katsuya94/grime/common")
 	imports.add("github.com/katsuya94/grime/runtime")
+	imports.add("github.com/katsuya94/grime/util")
+	imports.add(pkg.PkgPath)
 	funcs := []*goFunc{}
 	scope := pkg.Types.Scope()
 	for _, name := range scope.Names() {
@@ -201,7 +218,8 @@ type goImport struct {
 
 type goFunc struct {
 	*types.Func
-	Params []*goVar
+	Params  []*goVar
+	Results []struct{}
 }
 
 func newGoFunc(imports *goImportSet, f *types.Func) *goFunc {
@@ -211,7 +229,7 @@ func newGoFunc(imports *goImportSet, f *types.Func) *goFunc {
 		variadic := signature.Variadic() && i == signature.Params().Len()-1
 		params = append(params, newGoVar(imports, signature.Params().At(i), variadic))
 	}
-	return &goFunc{f, params}
+	return &goFunc{f, params, make([]struct{}, signature.Results().Len())}
 }
 
 func (f *goFunc) InternalName() string {
@@ -246,6 +264,7 @@ func defaultPkgName(pkgPath string) string {
 type goVar struct {
 	*types.Var
 	QualifiedType string
+	CoercibleType string
 	Variadic      bool
 }
 
@@ -257,7 +276,16 @@ func newGoVar(imports *goImportSet, v *types.Var, variadic bool) *goVar {
 	pkgPath, name := splitName(t.String())
 	imports.add(pkgPath)
 	qualifiedType := qualifiedName(imports.get(pkgPath), name)
-	return &goVar{v, qualifiedType, variadic}
+	coercibleType := ""
+	switch qualifiedType {
+	case "string":
+		coercibleType = "common.String"
+	}
+	return &goVar{v, qualifiedType, coercibleType, variadic}
+}
+
+func (v *goVar) Name() string {
+	return fmt.Sprintf("_%s", v.Var.Name())
 }
 
 func splitName(name string) (string, string) {
