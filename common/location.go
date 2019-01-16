@@ -15,3 +15,14 @@ type PatternVariable struct {
 }
 
 type BindingSet map[int]map[Symbol]Location
+
+func (set BindingSet) Merge(other BindingSet) {
+	for phase, locations := range other {
+		if _, ok := set[phase]; !ok {
+			set[phase] = map[Symbol]Location{}
+		}
+		for name, location := range locations {
+			set[phase][name] = location
+		}
+	}
+}

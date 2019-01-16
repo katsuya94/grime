@@ -13,6 +13,11 @@ func init() {
 	rootCmd.AddCommand(replCmd)
 }
 
+var libraryNames = [][]common.Symbol{
+	{common.Symbol("grime")},
+	{common.Symbol("fmt")},
+}
+
 var replCmd = &cobra.Command{
 	Use:   "repl",
 	Short: "Start an interactive REPL",
@@ -26,9 +31,13 @@ var replCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		bindings, err := rt.BindingsFor([]common.Symbol{common.Symbol("grime")})
-		if err != nil {
-			return err
+		bindings := common.BindingSet{}
+		for _, name := range libraryNames {
+			b, err := rt.BindingsFor(name)
+			if err != nil {
+				return err
+			}
+			bindings.Merge(b)
 		}
 		runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
 		return nil

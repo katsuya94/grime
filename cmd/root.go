@@ -7,6 +7,7 @@ import (
 	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/lib/derived"
+	_fmt "github.com/katsuya94/grime/lib/fmt"
 	"github.com/katsuya94/grime/lib/grime"
 	"github.com/katsuya94/grime/runtime"
 	"github.com/spf13/cobra"
@@ -39,6 +40,14 @@ func newRuntime() (*runtime.Runtime, error) {
 		return nil, err
 	}
 	err = rt.Bind(core.Library.Name(), core.Bindings)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Provide(_fmt.Library)
+	if err != nil {
+		return nil, err
+	}
+	err = rt.Bind(_fmt.Library.Name(), _fmt.Bindings)
 	if err != nil {
 		return nil, err
 	}
