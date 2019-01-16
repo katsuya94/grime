@@ -22,14 +22,12 @@ import (
 {{range .StandardImports -}}
 	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"
 {{end -}}
-{{if ne (len .OtherImports) 0}}
 {{range .OtherImports -}}
 	{{"\t"}}{{if ne .Name ""}}{{.Name}} {{end}}"{{.PkgPath}}"
 {{end -}}
-{{end -}}
 )
 
-var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{
+var Library = runtime.MustNewEmptyLibrary([]common.Symbol{
 {{range .PkgPathSegments -}}
 	{{"\t"}}common.Symbol("{{.}}"),
 {{end -}}

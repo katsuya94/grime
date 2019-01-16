@@ -6,10 +6,7 @@ package grime
 
 import "github.com/katsuya94/grime/runtime"
 
-var Library *runtime.Library
-
-func init() {
-	Library = runtime.MustNewLibraryFromString("grime", `(library (grime)
+var Library = runtime.MustNewLibraryFromString("grime", `(library (grime)
   (export
     quote
     syntax
@@ -57,4 +54,3 @@ func init() {
     (for (except (base) syntax syntax-case set! _ ... syntax-rules) run expand)
     (for (only (core) syntax syntax-case set! _ ...) run expand)
     (for (only (derived) syntax-rules) run expand)))`)
-}

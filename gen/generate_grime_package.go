@@ -19,11 +19,7 @@ package {{.Name}}
 
 import "github.com/katsuya94/grime/runtime"
 
-var Library *runtime.Library
-
-func init() {
-	Library = runtime.MustNewLibraryFromFile("{{.Name}}")
-}
+var Library = runtime.MustNewLibraryFromFile("{{.Name}}")
 `))
 
 var grimeJsFileTemplate = template.Must(template.New("grimeJsFile").Parse(`
@@ -35,11 +31,7 @@ package {{.Name}}
 
 import "github.com/katsuya94/grime/runtime"
 
-var Library *runtime.Library
-
-func init() {
-	Library = runtime.MustNewLibraryFromString("{{.Name}}", {{.SrcString}})
-}
+var Library = runtime.MustNewLibraryFromString("{{.Name}}", {{.SrcString}})
 `))
 
 type grimePackage struct {

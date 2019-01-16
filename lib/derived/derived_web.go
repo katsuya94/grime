@@ -6,10 +6,7 @@ package derived
 
 import "github.com/katsuya94/grime/runtime"
 
-var Library *runtime.Library
-
-func init() {
-	Library = runtime.MustNewLibraryFromString("derived", `(library (derived)
+var Library = runtime.MustNewLibraryFromString("derived", `(library (derived)
   (export
     define
     when
@@ -189,4 +186,3 @@ func init() {
                   #'(if e0 
                       (begin e1 e2 ...)
                       rest)]))]))]))))`)
-}

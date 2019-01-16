@@ -6,10 +6,7 @@ package base
 
 import "github.com/katsuya94/grime/runtime"
 
-var Library *runtime.Library
-
-func init() {
-	Library = runtime.MustNewLibraryFromString("base", `(library (base)
+var Library = runtime.MustNewLibraryFromString("base", `(library (base)
   (export
     quote
     syntax
@@ -65,4 +62,3 @@ func init() {
 
   (define (equal? l r)
     (eqv? l r)))`)
-}
