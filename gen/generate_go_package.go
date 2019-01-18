@@ -119,9 +119,7 @@ type {{.InternalName}} struct {
 {{with $interface := . -}}
 {{range .Methods -}}
 func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{if gt $i 0}}, {{end}}{{$param.LocalName}} {{$param.QualifiedType}}{{end}}) {
-	_, err := common.WithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return i.{{.Field.InternalName}}.Call(escape{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
-	})
+	_, err := util.Invoke(i.{{.Field.InternalName}}{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
 	if err != nil {
 		panic(err)
 	}

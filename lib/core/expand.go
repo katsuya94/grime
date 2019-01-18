@@ -5,6 +5,7 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/util"
 )
 
 var (
@@ -74,9 +75,7 @@ func expandMacroMatching(form common.Datum, pattern common.Datum, literals map[c
 	}
 	mark := common.NewMark()
 	input := common.Mark(form, mark)
-	output, err := common.WithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
-		return keyword.Transformer.Call(escape, input)
-	})
+	output, err := util.Invoke(keyword.Transformer, input)
 	if err != nil {
 		return nil, false, err
 	}
