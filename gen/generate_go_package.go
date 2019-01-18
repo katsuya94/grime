@@ -118,11 +118,25 @@ type {{.InternalName}} struct {
 
 {{with $interface := . -}}
 {{range .Methods -}}
-func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{if gt $i 0}}, {{end}}{{$param.LocalName}} {{$param.QualifiedType}}{{end}}) {
-	_, err := util.Invoke(i.{{.Field.InternalName}}{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
+func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{if gt $i 0}}, {{end}}{{$param.LocalName}} {{$param.QualifiedType}}{{end}}) ({{range $i, $result := .Results}}{{if gt $i 0}}, {{end}}{{$result.QualifiedType}}{{end}}) {
+	results, err := util.Invoke(i.{{.Field.InternalName}}{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
+	{{if .TrailingError}}{{end}}
 	if err != nil {
 		panic(err)
 	}
+	s, err := util.Slice(results)
+	if err != nil {
+		panic(err)
+	}
+	valid := len(s) == {{len .Results}}
+	if !valid
+		var argTypes []string
+		for _, arg := range args {
+			argTypes = append(argTypes, reflect.TypeOf(arg).String())
+		}
+		panic(fmt.Sprintf("{{.QualifiedName}}: expected ({{.ParamTypes}}), got (%v)", strings.Join(argTypes, ", ")))
+	}
+	{{end -}}
 }
 
 {{end -}}
@@ -311,17 +325,21 @@ type goImport struct {
 type goFunc struct {
 	*types.Func
 	Params  []*goVar
-	Results []struct{}
+	Results []*goVar
 }
 
 func newGoFunc(imports *goImportSet, f *types.Func) *goFunc {
-	params := []*goVar{}
 	signature := f.Type().(*types.Signature)
+	params := make([]*goVar, signature.Params().Len())
 	for i := 0; i < signature.Params().Len(); i++ {
 		variadic := signature.Variadic() && i == signature.Params().Len()-1
-		params = append(params, newGoVar(imports, signature.Params().At(i).Name(), signature.Params().At(i), variadic))
+		params[i] = newGoVar(imports, signature.Params().At(i).Name(), signature.Params().At(i), variadic)
 	}
-	return &goFunc{f, params, make([]struct{}, signature.Results().Len())}
+	results := make([]*goVar, signature.Results().Len())
+	for i := 0; i < signature.Results().Len(); i++ {
+		results[i] = newGoVar(imports, signature.Results().At(i).Name(), signature.Results().At(i), false)
+	}
+	return &goFunc{f, params, results}
 }
 
 func (f *goFunc) InternalName() string {
@@ -390,6 +408,17 @@ func newGoMethod(imports *goImportSet, f *types.Func, field *goVar) *goMethod {
 	return &goMethod{newGoFunc(imports, f), field}
 }
 
+func (method *goMethod) TrailingError() bool {
+	if len(method.Results) == 0 {
+		return false
+	}
+	t, ok := method.Results[len(method.Results)-1].Type().(*types.Named)
+	if !ok {
+		return false
+	}
+	return t.Obj().Name() == "error"
+}
+
 type goStruct struct {
 	QualifiedName string
 	QualifiedType string
@@ -437,7 +466,10 @@ func computeQualifiedType(imports *goImportSet, t types.Type) string {
 	case *types.Pointer:
 		return fmt.Sprintf("*%s", computeQualifiedType(imports, t.Elem()))
 	case *types.Named:
-		pkgPath := t.Obj().Pkg().Path()
+		pkgPath := ""
+		if t.Obj().Pkg() != nil {
+			pkgPath = t.Obj().Pkg().Path()
+		}
 		imports.add(pkgPath)
 		return qualifiedName(imports.get(pkgPath), t.Obj().Name())
 	case *types.Basic:
