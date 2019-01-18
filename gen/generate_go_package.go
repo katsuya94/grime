@@ -43,7 +43,7 @@ var Bindings = common.BindingSet{
 	},
 }
 
-{{range .Funcs}}
+{{range .Funcs -}}
 func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	{{if len .Params -}}
 	{{if .Type.Variadic -}}
@@ -106,6 +106,7 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 	)
 	return common.CallC(c, util.List({{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}))
 }
+
 {{end -}}
 
 {{range .Interfaces}}
@@ -130,7 +131,7 @@ func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{
 {{end -}}
 {{end -}}
 
-{{range .Structs}}
+{{range .Structs -}}
 func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	s := {{.QualifiedType}}{}
 	m := map[common.Symbol]struct{}{}
@@ -167,7 +168,8 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 	}
 	return common.CallC(c, s)
 }
-{{end}}
+
+{{end -}}
 `))
 
 type goPackage struct {
