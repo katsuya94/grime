@@ -3,12 +3,11 @@ package gen
 import (
 	"bytes"
 	"fmt"
+	"go/token"
 	"go/types"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -38,6 +37,9 @@ var Bindings = common.BindingSet{
 	{{range .Funcs -}}
 		{{"\t"}}common.Symbol("{{.QualifiedName}}"): &common.Variable{common.Function({{.InternalName}})},
 	{{end -}}
+	{{range .Structs -}}
+		{{"\t"}}common.Symbol("{{.QualifiedName}}"): &common.Variable{common.Function({{.InternalName}})},
+	{{end -}}
 	},
 }
 
@@ -51,13 +53,13 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 	{{end -}}
 	{{range $i, $param := .Params -}}
 	{{if $param.Variadic -}}
-	var {{$param.Name}} []{{$param.QualifiedType}}
+	var {{$param.LocalName}} []{{$param.QualifiedType}}
 	{{else -}}
-	var {{$param.Name}} {{$param.QualifiedType}}
+	var {{$param.LocalName}} {{$param.QualifiedType}}
 	{{end -}}
 	if valid {
-		{{if $param.Variadic -}}
-		for _, arg := range args[{{$i}}:] {
+	{{if $param.Variadic -}}
+		{{"\t\t"}}for _, arg := range args[{{$i}}:] {
 			{{if ne $param.CoercibleType "" -}}
 			coerced := arg
 			if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
@@ -68,18 +70,18 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 			elem, ok := arg.({{$param.QualifiedType}})
 			{{end -}}
 			valid = valid && ok
-			{{$param.Name}} = append({{$param.Name}}, elem)
+			{{$param.LocalName}} = append({{$param.LocalName}}, elem)
 		}
 	{{else -}}
-		var ok bool
+		{{"\t\t"}}var ok bool
 		{{if ne $param.CoercibleType "" -}}
 		coerced := args[{{$i}}]
 		if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
 			coerced = {{$param.QualifiedType}}(coercible)
 		}
-		{{$param.Name}}, ok = coerced.({{$param.QualifiedType}})
+		{{$param.LocalName}}, ok = coerced.({{$param.QualifiedType}})
 		{{else -}}
-		{{$param.Name}}, ok = args[{{$i}}].({{$param.QualifiedType}})
+		{{$param.LocalName}}, ok = args[{{$i}}].({{$param.QualifiedType}})
 		{{end -}}
 		valid = valid && ok
 	{{end -}}
@@ -90,27 +92,90 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 		for _, arg := range args {
 			argTypes = append(argTypes, reflect.TypeOf(arg).String())
 		}
-		return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected ({{.ParamTypes}}) got (%v)", strings.Join(argTypes, ", ")))
+		return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected ({{.ParamTypes}}), got (%v)", strings.Join(argTypes, ", ")))
 	}
 	{{end -}}
 	{{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}{{if gt (len .Results) 0}} := {{end}}{{.QualifiedName}}(
 	{{range .Params -}}
 		{{"\t"}}{{if .Variadic -}}
-		{{.Name}}...,
+		{{.LocalName}}...,
 		{{- else -}}
-		{{.Name}},
+		{{.LocalName}},
 		{{- end}}
 	{{end -}}
 	)
 	return common.CallC(c, util.List({{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}))
+}
+{{end -}}
+
+{{range .Interfaces}}
+type {{.InternalName}} struct {
+{{range .Methods -}}
+	{{"\t"}}{{.Field.InternalName}} common.Procedure
+{{end -}}
+}
+
+{{with $interface := . -}}
+{{range .Methods -}}
+func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{if gt $i 0}}, {{end}}{{$param.LocalName}} {{$param.QualifiedType}}{{end}}) {
+	_, err := common.WithEscape(func(escape common.Continuation) (common.EvaluationResult, error) {
+		return i.{{.Field.InternalName}}.Call(escape{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+
+{{end -}}
+{{end -}}
+{{end -}}
+
+{{range .Structs}}
+func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+	s := {{.QualifiedType}}{}
+	m := map[common.Symbol]struct{}{}
+	i := 0
+	for ; i+1 < len(args); i += 2 {
+		key, ok := args[i].(common.Symbol)
+		if !ok {
+			return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected key, got %s", reflect.TypeOf(args[i]).String()))
+		}
+		if []byte(string(key))[0] != byte(':') {
+			return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected key, got %s", key))
+		}
+		if _, ok := m[key]; ok {
+			return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: duplicate key %s", key))
+		}
+		switch key {
+	    {{with $struct := . -}}
+		{{range .Fields -}}
+		{{"\t"}}case common.Symbol(":{{.Name}}"):
+			value, ok := args[i+1].({{.QualifiedType}})
+			if !ok {
+				return common.ErrorC(fmt.Errorf("{{$struct.QualifiedName}}: expected {{.Type}}, got %s", reflect.TypeOf(args[i+1]).String()))
+			}
+			s.{{.InternalName}} = value
+		{{end -}}
+		{{end -}}
+		default:
+			return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: unrecognized key %s", key))
+		}
+		m[key] = struct{}{}
+	}
+	if i < len(args) {
+		return common.ErrorC(fmt.Errorf("{{.QualifiedName}}: expected key-value pairs, got %d arguments", len(args)))
+	}
+	return common.CallC(c, s)
 }
 {{end}}
 `))
 
 type goPackage struct {
 	*packages.Package
-	imports *goImportSet
-	Funcs   []*goFunc
+	imports    *goImportSet
+	Funcs      []*goFunc
+	Interfaces []*goInterface
+	Structs    []*goStruct
 }
 
 func newGoPackage(pkg *packages.Package) *goPackage {
@@ -123,19 +188,46 @@ func newGoPackage(pkg *packages.Package) *goPackage {
 	imports.add("github.com/katsuya94/grime/util")
 	imports.add(pkg.PkgPath)
 	funcs := []*goFunc{}
+	interfaces := []*goInterface{}
+	structs := []*goStruct{}
 	scope := pkg.Types.Scope()
 	for _, name := range scope.Names() {
-		f, ok := scope.Lookup(name).(*types.Func)
-		if !ok || !f.Exported() {
-			continue
+		switch obj := scope.Lookup(name).(type) {
+		case *types.Func:
+			if !obj.Exported() {
+				continue
+			}
+			if obj.Type().(*types.Signature).Recv() != nil {
+				continue
+			}
+			funcs = append(funcs, newGoFunc(imports, obj))
+		case *types.TypeName:
+			if !obj.Exported() {
+				continue
+			}
+			switch t := obj.Type().Underlying().(type) {
+			case *types.Interface:
+				i := newGoInterface(imports, obj, t)
+				interfaces = append(interfaces, i)
+				structs = append(structs, i.implementation)
+			case *types.Struct:
+				fields := []*goVar{}
+				for i := 0; i < t.NumFields(); i++ {
+					if !t.Field(i).Exported() {
+						continue
+					}
+					fields = append(fields, newGoVar(imports, t.Field(i).Name(), t.Field(i), false))
+				}
+				structs = append(structs, newGoStruct(imports, obj, obj, fields))
+			default:
+				panic(fmt.Sprintf("unhandled type %#v for %s", t, obj.Name()))
+			}
+
+		default:
+			panic(fmt.Sprintf("unhandled object %#v", obj))
 		}
-		if f.Type().(*types.Signature).Recv() != nil {
-			fmt.Printf("skipping %v because of receiver\n", f)
-			continue
-		}
-		funcs = append(funcs, newGoFunc(imports, f))
 	}
-	return &goPackage{pkg, imports, funcs}
+	return &goPackage{pkg, imports, funcs, interfaces, structs}
 }
 
 func (pkg *goPackage) PkgPathSegments() []string {
@@ -227,16 +319,13 @@ func newGoFunc(imports *goImportSet, f *types.Func) *goFunc {
 	signature := f.Type().(*types.Signature)
 	for i := 0; i < signature.Params().Len(); i++ {
 		variadic := signature.Variadic() && i == signature.Params().Len()-1
-		params = append(params, newGoVar(imports, signature.Params().At(i), variadic))
+		params = append(params, newGoVar(imports, signature.Params().At(i).Name(), signature.Params().At(i), variadic))
 	}
 	return &goFunc{f, params, make([]struct{}, signature.Results().Len())}
 }
 
 func (f *goFunc) InternalName() string {
-	internalName := f.Name()
-	internalName = string(regexp.MustCompile("[^a-zA-Z0-9]").ReplaceAll([]byte(internalName), []byte{}))
-	internalName = string(append([]rune{unicode.ToLower([]rune(internalName)[0])}, []rune(internalName)[1:]...))
-	return internalName
+	return fmt.Sprintf("func_%s", f.Name())
 }
 
 func (f *goFunc) ParamTypes() string {
@@ -260,14 +349,76 @@ func defaultPkgName(pkgPath string) string {
 	return parts[len(parts)-1]
 }
 
+type goInterface struct {
+	*types.Interface
+	implementation *goStruct
+	Methods        []*goMethod
+}
+
+var procedureType = types.NewNamed(types.NewTypeName(token.NoPos, types.NewPackage("github.com/katsuya94/grime/common", "common"), "Procedure", nil), nil, nil)
+
+func newGoInterface(imports *goImportSet, name *types.TypeName, ifc *types.Interface) *goInterface {
+	funcs := []*types.Func{}
+	fields := []*goVar{}
+	for i := 0; i < ifc.NumMethods(); i++ {
+		f := ifc.Method(i)
+		if !f.Exported() {
+			continue
+		}
+		funcs = append(funcs, f)
+		fields = append(fields, newGoVar(imports, f.Name(), types.NewField(token.NoPos, nil, fmt.Sprintf("field_%s", f.Name()), procedureType, false), false))
+	}
+	structName := types.NewTypeName(token.NoPos, types.NewPackage("", ""), fmt.Sprintf("interface_%s", name.Name()), nil)
+	srt := newGoStruct(imports, name, structName, fields)
+	methods := make([]*goMethod, len(fields))
+	for i := range srt.Fields {
+		methods[i] = newGoMethod(imports, funcs[i], srt.Fields[i])
+	}
+	return &goInterface{ifc, srt, methods}
+}
+
+func (ifc *goInterface) InternalName() string {
+	return fmt.Sprintf("interface_%s", ifc.implementation.Name())
+}
+
+type goMethod struct {
+	*goFunc
+	Field *goVar
+}
+
+func newGoMethod(imports *goImportSet, f *types.Func, field *goVar) *goMethod {
+	return &goMethod{newGoFunc(imports, f), field}
+}
+
+type goStruct struct {
+	QualifiedName string
+	QualifiedType string
+	Fields        []*goVar
+}
+
+func newGoStruct(imports *goImportSet, displayName *types.TypeName, typeName *types.TypeName, fields []*goVar) *goStruct {
+	imports.add(typeName.Pkg().Path())
+	return &goStruct{qualifiedName(displayName.Pkg().Name(), displayName.Name()), qualifiedName(imports.get(typeName.Pkg().Path()), typeName.Name()), fields}
+}
+
+func (srt *goStruct) Name() string {
+	_, name := splitName(srt.QualifiedName)
+	return name
+}
+
+func (srt *goStruct) InternalName() string {
+	return fmt.Sprintf("struct_%s", srt.Name())
+}
+
 type goVar struct {
 	*types.Var
+	Name          string
 	QualifiedType string
 	CoercibleType string
 	Variadic      bool
 }
 
-func newGoVar(imports *goImportSet, v *types.Var, variadic bool) *goVar {
+func newGoVar(imports *goImportSet, name string, v *types.Var, variadic bool) *goVar {
 	t := v.Type()
 	if variadic {
 		t = t.(*types.Slice).Elem()
@@ -278,7 +429,7 @@ func newGoVar(imports *goImportSet, v *types.Var, variadic bool) *goVar {
 	case "string":
 		coercibleType = "common.String"
 	}
-	return &goVar{v, qualifiedType, coercibleType, variadic}
+	return &goVar{v, name, qualifiedType, coercibleType, variadic}
 }
 
 func computeQualifiedType(imports *goImportSet, t types.Type) string {
@@ -293,13 +444,29 @@ func computeQualifiedType(imports *goImportSet, t types.Type) string {
 		return t.String()
 	case *types.Interface:
 		return t.String()
+	case *types.Slice:
+		return fmt.Sprintf("[]%s", computeQualifiedType(imports, t.Elem()))
+	case *types.Signature:
+		params := make([]string, t.Params().Len())
+		for i := 0; i < t.Params().Len(); i++ {
+			params[i] = computeQualifiedType(imports, t.Params().At(i).Type())
+		}
+		results := make([]string, t.Results().Len())
+		for i := 0; i < t.Results().Len(); i++ {
+			results[i] = computeQualifiedType(imports, t.Results().At(i).Type())
+		}
+		return fmt.Sprintf("func(%s) (%s)", strings.Join(params, ", "), strings.Join(results, ", "))
 	default:
 		panic(fmt.Sprintf("unhandled type %#v", t))
 	}
 }
 
-func (v *goVar) Name() string {
-	return fmt.Sprintf("_%s", v.Var.Name())
+func (v *goVar) InternalName() string {
+	return v.Var.Name()
+}
+
+func (v *goVar) LocalName() string {
+	return fmt.Sprintf("var_%s", v.InternalName())
 }
 
 func splitName(name string) (string, string) {
