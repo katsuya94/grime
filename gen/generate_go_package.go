@@ -252,8 +252,7 @@ func (f *goFunc) ParamTypes() string {
 }
 
 func (f *goFunc) QualifiedName() string {
-	pkgPath, name := splitName(f.FullName())
-	return fmt.Sprintf("%v.%v", defaultPkgName(pkgPath), name)
+	return qualifiedName(f.Pkg().Name(), f.Name())
 }
 
 func defaultPkgName(pkgPath string) string {
@@ -273,15 +272,30 @@ func newGoVar(imports *goImportSet, v *types.Var, variadic bool) *goVar {
 	if variadic {
 		t = t.(*types.Slice).Elem()
 	}
-	pkgPath, name := splitName(t.String())
-	imports.add(pkgPath)
-	qualifiedType := qualifiedName(imports.get(pkgPath), name)
+	qualifiedType := computeQualifiedType(imports, t)
 	coercibleType := ""
 	switch qualifiedType {
 	case "string":
 		coercibleType = "common.String"
 	}
 	return &goVar{v, qualifiedType, coercibleType, variadic}
+}
+
+func computeQualifiedType(imports *goImportSet, t types.Type) string {
+	switch t := t.(type) {
+	case *types.Pointer:
+		return fmt.Sprintf("*%s", computeQualifiedType(imports, t.Elem()))
+	case *types.Named:
+		pkgPath := t.Obj().Pkg().Path()
+		imports.add(pkgPath)
+		return qualifiedName(imports.get(pkgPath), t.Obj().Name())
+	case *types.Basic:
+		return t.String()
+	case *types.Interface:
+		return t.String()
+	default:
+		panic(fmt.Sprintf("unhandled type %#v", t))
+	}
 }
 
 func (v *goVar) Name() string {
