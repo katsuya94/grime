@@ -54,38 +54,36 @@ func {{.InternalName}}(c common.Continuation, args ...common.Datum) (common.Eval
 	{{range $i, $param := .Params -}}
 	{{if $param.Variadic -}}
 	var {{$param.LocalName}} []{{$param.QualifiedType}}
-	{{else -}}
-	var {{$param.LocalName}} {{$param.QualifiedType}}
-	{{end -}}
-	if valid {
-	{{if $param.Variadic -}}
-		{{"\t\t"}}for _, arg := range args[{{$i}}:] {
-			{{if ne $param.CoercibleType "" -}}
-			coerced := arg
-			if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
-				coerced = {{$param.QualifiedType}}(coercible)
-			}
-			elem, ok := coerced.({{$param.QualifiedType}})
-			{{else -}}
-			elem, ok := arg.({{$param.QualifiedType}})
-			{{end -}}
-			valid = valid && ok
-			{{$param.LocalName}} = append({{$param.LocalName}}, elem)
+	for _, arg := range args[{{$i}}:] {
+		if !valid {
+			break
 		}
-	{{else -}}
-		{{"\t\t"}}var ok bool
+		var elem {{$param.QualifiedType}}
 		{{if ne $param.CoercibleType "" -}}
-		coerced := args[{{$i}}]
+		coerced := arg
 		if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
 			coerced = {{$param.QualifiedType}}(coercible)
 		}
-		{{$param.LocalName}}, ok = coerced.({{$param.QualifiedType}})
+		elem, valid = coerced.({{$param.QualifiedType}})
 		{{else -}}
-		{{$param.LocalName}}, ok = args[{{$i}}].({{$param.QualifiedType}})
+		elem, valid = arg.({{$param.QualifiedType}})
 		{{end -}}
-		valid = valid && ok
+		{{$param.LocalName}} = append({{$param.LocalName}}, elem)
+	}
+	{{else -}}
+	var {{$param.LocalName}} {{$param.QualifiedType}}
+	if valid {
+	{{if ne $param.CoercibleType "" -}}
+		{{"\t"}}coerced := args[{{$i}}]
+		if coercible, ok := coerced.({{$param.CoercibleType}}); ok {
+			coerced = {{$param.QualifiedType}}(coercible)
+		}
+		{{$param.LocalName}}, valid = coerced.({{$param.QualifiedType}})
+	{{else -}}
+		{{$param.LocalName}}, valid = args[{{$i}}].({{$param.QualifiedType}})
 	{{end -}}
 	}
+	{{end -}}
 	{{end -}}
 	if !valid {
 		var argTypes []string
@@ -120,7 +118,20 @@ type {{.InternalName}} struct {
 {{range .Methods -}}
 func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{if gt $i 0}}, {{end}}{{$param.LocalName}} {{$param.QualifiedType}}{{end}}) ({{range $i, $result := .Results}}{{if gt $i 0}}, {{end}}{{$result.QualifiedType}}{{end}}) {
 	results, err := util.Invoke(i.{{.Field.InternalName}}{{range $i, $param := .Params}}, {{$param.LocalName}}{{end}})
-	{{if .TrailingError}}{{end}}
+	{{if ge .TrailingErrorIndex 0 -}}
+	{{range $i, $result := .Results -}}
+	var r{{$i}} {{$result.QualifiedType}}
+	{{end -}}
+	if err != nil {
+		r{{.TrailingErrorIndex}} = err
+		return {{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}
+	}
+	s, err := util.Slice(results)
+	if err != nil {
+		r{{.TrailingErrorIndex}} = err
+		return {{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}
+	}
+	{{else -}}
 	if err != nil {
 		panic(err)
 	}
@@ -128,15 +139,34 @@ func (i {{$interface.InternalName}}) {{.Name}}({{range $i, $param := .Params}}{{
 	if err != nil {
 		panic(err)
 	}
+	{{end -}}
 	valid := len(s) == {{len .Results}}
-	if !valid
-		var argTypes []string
-		for _, arg := range args {
-			argTypes = append(argTypes, reflect.TypeOf(arg).String())
+	{{with $method := . -}}
+	{{range $i, $result := .Results -}}
+	{{if not (ge $method.TrailingErrorIndex 0) -}}
+	var r{{$i}} {{$result.QualifiedType}}
+	{{end -}}
+	if valid {
+	{{if ne $result.CoercibleType "" -}}
+		{{"\t"}}coerced := s[{{$i}}]
+		if coercible, ok := coerced.({{$result.CoercibleType}}); ok {
+			coerced = {{$result.QualifiedType}}(coercible)
 		}
-		panic(fmt.Sprintf("{{.QualifiedName}}: expected ({{.ParamTypes}}), got (%v)", strings.Join(argTypes, ", ")))
+		r{{$i}}, valid = coerced.({{$result.QualifiedType}})
+	{{else -}}
+		{{"\t"}}r{{$i}}, valid = s[{{$i}}].({{$result.QualifiedType}})
+	{{end -}}
 	}
 	{{end -}}
+	{{end -}}
+	if !valid {
+		var rTypes []string
+		for _, r := range s {
+			rTypes = append(rTypes, reflect.TypeOf(r).String())
+		}
+		panic(fmt.Sprintf("{{.QualifiedName}}: expected ({{.ParamTypes}}), got (%v)", strings.Join(rTypes, ", ")))
+	}
+	return {{range $i, $_ := .Results}}{{if gt $i 0}}, {{end}}r{{$i}}{{end}}
 }
 
 {{end -}}
@@ -236,7 +266,10 @@ func newGoPackage(pkg *packages.Package) *goPackage {
 			default:
 				panic(fmt.Sprintf("unhandled type %#v for %s", t, obj.Name()))
 			}
-
+		case *types.Var:
+			fmt.Println("Var not yet implemented")
+		case *types.Const:
+			fmt.Println("Const not yet implemented")
 		default:
 			panic(fmt.Sprintf("unhandled object %#v", obj))
 		}
@@ -408,15 +441,18 @@ func newGoMethod(imports *goImportSet, f *types.Func, field *goVar) *goMethod {
 	return &goMethod{newGoFunc(imports, f), field}
 }
 
-func (method *goMethod) TrailingError() bool {
+func (method *goMethod) TrailingErrorIndex() int {
 	if len(method.Results) == 0 {
-		return false
+		return -1
 	}
 	t, ok := method.Results[len(method.Results)-1].Type().(*types.Named)
 	if !ok {
-		return false
+		return -1
 	}
-	return t.Obj().Name() == "error"
+	if t.Obj().Name() != "error" {
+		return -1
+	}
+	return len(method.Results) - 1
 }
 
 type goStruct struct {
