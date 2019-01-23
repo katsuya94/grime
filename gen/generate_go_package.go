@@ -305,11 +305,15 @@ func (set *goImportSet) add(pkgPath string) {
 	if _, ok := set.names[pkgPath]; ok {
 		return
 	}
-	name := defaultPkgName(pkgPath)
-	for {
-		if _, ok := set.pkgPaths[name]; !ok {
-			break
+	parts := strings.Split(pkgPath, "/")
+	var name
+	for i := 1; i < len(parts); i++ {
+		name = strings.Join(parts[len(parts)-i:], "_")
+		other, ok := set.pkgPaths[name];
+		if !ok {
+			continue
 		}
+		other_parts := strings.Split(other, "/")
 		name = fmt.Sprintf("_%s", name)
 	}
 	set.pkgPaths[name] = pkgPath
@@ -393,11 +397,6 @@ func (f *goFunc) ParamTypes() string {
 
 func (f *goFunc) QualifiedName() string {
 	return qualifiedName(f.Pkg().Name(), f.Name())
-}
-
-func defaultPkgName(pkgPath string) string {
-	parts := strings.Split(pkgPath, "/")
-	return parts[len(parts)-1]
 }
 
 type goInterface struct {
