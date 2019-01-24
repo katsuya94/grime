@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -290,66 +289,32 @@ func (pkg *goPackage) OtherImports() []*goImport {
 }
 
 type goImportSet struct {
-	pkgPaths map[string]string
-	names    map[string]string
+	token *goImportSetToken
 }
 
 func newGoImportSet() *goImportSet {
-	return &goImportSet{map[string]string{}, map[string]string{}}
+	return &goImportSet{newGoImportSetToken([]string{})}
 }
 
 func (set *goImportSet) add(pkgPath string) {
-	if pkgPath == "" {
-		return
-	}
-	if _, ok := set.names[pkgPath]; ok {
-		return
-	}
 	parts := strings.Split(pkgPath, "/")
-	var name
-	for i := 1; i < len(parts); i++ {
-		name = strings.Join(parts[len(parts)-i:], "_")
-		other, ok := set.pkgPaths[name];
-		if !ok {
-			continue
-		}
-		other_parts := strings.Split(other, "/")
-		name = fmt.Sprintf("_%s", name)
-	}
-	set.pkgPaths[name] = pkgPath
-	set.names[pkgPath] = name
+	set.token.add(parts)
 }
 
 func (set *goImportSet) get(pkgPath string) string {
-	if pkgPath == "" {
-		return ""
-	}
-	return set.names[pkgPath]
+	parts := strings.Split(pkgPath, "/")
+	name_parts := set.token.get(parts)
+	return strings.Join(name_parts, "_")
 }
 
 func (set *goImportSet) imports(standard bool) []*goImport {
-	mapping := map[string]string{}
-	for name, pkgPath := range set.pkgPaths {
-		parts := strings.Split(pkgPath, "/")
-		if (len(parts) == 1) == standard {
-			if name == parts[len(parts)-1] {
-				mapping[pkgPath] = ""
-			} else {
-				mapping[pkgPath] = name
-			}
+	paths := set.token.paths()
+	imports := make([]*goImport, len(paths))
+	for i, parts := range paths {
+		imports[i] = &goImport{
+			Name:    strings.Join(set.token.get(parts), "_"),
+			PkgPath: strings.Join(parts, "/"),
 		}
-	}
-	pkgPaths := []string{}
-	for pkgPath := range mapping {
-		pkgPaths = append(pkgPaths, pkgPath)
-	}
-	sort.Strings(pkgPaths)
-	imports := []*goImport{}
-	for _, pkgPath := range pkgPaths {
-		imports = append(imports, &goImport{
-			Name:    mapping[pkgPath],
-			PkgPath: pkgPath,
-		})
 	}
 	return imports
 }
