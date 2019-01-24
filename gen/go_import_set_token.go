@@ -2,47 +2,49 @@ package gen
 
 type goImportSetSubtoken struct {
 	rest  []string
-	token *goImportSetToken
+	token goImportSetToken
 }
 
-type goImportSetToken struct {
-	subtokens map[string]*goImportSetSubtoken
+type goImportSetToken map[string]*goImportSetSubtoken
+
+func newGoImportSetToken() goImportSetToken {
+	return goImportSetToken{}
 }
 
-func (token *goImportSetToken) add(parts []string) {
-	if token.subtokens == nil {
-		token.subtokens = map[string]*goImportSetSubtoken{}
-	}
+func (token goImportSetToken) add(parts []string) {
 	last := parts[len(parts)-1]
 	rest := parts[0 : len(parts)-1]
-	other, ok := token.subtokens[last]
+	existing, ok := token[last]
 	if ok {
-		if other.token.subtokens == nil {
-
+		if existing.token == nil {
+			existing.token = newGoImportSetToken()
+			existing.token.add(existing.rest)
 		}
+		existing.token.add(rest)
 	} else {
-		token.subtokens[last] = &goImportSetSubtoken{rest, &goImportSetToken{nil}}
+		token[last] = &goImportSetSubtoken{rest, nil}
 	}
 }
 
-func (token *goImportSetToken) get(parts []string) []string {
+func (token goImportSetToken) get(parts []string) []string {
 	last := parts[len(parts)-1]
 	rest := parts[0 : len(parts)-1]
-	if token.subtokens == nil {
-		return []string{}
+	subtoken := token[last]
+	if subtoken.token == nil {
+		return []string{last}
 	}
-	return append(token.subtokens[last].get(rest), last)
+	return append(subtoken.token.get(rest), last)
 }
 
-func (token *goImportSetToken) paths() [][]string {
-	if token.subtokens == nil {
-		return [][]string{token.rest}
-	}
+func (token goImportSetToken) paths() [][]string {
 	paths := [][]string{}
-	for part, subtoken := range token.subtokens {
-		subpaths := subtoken.paths()
-		for _, subpath := range subpaths {
-			paths = append(paths, append(subpath, part))
+	for part, subtoken := range token {
+		if subtoken.token == nil {
+			paths = append(paths, append(subtoken.rest, part))
+		} else {
+			for _, path := range subtoken.token.paths() {
+				paths = append(paths, append(path, part))
+			}
 		}
 	}
 	return paths

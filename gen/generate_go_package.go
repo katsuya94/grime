@@ -289,31 +289,31 @@ func (pkg *goPackage) OtherImports() []*goImport {
 }
 
 type goImportSet struct {
-	token *goImportSetToken
+	token goImportSetToken
 }
 
 func newGoImportSet() *goImportSet {
-	return &goImportSet{newGoImportSetToken([]string{})}
+	return &goImportSet{newGoImportSetToken()}
 }
 
 func (set *goImportSet) add(pkgPath string) {
-	parts := strings.Split(pkgPath, "/")
-	set.token.add(parts)
+	path_parts := strings.Split(pkgPath, "/")
+	set.token.add(path_parts)
 }
 
 func (set *goImportSet) get(pkgPath string) string {
-	parts := strings.Split(pkgPath, "/")
-	name_parts := set.token.get(parts)
+	path_parts := strings.Split(pkgPath, "/")
+	name_parts := set.token.get(path_parts)
 	return strings.Join(name_parts, "_")
 }
 
 func (set *goImportSet) imports(standard bool) []*goImport {
 	paths := set.token.paths()
 	imports := make([]*goImport, len(paths))
-	for i, parts := range paths {
+	for i, path_parts := range paths {
 		imports[i] = &goImport{
-			Name:    strings.Join(set.token.get(parts), "_"),
-			PkgPath: strings.Join(parts, "/"),
+			Name:    strings.Join(set.token.get(path_parts), "_"),
+			PkgPath: strings.Join(path_parts, "/"),
 		}
 	}
 	return imports
