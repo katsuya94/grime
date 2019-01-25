@@ -500,7 +500,11 @@ func newGoVar(imports *goImportSet, name string, v *types.Var, variadic bool) *g
 }
 
 func (srt *goVar) QualifiedType() string {
-	return computeQualifiedType(srt.imports, srt.Type())
+	t := srt.Type()
+	if srt.Variadic {
+		t = t.(*types.Slice).Elem()
+	}
+	return computeQualifiedType(srt.imports, t)
 }
 
 func addImports(imports *goImportSet, t types.Type) {
