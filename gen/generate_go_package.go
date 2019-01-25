@@ -453,13 +453,14 @@ func (method *goMethod) TrailingErrorIndex() int {
 
 type goStruct struct {
 	QualifiedName string
-	QualifiedType string
 	Fields        []*goVar
+	imports       *goImportSet
+	typeName      *types.TypeName
 }
 
 func newGoStruct(imports *goImportSet, displayName *types.TypeName, typeName *types.TypeName, fields []*goVar) *goStruct {
 	imports.add(typeName.Pkg().Path())
-	return &goStruct{qualifiedName(displayName.Pkg().Name(), displayName.Name()), qualifiedName(imports.get(typeName.Pkg().Path()), typeName.Name()), fields}
+	return &goStruct{qualifiedName(displayName.Pkg().Name(), displayName.Name()), fields, imports, typeName}
 }
 
 func (srt *goStruct) Name() string {
@@ -471,12 +472,16 @@ func (srt *goStruct) InternalName() string {
 	return fmt.Sprintf("struct_%s", srt.Name())
 }
 
+func (srt *goStruct) QualifiedType() string {
+	return qualifiedName(srt.imports.get(srt.typeName.Pkg().Path()), srt.typeName.Name())
+}
+
 type goVar struct {
 	*types.Var
 	Name          string
-	QualifiedType string
 	CoercibleType string
 	Variadic      bool
+	imports       *goImportSet
 }
 
 func newGoVar(imports *goImportSet, name string, v *types.Var, variadic bool) *goVar {
@@ -484,13 +489,44 @@ func newGoVar(imports *goImportSet, name string, v *types.Var, variadic bool) *g
 	if variadic {
 		t = t.(*types.Slice).Elem()
 	}
-	qualifiedType := computeQualifiedType(imports, t)
+	addImports(imports, t)
 	coercibleType := ""
-	switch qualifiedType {
-	case "string":
-		coercibleType = "common.String"
+	if t, ok := t.(*types.Basic); ok {
+		if t.Kind() == types.String {
+			coercibleType = "common.String"
+		}
 	}
-	return &goVar{v, name, qualifiedType, coercibleType, variadic}
+	return &goVar{v, name, coercibleType, variadic, imports}
+}
+
+func (srt *goVar) QualifiedType() string {
+	return computeQualifiedType(srt.imports, srt.Type())
+}
+
+func addImports(imports *goImportSet, t types.Type) {
+	switch t := t.(type) {
+	case *types.Pointer:
+		addImports(imports, t.Elem())
+	case *types.Named:
+		pkgPath := ""
+		if t.Obj().Pkg() != nil {
+			pkgPath = t.Obj().Pkg().Path()
+		}
+		imports.add(pkgPath)
+	case *types.Basic:
+	case *types.Interface:
+	case *types.Slice:
+		addImports(imports, t.Elem())
+	case *types.Signature:
+		for i := 0; i < t.Params().Len(); i++ {
+			addImports(imports, t.Params().At(i).Type())
+		}
+		for i := 0; i < t.Results().Len(); i++ {
+			addImports(imports, t.Results().At(i).Type())
+		}
+	default:
+		panic(fmt.Sprintf("unhandled type %#v", t))
+	}
 }
 
 func computeQualifiedType(imports *goImportSet, t types.Type) string {
@@ -502,7 +538,6 @@ func computeQualifiedType(imports *goImportSet, t types.Type) string {
 		if t.Obj().Pkg() != nil {
 			pkgPath = t.Obj().Pkg().Path()
 		}
-		imports.add(pkgPath)
 		return qualifiedName(imports.get(pkgPath), t.Obj().Name())
 	case *types.Basic:
 		return t.String()
