@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -297,25 +298,56 @@ func newGoImportSet() *goImportSet {
 }
 
 func (set *goImportSet) add(pkgPath string) {
-	path_parts := strings.Split(pkgPath, "/")
-	set.token.add(path_parts)
+	pathParts := strings.Split(pkgPath, "/")
+	if len(pathParts) == 1 && pathParts[0] == "" {
+		return
+	}
+	set.token.add(pathParts)
 }
 
 func (set *goImportSet) get(pkgPath string) string {
-	path_parts := strings.Split(pkgPath, "/")
-	name_parts := set.token.get(path_parts)
-	return strings.Join(name_parts, "_")
+	pathParts := strings.Split(pkgPath, "/")
+	if len(pathParts) == 1 && pathParts[0] == "" {
+		return ""
+	}
+	nameParts := set.token.get(pathParts)
+	return strings.Join(nameParts, "_")
+}
+
+type importSorter []*goImport
+
+func (s importSorter) Len() int {
+	return len(s)
+}
+
+func (s importSorter) Less(i, j int) bool {
+	return s[i].PkgPath < s[j].PkgPath
+}
+
+func (s importSorter) Swap(i, j int) {
+	tmp := s[i]
+	s[i] = s[j]
+	s[j] = tmp
 }
 
 func (set *goImportSet) imports(standard bool) []*goImport {
 	paths := set.token.paths()
-	imports := make([]*goImport, len(paths))
-	for i, path_parts := range paths {
-		imports[i] = &goImport{
-			Name:    strings.Join(set.token.get(path_parts), "_"),
-			PkgPath: strings.Join(path_parts, "/"),
+	imports := []*goImport{}
+	for _, pathParts := range paths {
+		if (len(pathParts) == 1) != standard {
+			continue
 		}
+		nameParts := set.token.get(pathParts)
+		defaultName := pathParts[len(pathParts)-1]
+		if partsEqual(nameParts, []string{defaultName}) {
+			nameParts = []string{}
+		}
+		imports = append(imports, &goImport{
+			Name:    strings.Join(nameParts, "_"),
+			PkgPath: strings.Join(pathParts, "/"),
+		})
 	}
+	sort.Sort(importSorter(imports))
 	return imports
 }
 
