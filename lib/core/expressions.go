@@ -351,9 +351,6 @@ func evaluateSubtemplate(subtemplate Subtemplate, bindings map[*common.PatternVa
 		}
 		return []common.Datum{datum}, nil
 	}
-	if _, ok := bindings[subtemplate.PatternVariables[0]].([]interface{}); !ok {
-		return nil, fmt.Errorf("SPECIAL ERROR")
-	}
 	n := len(bindings[subtemplate.PatternVariables[0]].([]interface{}))
 	for _, patternVariable := range subtemplate.PatternVariables {
 		if len(bindings[patternVariable].([]interface{})) != n {

@@ -246,9 +246,8 @@ func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.Bindi
 			return nil, fmt.Errorf("only: unexported identifier %v", id)
 		}
 	}
-	filteredBindings := make(common.BindingSet)
+	filteredBindings := common.NewBindingSet()
 	for level, locations := range bindings {
-		filteredBindings[level] = make(map[common.Symbol]common.Location)
 		for id, location := range locations {
 			found := false
 			for _, included := range spec.identifiers {
@@ -257,7 +256,7 @@ func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.Bindi
 				}
 			}
 			if found {
-				filteredBindings[level][id] = location
+				filteredBindings.Set(id, level, location)
 			}
 		}
 	}
@@ -286,9 +285,8 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 			return nil, fmt.Errorf("except: unexported identifier %v", id)
 		}
 	}
-	filteredBindings := make(common.BindingSet)
+	filteredBindings := common.NewBindingSet()
 	for level, locations := range bindings {
-		filteredBindings[level] = make(map[common.Symbol]common.Location)
 		for id, location := range locations {
 			found := false
 			for _, excluded := range spec.identifiers {
@@ -297,7 +295,7 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 				}
 			}
 			if !found {
-				filteredBindings[level][id] = location
+				filteredBindings.Set(id, level, location)
 			}
 		}
 	}
@@ -315,11 +313,10 @@ func (spec identifierSpecPrefix) resolve(bindings common.BindingSet) (common.Bin
 	if err != nil {
 		return nil, err
 	}
-	prefixedBindings := make(common.BindingSet)
+	prefixedBindings := common.NewBindingSet()
 	for level, locations := range bindings {
-		prefixedBindings[level] = make(map[common.Symbol]common.Location)
 		for id, location := range locations {
-			prefixedBindings[level][common.Symbol(spec.identifier+id)] = location
+			prefixedBindings.Set(common.Symbol(spec.identifier+id), level, location)
 		}
 	}
 	return prefixedBindings, nil
@@ -347,16 +344,15 @@ func (spec identifierSpecRename) resolve(bindings common.BindingSet) (common.Bin
 			return nil, fmt.Errorf("rename: unexported identifier %v", identifierBinding.external)
 		}
 	}
-	renamedBindings := make(common.BindingSet)
+	renamedBindings := common.NewBindingSet()
 	for level, locations := range bindings {
-		renamedBindings[level] = make(map[common.Symbol]common.Location)
 		for id, location := range locations {
 			for _, identifierBinding := range spec.identifierBindings {
 				if identifierBinding.external == id {
 					id = identifierBinding.internal
 				}
 			}
-			renamedBindings[level][id] = location
+			renamedBindings.Set(id, level, location)
 		}
 	}
 	return renamedBindings, nil

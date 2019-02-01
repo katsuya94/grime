@@ -31,7 +31,7 @@ var replCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		bindings := common.BindingSet{}
+		bindings := common.NewBindingSet()
 		for _, name := range libraryNames {
 			b, err := rt.BindingsFor(name)
 			if err != nil {

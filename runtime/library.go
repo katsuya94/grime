@@ -24,11 +24,12 @@ type Library struct {
 	importSpecs            []importSpec
 	exportSpecs            []identifierBinding
 	body                   []common.Syntax
+	additionalScopes       []common.Scope
 	nullSourceLocationTree common.SourceLocationTree
 }
 
 func NewLibrary(source common.Syntax) (*Library, error) {
-	var library Library
+	library := &Library{}
 	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
 		common.Symbol("library"): nil,
 		common.Symbol("export"):  nil,
@@ -91,18 +92,7 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 		null = common.NewSyntax(pair.Rest)
 	}
 	library.nullSourceLocationTree = *null.SourceLocationTree()
-	return &library, nil
-}
-
-func MustNewLibraryFromReader(name string, r io.Reader) *Library {
-	syntaxes, _, err := read.Read(name, r)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load %v: %v", name, err))
-	}
-	if len(syntaxes) != 1 {
-		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(syntaxes)))
-	}
-	return MustNewLibrary(syntaxes[0])
+	return library, nil
 }
 
 func MustNewLibraryFromString(name string, src string) *Library {
@@ -120,6 +110,17 @@ func MustNewLibraryFromFile(name string) *Library {
 		panic(fmt.Sprintf("failed to load %v: %v", name, err))
 	}
 	return MustNewLibraryFromReader(sourcePath, f)
+}
+
+func MustNewLibraryFromReader(name string, r io.Reader) *Library {
+	syntaxes, _, err := read.Read(name, r)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %v: %v", name, err))
+	}
+	if len(syntaxes) != 1 {
+		panic(fmt.Sprintf("failed to load %v: found %v data", name, len(syntaxes)))
+	}
+	return MustNewLibrary(syntaxes[0])
 }
 
 func MustNewLibrary(source common.Syntax) *Library {
@@ -153,6 +154,10 @@ func MustNewEmptyLibrary(name []common.Symbol, version []int) *Library {
 
 func (l *Library) Name() []common.Symbol {
 	return l.name
+}
+
+func (l *Library) AddScope(scope common.Scope) {
+	l.additionalScopes = append(l.additionalScopes, scope)
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {

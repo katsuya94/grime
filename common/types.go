@@ -125,8 +125,8 @@ func (d Pair) Mark(m *M) Marker {
 
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
-	scopeList          *scopeList
 	datum              Datum
+	scopeList          *ScopeList
 	marks              markSet
 	phase              int
 	sourceLocationTree *SourceLocationTree
@@ -135,6 +135,7 @@ type WrappedSyntax struct {
 func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	return WrappedSyntax{
 		datum:              d,
+		scopeList:          &ScopeList{},
 		sourceLocationTree: sourceLocationTree,
 	}
 }
@@ -148,7 +149,7 @@ func (d WrappedSyntax) Datum() Datum {
 }
 
 func (d WrappedSyntax) Push(scope Scope, phase int) WrappedSyntax {
-	d.scopeList = &scopeList{scope, d.scopeList, phase}
+	d.scopeList.Push(scope, phase)
 	return d
 }
 
