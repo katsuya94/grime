@@ -93,8 +93,7 @@ func (s Syntax) Identifier() (Identifier, bool) {
 	return wrapped.Identifier()
 }
 
-// TODO: Rename to Unwrap
-func (s Syntax) Datum() Datum {
+func (s Syntax) Unwrap() Datum {
 	datum := s.datum
 	if wrapped, ok := datum.(WrappedSyntax); ok {
 		datum = wrapped.Datum()
@@ -102,8 +101,7 @@ func (s Syntax) Datum() Datum {
 	return datum
 }
 
-// TODO: Rename to Datum
-func (s Syntax) Form() Datum {
+func (s Syntax) Datum() Datum {
 	return s.datum
 }
 

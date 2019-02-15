@@ -16,7 +16,7 @@ func Body(nullSourceLocationTree SourceLocationTree, syntaxes ...Syntax) Syntax 
 				Pair{*syntaxes[i].SourceLocationTree(), *list.SourceLocationTree()},
 			}
 		}
-		list = NewSyntax(NewWrappedSyntax(Pair{syntaxes[i].Datum(), list.Datum()}, sourceLocationTree))
+		list = NewSyntax(NewWrappedSyntax(Pair{syntaxes[i].Unwrap(), list.Unwrap()}, sourceLocationTree))
 	}
 	return list
 }

@@ -72,7 +72,7 @@ func Compile(body common.Syntax, scope common.Scope) (common.Expression, error) 
 		}
 		first := common.NewSyntax(pair.First)
 		rest := common.NewSyntax(pair.Rest)
-		forms = append(forms, first.Form())
+		forms = append(forms, first.Datum())
 		body = rest
 	}
 	return NewCompiler().BodyCompile(forms, scope)

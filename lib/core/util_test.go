@@ -44,5 +44,5 @@ func wrap(datum common.Datum) common.WrappedSyntax {
 func set(datum common.Datum, name common.Symbol, location common.Location) common.Datum {
 	scope := common.NewScope()
 	scope.Set(common.NewIdentifier(name), location)
-	return common.NewSyntax(datum).Push(scope, common.LEXICAL).Form()
+	return common.NewSyntax(datum).Push(scope, common.LEXICAL).Datum()
 }

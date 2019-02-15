@@ -37,10 +37,10 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	if result, ok, err := common.MatchSyntax(common.NewSyntax(form), PatternApplication, nil); err != nil {
 		return nil, false, err
 	} else if ok {
-		procedure := result[common.Symbol("procedure")].(common.Syntax).Form()
+		procedure := result[common.Symbol("procedure")].(common.Syntax).Datum()
 		var arguments []common.Datum
 		for _, syntax := range result[common.Symbol("arguments")].([]interface{}) {
-			arguments = append(arguments, syntax.(common.Syntax).Form())
+			arguments = append(arguments, syntax.(common.Syntax).Datum())
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
 	}

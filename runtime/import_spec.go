@@ -83,7 +83,7 @@ func newImportLevel(d common.Syntax) (int, error) {
 	}); err != nil {
 		return 0, err
 	} else if ok {
-		number, ok := result[common.Symbol("n")].(common.Syntax).Datum().(common.Number)
+		number, ok := result[common.Symbol("n")].(common.Syntax).Unwrap().(common.Number)
 		if !ok {
 			return 0, fmt.Errorf("runtime: malformed import level")
 		}
@@ -134,7 +134,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		var ids []common.Symbol
 		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
-			id, ok := d.(common.Syntax).Datum().(common.Symbol)
+			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
 			}
@@ -153,7 +153,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		var ids []common.Symbol
 		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
-			id, ok := d.(common.Syntax).Datum().(common.Symbol)
+			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
 			}
@@ -170,7 +170,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		if err != nil {
 			return nil, err
 		}
-		id, ok := result[common.Symbol("identifier")].(common.Syntax).Datum().(common.Symbol)
+		id, ok := result[common.Symbol("identifier")].(common.Syntax).Unwrap().(common.Symbol)
 		if !ok {
 			return nil, fmt.Errorf("runtime: malformed import set")
 		}
@@ -187,7 +187,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		var externalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("external")].([]interface{}) {
-			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -195,7 +195,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		var internalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("internal")].([]interface{}) {
-			if id, ok := d.(common.Syntax).Datum().(common.Symbol); ok {
+			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -453,7 +453,7 @@ func newLibraryReference(d common.Syntax) (importSetLibraryReference, error) {
 	}
 	i := 0
 	for ; i < len(libraryName); i++ {
-		if name, ok := libraryName[i].(common.Syntax).Datum().(common.Symbol); ok {
+		if name, ok := libraryName[i].(common.Syntax).Unwrap().(common.Symbol); ok {
 			ref.name = append(ref.name, name)
 		} else {
 			break
@@ -725,7 +725,7 @@ func (ref subVersion) resolve(subV subVersion) bool {
 }
 
 func newSubVersion(d common.Syntax) (subVersion, error) {
-	number, ok := d.Datum().(common.Number)
+	number, ok := d.Unwrap().(common.Number)
 	if !ok {
 		return 0, fmt.Errorf("runtime: malformed sub-version")
 	}

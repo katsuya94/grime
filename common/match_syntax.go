@@ -31,7 +31,7 @@ func newSyntaxMatcher(literals map[Symbol]Location) *syntaxMatcher {
 func (m *syntaxMatcher) match(input Syntax, pattern Datum) (map[Symbol]interface{}, bool, error) {
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
-		if input.Datum() == p {
+		if input.Unwrap() == p {
 			return map[Symbol]interface{}{}, true, nil
 		}
 		return nil, false, nil
@@ -81,7 +81,7 @@ func (m *syntaxMatcher) match(input Syntax, pattern Datum) (map[Symbol]interface
 		return result, true, nil
 	default:
 		if p == Null {
-			if input.Datum() == Null {
+			if input.Unwrap() == Null {
 				return map[Symbol]interface{}{}, true, nil
 			}
 			return nil, false, nil

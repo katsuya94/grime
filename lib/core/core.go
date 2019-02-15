@@ -78,7 +78,7 @@ func transformQuote(c common.Continuation, args ...common.Datum) (common.Evaluat
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
 	}
-	return common.CallC(c, QuoteForm{result[common.Symbol("datum")].(common.Syntax).Datum()})
+	return common.CallC(c, QuoteForm{result[common.Symbol("datum")].(common.Syntax).Unwrap()})
 }
 
 func transformSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -88,7 +88,7 @@ func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evalua
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("syntax: bad syntax"))
 	}
-	return common.CallC(c, SyntaxForm{result[common.Symbol("datum")].(common.Syntax).Form()})
+	return common.CallC(c, SyntaxForm{result[common.Symbol("datum")].(common.Syntax).Datum()})
 }
 
 func transformIf(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -99,9 +99,9 @@ func transformIf(c common.Continuation, args ...common.Datum) (common.Evaluation
 		return common.ErrorC(fmt.Errorf("if: bad syntax"))
 	}
 	form := IfForm{
-		result[common.Symbol("condition")].(common.Syntax).Form(),
-		result[common.Symbol("then")].(common.Syntax).Form(),
-		result[common.Symbol("else")].(common.Syntax).Form(),
+		result[common.Symbol("condition")].(common.Syntax).Datum(),
+		result[common.Symbol("then")].(common.Syntax).Datum(),
+		result[common.Symbol("else")].(common.Syntax).Datum(),
 	}
 	return common.CallC(c, form)
 }
@@ -117,10 +117,10 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if !ok {
 		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
 	}
-	init := result[common.Symbol("init")].(common.Syntax).Form()
+	init := result[common.Symbol("init")].(common.Syntax).Datum()
 	var forms []common.Datum
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, syntax.(common.Syntax).Form())
+		forms = append(forms, syntax.(common.Syntax).Datum())
 	}
 	return common.CallC(c, LetForm{id, init, forms})
 }
@@ -134,7 +134,7 @@ func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluat
 	}
 	var forms []common.Datum
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, syntax.(common.Syntax).Form())
+		forms = append(forms, syntax.(common.Syntax).Datum())
 	}
 	return common.CallC(c, BeginForm{forms})
 }
@@ -161,7 +161,7 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	}
 	var forms []common.Datum
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, syntax.(common.Syntax).Form())
+		forms = append(forms, syntax.(common.Syntax).Datum())
 	}
 	return common.CallC(c, LambdaForm{formals, forms})
 }
@@ -177,7 +177,7 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	if !ok {
 		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
 	}
-	form := result[common.Symbol("value")].(common.Syntax).Form()
+	form := result[common.Symbol("value")].(common.Syntax).Datum()
 	return common.CallC(c, DefineForm{id, form})
 }
 
@@ -192,7 +192,7 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 	if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
 	}
-	form := result[common.Symbol("value")].(common.Syntax).Form()
+	form := result[common.Symbol("value")].(common.Syntax).Datum()
 	return common.CallC(c, DefineSyntaxForm{id, form})
 }
 
@@ -203,7 +203,7 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 	} else if !ok {
 		return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 	}
-	input := result[common.Symbol("input")].(common.Syntax).Form()
+	input := result[common.Symbol("input")].(common.Syntax).Datum()
 	var literals []common.Identifier
 	for _, literal := range result[common.Symbol("literal")].([]interface{}) {
 		id, ok := literal.(common.Syntax).Identifier()
@@ -226,15 +226,15 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 		if result, ok, err := common.MatchSyntax(clause.(common.Syntax), PatternSyntaxCaseClause, nil); err != nil {
 			return common.ErrorC(err)
 		} else if ok {
-			pattern = result[common.Symbol("pattern")].(common.Syntax).Form()
+			pattern = result[common.Symbol("pattern")].(common.Syntax).Datum()
 			fender = common.NewWrappedSyntax(common.Boolean(true), nil)
-			output = result[common.Symbol("output")].(common.Syntax).Form()
+			output = result[common.Symbol("output")].(common.Syntax).Datum()
 		} else if result, ok, err := common.MatchSyntax(clause.(common.Syntax), PatternSyntaxCaseClauseWithFender, nil); err != nil {
 			return common.ErrorC(err)
 		} else if ok {
-			pattern = result[common.Symbol("pattern")].(common.Syntax).Form()
-			fender = result[common.Symbol("fender")].(common.Syntax).Form()
-			output = result[common.Symbol("output")].(common.Syntax).Form()
+			pattern = result[common.Symbol("pattern")].(common.Syntax).Datum()
+			fender = result[common.Symbol("fender")].(common.Syntax).Datum()
+			output = result[common.Symbol("output")].(common.Syntax).Datum()
 		} else {
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
@@ -256,7 +256,7 @@ func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
 	}
-	form := result[common.Symbol("expression")].(common.Syntax).Form()
+	form := result[common.Symbol("expression")].(common.Syntax).Datum()
 	return common.CallC(c, SetForm{id, form})
 }
 
@@ -304,7 +304,7 @@ func null(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("null?: wrong arity"))
 	}
-	return common.CallC(c, common.Boolean(common.NewSyntax(args[0]).Datum() == common.Null))
+	return common.CallC(c, common.Boolean(common.NewSyntax(args[0]).Unwrap() == common.Null))
 }
 
 func pair(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {

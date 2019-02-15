@@ -165,7 +165,7 @@ func TestRead(t *testing.T) {
 					sourceLocationTrees []common.SourceLocationTree
 				)
 				for _, syntax := range syntaxes {
-					data = append(data, syntax.Datum())
+					data = append(data, syntax.Unwrap())
 					sourceLocationTrees = append(sourceLocationTrees, *syntax.SourceLocationTree())
 				}
 				if !reflect.DeepEqual(data, test.data) {

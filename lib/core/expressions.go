@@ -316,7 +316,7 @@ func evaluateSyntaxTemplate(datum common.Datum, bindings map[*common.PatternVari
 	case common.WrappedSyntax:
 		return datum, nil
 	case PatternVariableReference:
-		return bindings[datum.PatternVariable].(common.Syntax).Form(), nil
+		return bindings[datum.PatternVariable].(common.Syntax).Datum(), nil
 	case common.Pair:
 		if first, ok := datum.First.(Subtemplate); ok {
 			data, err := evaluateSubtemplate(first, bindings)

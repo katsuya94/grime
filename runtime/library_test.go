@@ -476,7 +476,7 @@ func TestNewLibrary(t *testing.T) {
 				t.Fatal(err)
 			} else {
 				null := syntax
-				for null.Datum() != common.Null {
+				for null.Unwrap() != common.Null {
 					pair, _ := null.Pair()
 					null = common.NewSyntax(pair.Rest)
 				}
