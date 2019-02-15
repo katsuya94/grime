@@ -168,13 +168,13 @@ func TestCore(t *testing.T) {
 			"cannot reference identifer before its definition",
 			"(~define foo (lambda () bar)) (~define baz (foo)) (~define bar 'id) baz",
 			"",
-			"evaluate: cannot reference identifier before its definition",
+			"evaluate: bar at string:1:25: cannot reference identifier before its definition",
 		},
 		{
 			"cannot set identifer before its definition",
 			"(~define foo (lambda () (set! bar 'thing))) (~define baz (foo)) (~define bar 'id) baz",
 			"",
-			"evaluate: cannot set identifier before its definition",
+			"evaluate: bar at string:1:31: cannot set identifier before its definition",
 		},
 		{
 			"define-syntax",

@@ -115,7 +115,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		if !ok {
 			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", form.Identifier.Name())
 		}
-		return Reference{variable}, nil
+		return Reference{form.Identifier, variable}, nil
 	case SetForm:
 		location := form.Identifier.Location()
 		if location == nil {
@@ -129,7 +129,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		if err != nil {
 			return nil, err
 		}
-		return Set{variable, expression}, nil
+		return Set{form.Identifier, variable, expression}, nil
 	case SyntaxCaseForm:
 		inputExpression, err := compiler.ExpressionCompile(form.Input)
 		if err != nil {

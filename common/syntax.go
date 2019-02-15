@@ -21,6 +21,10 @@ func (id Identifier) Mark(m *M) Identifier {
 	return Identifier{id.WrappedSyntax.Mark(m).(WrappedSyntax)}
 }
 
+func (id Identifier) Equal(other Identifier) bool {
+	return id.Name() == other.Name() && id.marks.subset(other.marks) && other.marks.subset(id.marks)
+}
+
 // IsSyntax determines whether a Datum is a Syntax object.
 func IsSyntax(d Datum) bool {
 	switch d := d.(type) {

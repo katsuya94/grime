@@ -34,12 +34,18 @@
            ...
            _
            begin
+           bound-identifier=?
+           car
+           cdr
+           datum->syntax
            generate-temporaries
            identifier?
            if
            lambda
            list
            not
+           null?
+           quote
            set!
            syntax
            syntax-case
@@ -83,17 +89,21 @@
         [(_ ((p e0) ...) e1 e2 ...)
          #'(syntax-case (list e0 ...) ()
              ((p ...) (begin e1 e2 ...)))])))
-  
-  (define (unique-ids? ls)
-    (or (null? ls)
-        (and (let notmem? ([x (car ls)] [ls (cdr ls)])
-               (or (null? ls)
-                   (and (not (bound-identifier=? x (car ls)))
-                        (notmem? x (cdr ls)))))
-             (unique-ids? (cdr ls)))))
 
   (define-syntax let
     (lambda (x)
+      (define (unique-ids? ls)
+        (define (notmem? x ls)
+          (if (null? ls)
+            #t
+            (if (bound-identifier=? x (car ls))
+              #f
+              (notmem? x (cdr ls)))))
+        (if (null? ls)
+          #t
+          (if (notmem? (car ls) (cdr ls))
+            (unique-ids? (cdr ls))
+            #f)))
       (syntax-case x ()
         [(_ v ((i e) ...) b1 b2 ...)
          (identifier? #'v)
@@ -109,6 +119,18 @@
   ; TODO letrec should detect usages of variables before definition
   (define-syntax letrec
     (lambda (x)
+      (define (unique-ids? ls)
+        (define (notmem? x ls)
+          (if (null? ls)
+            #t
+            (if (bound-identifier=? x (car ls))
+              #f
+              (notmem? x (cdr ls)))))
+        (if (null? ls)
+          #t
+          (if (notmem? (car ls) (cdr ls))
+            (unique-ids? (cdr ls))
+            #f)))
       (syntax-case x ()
         [(_ ((i e) ...) b1 b2 ...)
          (unique-ids? #'(i ...))

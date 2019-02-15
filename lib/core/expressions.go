@@ -175,25 +175,27 @@ func (c defineExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult
 
 // Set sets its variable to the value of its expression.
 type Set struct {
+	Identifier common.Identifier
 	Variable   *common.Variable
 	Expression common.Expression
 }
 
 func (e Set) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
 	return common.EvalC(
-		setExpressionEvaluated{c, e.Variable},
+		setExpressionEvaluated{c, e.Identifier, e.Variable},
 		e.Expression,
 	)
 }
 
 type setExpressionEvaluated struct {
 	continuation common.Continuation
+	identifier   common.Identifier
 	variable     *common.Variable
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
 	if c.variable.Value == nil {
-		return nil, fmt.Errorf("evaluate: cannot set identifier before its definition")
+		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot set identifier before its definition", c.identifier.Name(), c.identifier.SourceLocation()))
 	}
 	(*c.variable).Value = d
 	return common.CallC(c.continuation, common.Void)
@@ -201,12 +203,13 @@ func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, e
 
 // Reference evaluates to the value of its variable.
 type Reference struct {
-	Variable *common.Variable
+	Identifier common.Identifier
+	Variable   *common.Variable
 }
 
 func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
 	if e.Variable.Value == nil {
-		return common.ErrorC(fmt.Errorf("evaluate: cannot reference identifier before its definition"))
+		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot reference identifier before its definition", e.Identifier.Name(), e.Identifier.SourceLocation()))
 	}
 	return common.CallC(c, e.Variable.Value)
 }

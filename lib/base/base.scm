@@ -1,47 +1,49 @@
 (library (base)
   (export
-    quote
-    syntax
-    if
-    begin
-    lambda
-    define
-    define-syntax
-    syntax-case
-    set!
-    _
     ...
-    cons
-    not
+    _
+    and
+    begin
+    bound-identifier=?
+    call/cc
     car
     cdr
-    null?
-    pair?
-    write
-    call/cc
-    error
-    eqv?
-    syntax->datum
+    cond
+    cons
     datum->syntax
-    identifier?
-    generate-temporaries
-    list
-    when
-    unless
-    let*
-    letrec*
-    with-syntax
-    let
-    letrec
-    and
-    or
-    list?
+    define
+    define-syntax
+    eq?
+    equal?
+    eqv?
+    error
     fold-left
     for-all
+    free-identifier=?
+    generate-temporaries
+    identifier?
+    if
+    lambda
+    let
+    let*
+    letrec
+    letrec*
+    list
+    list?
+    not
+    null?
+    or
+    pair?
+    quote
+    set!
+    syntax
+    syntax->datum
+    syntax-case
     syntax-rules
-    cond
-    eq?
-    equal?)
+    unless
+    when
+    with-syntax
+    write)
   (import
     (for (only (derived) syntax-rules) expand)
     (for (except (derived) syntax-rules) run)
