@@ -135,7 +135,7 @@ type WrappedSyntax struct {
 func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	return WrappedSyntax{
 		datum:              d,
-		scopeList:          &ScopeList{},
+		scopeList:          NewScopeList(),
 		sourceLocationTree: sourceLocationTree,
 	}
 }

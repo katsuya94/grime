@@ -9,7 +9,12 @@ type scopeListElement struct {
 	phase int
 }
 
+// ScopeList is a stack of Scopes, giving the top (innermost) scope precendence when resolving bindings.
 type ScopeList []scopeListElement
+
+func NewScopeList() *ScopeList {
+	return &ScopeList{}
+}
 
 func (l *ScopeList) Get(id Identifier) Location {
 	for i := len(*l) - 1; i >= 0; i-- {
@@ -29,9 +34,14 @@ func (l *ScopeList) Push(scope Scope, phase int) {
 	*l = append(*l, scopeListElement{scope, phase})
 }
 
+// Scope is a set of mappings from Identifiers to Locations.
 type Scope interface {
 	Get(Identifier) Location
 	Set(Identifier, Location) error
+}
+
+func NewScope() BaseScope {
+	return BaseScope{}
 }
 
 type binding struct {
@@ -39,11 +49,8 @@ type binding struct {
 	location Location
 }
 
+// BaseScope is a simple implementation of Scope.
 type BaseScope map[Symbol][]binding
-
-func NewScope() BaseScope {
-	return make(BaseScope)
-}
 
 func (b BaseScope) Get(id Identifier) Location {
 	bindings, _ := b[id.Name()]
@@ -70,7 +77,7 @@ func (b BaseScope) Set(id Identifier, location Location) error {
 }
 
 func (b BaseScope) Bindings() map[Symbol]Location {
-	m := make(map[Symbol]Location)
+	m := map[Symbol]Location{}
 	for name, bindings := range b {
 		for _, binding := range bindings {
 			if (markSet{}).subset(binding.marks) {
@@ -81,6 +88,7 @@ func (b BaseScope) Bindings() map[Symbol]Location {
 	return m
 }
 
+// ProxyScope wraps another scope, setting bindings both on itself and the underlying scope. This allows bindings to be treated lexically (available at any phase in its lexical context), as well as globally (exported at a particular phase).
 type ProxyScope struct {
 	BaseScope
 	Scope
@@ -102,6 +110,7 @@ func (p ProxyScope) Set(id Identifier, location Location) error {
 	return p.BaseScope.Set(id, location)
 }
 
+// FlushScope wraps another scope, buffering bindings, and allowing unmarked bindings to later be flushed to the underlying scope. This allows isolating compilation from a shared scope.
 type FlushScope struct {
 	BaseScope
 	Scope
@@ -124,15 +133,14 @@ func (f FlushScope) Set(id Identifier, location Location) error {
 	if l != nil {
 		return fmt.Errorf("already defined: %v", id.Name())
 	}
-	l = f.Scope.Get(id)
-	if l != nil {
-		return fmt.Errorf("already defined: %v", id.Name())
-	}
 	return f.BaseScope.Set(id, location)
 }
 
 func (p FlushScope) Flush() {
 	for name, location := range p.BaseScope.Bindings() {
-		p.Scope.Set(NewIdentifier(name), location)
+		err := p.Scope.Set(NewIdentifier(name), location)
+		if err != nil {
+			panic(fmt.Sprintf("encountered error while flushing scope: %v", err))
+		}
 	}
 }

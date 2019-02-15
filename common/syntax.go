@@ -1,5 +1,6 @@
 package common
 
+// Identifier wraps a wrapped symbol (an identifier), providing access to its binding.
 type Identifier struct {
 	WrappedSyntax
 }
@@ -32,6 +33,7 @@ func IsSyntax(d Datum) bool {
 	}
 }
 
+// Syntax wraps syntax objects, providing a shared interface for both wrapped and unwrapped syntax objects.
 type Syntax struct {
 	datum Datum
 }
