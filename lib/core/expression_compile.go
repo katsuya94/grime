@@ -135,16 +135,16 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		if err != nil {
 			return nil, err
 		}
-		literals := map[common.Symbol]common.Location{}
+		literals := []common.Identifier{}
 		for _, literal := range form.Literals {
 			location := literal.Location()
-			if location == underscoreKeyword {
+			if location == common.UnderscoreKeyword {
 				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}
-			if location == ellipsisKeyword {
+			if location == common.EllipsisKeyword {
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
-			literals[literal.Name()] = location
+			literals = append(literals, literal)
 		}
 		var (
 			patterns                []common.Datum
@@ -153,11 +153,8 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(common.NewSyntax(form.Patterns[i]))
-			if err != nil {
-				return nil, err
-			}
-			patternVariables, err := common.PatternVariables(pattern, literals)
+			pattern := form.Patterns[i]
+			patternVariables, err := common.PatternVariables(common.NewSyntax(pattern), literals)
 			if err != nil {
 				return nil, err
 			}
@@ -210,7 +207,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 		if patternVariable, ok := location.(*common.PatternVariable); ok {
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
 		}
-		if location == ellipsisKeyword {
+		if location == common.EllipsisKeyword {
 			return nil, nil, fmt.Errorf("compile: in syntax template at %v: improper use of ellipsis", id.SourceLocation())
 		}
 		return syntax.Datum(), map[*common.PatternVariable]int{}, nil
@@ -228,7 +225,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 			if !ok {
 				break
 			}
-			if id.Location() != ellipsisKeyword {
+			if id.Location() != common.EllipsisKeyword {
 				break
 			}
 			ellipsis++
@@ -280,31 +277,4 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil
 	}
 	return syntax.Datum(), map[*common.PatternVariable]int{}, nil
-}
-
-func compilePattern(syntax common.Syntax) (common.Datum, error) {
-	if id, ok := syntax.Identifier(); ok {
-		location := id.Location()
-		if location == underscoreKeyword {
-			return common.Underscore, nil
-		}
-		if location == ellipsisKeyword {
-			return common.Ellipsis, nil
-		}
-		return syntax.Unwrap(), nil
-	}
-	if pair, ok := syntax.Pair(); ok {
-		firstPattern := common.NewSyntax(pair.First)
-		restPattern := common.NewSyntax(pair.Rest)
-		first, err := compilePattern(firstPattern)
-		if err != nil {
-			return nil, err
-		}
-		rest, err := compilePattern(restPattern)
-		if err != nil {
-			return nil, err
-		}
-		return common.Pair{first, rest}, nil
-	}
-	return syntax.Unwrap(), nil
 }

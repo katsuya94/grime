@@ -217,7 +217,7 @@ func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, err
 // SyntaxCase evaluates its input and evaluates to an output according to pattern matching and fender expressions.
 type SyntaxCase struct {
 	Input                   common.Expression
-	Literals                map[common.Symbol]common.Location
+	Literals                []common.Identifier
 	Patterns                []common.Datum
 	PatternVariableBindings []map[common.Symbol]*common.PatternVariable
 	Fenders                 []common.Expression
@@ -233,7 +233,7 @@ func (e SyntaxCase) Evaluate(c common.Continuation) (common.EvaluationResult, er
 
 type syntaxCaseInputEvaluated struct {
 	continuation            common.Continuation
-	literals                map[common.Symbol]common.Location
+	literals                []common.Identifier
 	patterns                []common.Datum
 	patternVariableBindings []map[common.Symbol]*common.PatternVariable
 	fenders                 []common.Expression
@@ -250,7 +250,7 @@ func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult,
 type syntaxCaseFenderEvaluated struct {
 	continuation            common.Continuation
 	input                   common.Datum
-	literals                map[common.Symbol]common.Location
+	literals                []common.Identifier
 	output                  common.Expression
 	patterns                []common.Datum
 	patternVariableBindings []map[common.Symbol]*common.PatternVariable

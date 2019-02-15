@@ -1,32 +1,44 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func Pattern(d Datum) Datum {
-	if d, ok := d.(Pair); ok {
-		return Pair{
-			Pattern(d.First),
-			Pattern(d.Rest),
-		}
-	}
-	if d == Symbol("_") {
-		return Underscore
-	}
-	if d == Symbol("...") {
-		return Ellipsis
-	}
-	return d
+var (
+	UnderscoreKeyword = Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand underscore")
+	})}
+	EllipsisKeyword = Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand ellipsis")
+	})}
+)
+
+func Pattern(d Datum) Syntax {
+	scope := NewScope()
+	scope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
+	scope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
+	syntax := NewSyntax(NewWrappedSyntax(d, nil))
+	syntax.Push(scope, LEXICAL)
+	return syntax
 }
 
 type syntaxMatcher struct {
-	literals map[Symbol]Location
+	literals []Identifier
 }
 
-func newSyntaxMatcher(literals map[Symbol]Location) *syntaxMatcher {
-	return &syntaxMatcher{literals}
-}
-
-func (m *syntaxMatcher) match(input Syntax, pattern Datum) (map[Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (map[Symbol]interface{}, bool, error) {
+	if pattern, ok := pattern.Identifier(); ok {
+		if id, ok := input.Identifier(); ok {
+			location := id.Location()
+			for _, literal := range m.literals {
+				l := literal.Location()
+				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
+					return map[Symbol]interface{}{}, true, nil
+				}
+			}
+		}
+		return map[Identifier]interface{}{p: input}, true, nil
+	}
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
 		if input.Unwrap() == p {
@@ -156,7 +168,7 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Datum, restpatter
 	return result, true, nil
 }
 
-func PatternVariables(pattern Datum, literals map[Symbol]Location) (map[Symbol]int, error) {
+func PatternVariables(pattern Syntax, literals map[Symbol]Location) (map[Symbol]int, error) {
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
 		return nil, nil
@@ -207,6 +219,6 @@ func PatternVariables(pattern Datum, literals map[Symbol]Location) (map[Symbol]i
 	}
 }
 
-func MatchSyntax(input Syntax, pattern Datum, literals map[Symbol]Location) (map[Symbol]interface{}, bool, error) {
-	return newSyntaxMatcher(literals).match(input, pattern)
+func MatchSyntax(input Syntax, pattern Datum, literals []Identifier) (map[Symbol]interface{}, bool, error) {
+	return &syntaxMatcher{literals}.match(input, pattern)
 }

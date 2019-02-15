@@ -46,15 +46,7 @@ var Bindings = common.BindingSet{
 	},
 }
 
-var (
-	setKeyword        = &common.Keyword{common.Function(transformSet)}
-	underscoreKeyword = &common.Keyword{common.Function(func(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
-		return nil, fmt.Errorf("cannot expand underscore")
-	})}
-	ellipsisKeyword = &common.Keyword{common.Function(func(common.Continuation, ...common.Datum) (common.EvaluationResult, error) {
-		return nil, fmt.Errorf("cannot expand ellipsis")
-	})}
-)
+var setKeyword = &common.Keyword{common.Function(transformSet)}
 
 var (
 	PatternQuote                      = common.Pattern(read.MustReadDatum("(quote datum)"))
