@@ -135,7 +135,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		if err != nil {
 			return nil, err
 		}
-		literals := make(map[common.Symbol]common.Location)
+		literals := map[common.Symbol]common.Location{}
 		for _, literal := range form.Literals {
 			location := literal.Location()
 			if location == underscoreKeyword {
@@ -161,7 +161,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			if err != nil {
 				return nil, err
 			}
-			bindings := make(map[common.Symbol]*common.PatternVariable)
+			bindings := map[common.Symbol]*common.PatternVariable{}
 			scope := common.NewScope()
 			for name, n := range patternVariables {
 				patternVariable := &common.PatternVariable{nil, n}
@@ -211,7 +211,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
 		}
 		if location == ellipsisKeyword {
-			return nil, nil, fmt.Errorf("compile: improper use of ellipsis in syntax template")
+			return nil, nil, fmt.Errorf("compile: in syntax template at %v: improper use of ellipsis", id.SourceLocation())
 		}
 		return syntax.Form(), map[*common.PatternVariable]int{}, nil
 	}
@@ -240,7 +240,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 		}
 		firstStatic := common.IsSyntax(firstCompiled)
 		if firstStatic && ellipsis > 0 {
-			return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable")
+			return nil, nil, fmt.Errorf("compile: in syntax template at %v: syntax subtemplate must contain a pattern variable", first.SourceLocation())
 		}
 		restCompiled, restPatternVariables, err := compileTemplate(rest)
 		if err != nil {
@@ -261,18 +261,18 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 				patternVariables = append(patternVariables, patternVariable)
 			}
 			if len(expansionPatternVariables) == 0 {
-				return nil, nil, fmt.Errorf("compile: syntax subtemplate must contain a pattern variable determining expansion count")
+				return nil, nil, fmt.Errorf("compile: in syntax template at %v: syntax subtemplate must contain a pattern variable determining expansion count", first.SourceLocation())
 			}
 			firstCompiled = Subtemplate{SyntaxTemplate{firstCompiled, patternVariables}, ellipsis, expansionPatternVariables}
 		}
-		patternVariables := make(map[*common.PatternVariable]int)
+		patternVariables := map[*common.PatternVariable]int{}
 		for patternVariable, n := range firstPatternVariables {
 			patternVariables[patternVariable] = n
 		}
 		for patternVariable, rest := range restPatternVariables {
 			if first, ok := patternVariables[patternVariable]; ok {
 				if rest != first {
-					return nil, nil, fmt.Errorf("compile: incompatible expansion counts for pattern variable")
+					return nil, nil, fmt.Errorf("compile: in syntax template at %v: incompatible expansion counts in first and rest of pair", syntax.SourceLocation())
 				}
 			}
 			patternVariables[patternVariable] = rest
@@ -282,6 +282,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 	return syntax.Form(), map[*common.PatternVariable]int{}, nil
 }
 
+// TODO: refactor to use common.Syntax
 func compilePattern(datum common.Datum) (common.Datum, error) {
 	syntax, isSyntax := datum.(common.WrappedSyntax)
 	if isSyntax {

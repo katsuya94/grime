@@ -13,7 +13,7 @@ func TestExpressionCompile_Quote(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	expression, err := ExpressionCompile(compiler, QuoteForm{datum("id")})
 	require.NoError(t, err)
-	require.Equal(t, Literal{datum("id")}, expression)
+	require.Exactly(t, Literal{datum("id")}, expression)
 }
 
 func TestExpressionCompile_SyntaxBoolean(t *testing.T) {
@@ -21,7 +21,7 @@ func TestExpressionCompile_SyntaxBoolean(t *testing.T) {
 	template := wrap(datum("#f"))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNumber(t *testing.T) {
@@ -29,7 +29,7 @@ func TestExpressionCompile_SyntaxNumber(t *testing.T) {
 	template := wrap(datum("123"))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxCharacter(t *testing.T) {
@@ -37,7 +37,7 @@ func TestExpressionCompile_SyntaxCharacter(t *testing.T) {
 	template := wrap(datum(`#\x`))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxString(t *testing.T) {
@@ -45,7 +45,7 @@ func TestExpressionCompile_SyntaxString(t *testing.T) {
 	template := wrap(datum(`"thing"`))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNull(t *testing.T) {
@@ -53,7 +53,7 @@ func TestExpressionCompile_SyntaxNull(t *testing.T) {
 	template := wrap(datum("()"))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPatternVariableReference(t *testing.T) {
@@ -83,7 +83,7 @@ func TestExpressionCompile_SyntaxImproperEllipsis(t *testing.T) {
 	template := wrap(datum("id"))
 	template = set(template, common.Symbol("id"), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: improper use of ellipsis in syntax template")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): improper use of ellipsis")
 }
 
 func TestExpressionCompile_SyntaxIdentifier(t *testing.T) {
@@ -91,7 +91,7 @@ func TestExpressionCompile_SyntaxIdentifier(t *testing.T) {
 	template := wrap(datum("id"))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPair(t *testing.T) {
@@ -99,7 +99,7 @@ func TestExpressionCompile_SyntaxPair(t *testing.T) {
 	template := wrap(datum("(id . thing)"))
 	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T) {
@@ -112,7 +112,7 @@ func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	require.Exactly(t, PatternVariableReference{patternVariable}, pair.First)
-	require.Equal(t, template.PushDown().(common.Pair).Rest, pair.Rest)
+	require.Exactly(t, template.PushDown().(common.Pair).Rest, pair.Rest)
 	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
@@ -126,7 +126,7 @@ func TestExpressionCompile_SyntaxPairRestPatternVariableReference(t *testing.T) 
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
-	require.Equal(t, template.PushDown().(common.Pair).First, pair.First)
+	require.Exactly(t, template.PushDown().(common.Pair).First, pair.First)
 	require.Exactly(t, PatternVariableReference{patternVariable}, pair.Rest)
 	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
@@ -149,7 +149,7 @@ func TestExpressionCompile_SyntaxEllipsis(t *testing.T) {
 	require.Exactly(t, 1, subtemplate.Nesting)
 	require.Exactly(t, 1, len(subtemplate.PatternVariables))
 	require.Exactly(t, patternVariable, subtemplate.PatternVariables[0])
-	require.Equal(t, template.PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest, pair.Rest)
+	require.Exactly(t, template.PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest, pair.Rest)
 	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
@@ -159,7 +159,7 @@ func TestExpressionCompile_SyntaxEllipsisNoPatterVariable(t *testing.T) {
 	template := wrap(datum("(id ...)"))
 	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: syntax subtemplate must contain a pattern variable")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable")
 }
 
 func TestExpressionCompile_SyntaxEllipsisMultiple(t *testing.T) {
@@ -179,7 +179,7 @@ func TestExpressionCompile_SyntaxEllipsisMultiple(t *testing.T) {
 	require.Exactly(t, 2, subtemplate.Nesting)
 	require.Exactly(t, 1, len(subtemplate.PatternVariables))
 	require.Exactly(t, patternVariable, subtemplate.PatternVariables[0])
-	require.Equal(t, template.PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest, pair.Rest)
+	require.Exactly(t, template.PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest.(common.WrappedSyntax).PushDown().(common.Pair).Rest, pair.Rest)
 	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
@@ -191,7 +191,7 @@ func TestExpressionCompile_SyntaxEllipsisInexact(t *testing.T) {
 	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
 	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: syntax subtemplate must contain a pattern variable determining expansion count")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable determining expansion count")
 }
 
 func TestExpressionCompile_SyntaxEllipsisInexactMultiple(t *testing.T) {
@@ -201,7 +201,7 @@ func TestExpressionCompile_SyntaxEllipsisInexactMultiple(t *testing.T) {
 	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
 	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: syntax subtemplate must contain a pattern variable determining expansion count")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable determining expansion count")
 }
 
 func TestExpressionCompile_SyntaxEllipsisIncompatible(t *testing.T) {
@@ -211,7 +211,7 @@ func TestExpressionCompile_SyntaxEllipsisIncompatible(t *testing.T) {
 	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
 	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: incompatible expansion counts for pattern variable")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): incompatible expansion counts in first and rest of pair")
 }
 
 func TestExpressionCompile_Begin(t *testing.T) {

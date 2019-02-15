@@ -62,17 +62,17 @@ func TestCompile(t *testing.T) {
 		{
 			"ellipsis outside pair",
 			"(syntax-case #'foo () (_ #'...))",
-			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:28: improper use of ellipsis",
 		},
 		{
 			"ellipsis in first position",
 			"(syntax-case #'foo () (_ #'(...)))",
-			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:29: improper use of ellipsis",
 		},
 		{
 			"ellipsis in rest position",
 			"(syntax-case #'foo () (id #'(id . ...)))",
-			"in body expression expanded from string:1:1: compile: improper use of ellipsis in syntax template",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:35: improper use of ellipsis",
 		},
 		{
 			"not enough ellipsis",
@@ -87,12 +87,12 @@ func TestCompile(t *testing.T) {
 		{
 			"no pattern variable",
 			"(syntax-case #'(foo) () ((_ ...) #'(bar ...)))",
-			"in body expression expanded from string:1:1: compile: syntax subtemplate must contain a pattern variable",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:37: syntax subtemplate must contain a pattern variable",
 		},
 		{
 			"no pattern variable determining expansion count",
 			"(syntax-case #'(foo) () ((id ...) #'(id ... ...)))",
-			"in body expression expanded from string:1:1: compile: syntax subtemplate must contain a pattern variable determining expansion count",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:38: syntax subtemplate must contain a pattern variable determining expansion count",
 		},
 	}
 	for _, test := range tests {
