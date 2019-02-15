@@ -181,26 +181,6 @@ func (d WrappedSyntax) SourceLocationTree() *SourceLocationTree {
 	return d.sourceLocationTree
 }
 
-// TODO: move this to a method on Syntax, requiring a rework of MatchSyntax
-func (d WrappedSyntax) PushDown() Datum {
-	switch datum := d.datum.(type) {
-	case Pair:
-		var (
-			firstSourceLocationTree *SourceLocationTree
-			restSourceLocationTree  *SourceLocationTree
-		)
-		if d.sourceLocationTree != nil {
-			first := d.sourceLocationTree.Children.(Pair).First.(SourceLocationTree)
-			firstSourceLocationTree = &first
-			rest := d.sourceLocationTree.Children.(Pair).Rest.(SourceLocationTree)
-			restSourceLocationTree = &rest
-		}
-		return Pair{d.PushOnto(datum.First, firstSourceLocationTree), d.PushOnto(datum.Rest, restSourceLocationTree)}
-	default:
-		panic(fmt.Sprintf("unhandled syntax #<%T>", datum))
-	}
-}
-
 func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree

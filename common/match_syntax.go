@@ -1,8 +1,6 @@
 package common
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func Pattern(d Datum) Datum {
 	if d, ok := d.(Pair); ok {
