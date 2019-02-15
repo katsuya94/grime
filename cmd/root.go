@@ -12,11 +12,11 @@ var rootCmd = &cobra.Command{
 	Short: "Grime is a programming language for developing joyful developer experiences that wrap Go",
 	Long:  "Grime is a programming language for developing joyful developer experiences that wrap Go. Complete documentation is available at https://github.com/katsuya94/grime",
 	Args:  cobra.RangeArgs(0, 1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
-			return replCmd.RunE(cmd, []string{})
+			replCmd.Run(cmd, []string{})
 		}
-		return runCmd.RunE(cmd, args)
+		runCmd.Run(cmd, args)
 	},
 }
 

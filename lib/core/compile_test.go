@@ -77,12 +77,12 @@ func TestCompile(t *testing.T) {
 		{
 			"not enough ellipsis",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'(id ...)))",
-			"in body expression expanded from string:1:1: compile: encountered unexpanded pattern variable",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:45: encountered unexpanded pattern variable",
 		},
 		{
 			"not enough ellipsis nested",
 			"(syntax-case #'((foo)) () (((id ...) ...) #'((id) ...)))",
-			"in body expression expanded from string:1:1: compile: encountered unexpanded pattern variable",
+			"in body expression expanded from string:1:1: compile: in syntax template at string:1:45: encountered unexpanded pattern variable",
 		},
 		{
 			"no pattern variable",

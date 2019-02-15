@@ -77,7 +77,7 @@ func TestScopeList_GetMany(t *testing.T) {
 	require.Exactly(t, location, scopeList.Get(id))
 }
 
-func TestScopeList_GetShaadow(t *testing.T) {
+func TestScopeList_GetShadow(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
 	other := location()
 	location := location()

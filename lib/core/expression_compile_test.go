@@ -75,7 +75,7 @@ func TestExpressionCompile_SyntaxPatternVariableUnexpected(t *testing.T) {
 	template := wrap(datum("id"))
 	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
 	_, err := ExpressionCompile(compiler, SyntaxForm{template})
-	require.EqualError(t, err, "compile: encountered unexpanded pattern variable")
+	require.EqualError(t, err, "compile: in syntax template at (unknown): encountered unexpanded pattern variable")
 }
 
 func TestExpressionCompile_SyntaxImproperEllipsis(t *testing.T) {

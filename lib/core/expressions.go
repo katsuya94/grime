@@ -263,8 +263,9 @@ func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult
 }
 
 func syntaxCaseMatch(continuation common.Continuation, input common.Datum, literals map[common.Symbol]common.Location, patterns []common.Datum, patternVariableBindings []map[common.Symbol]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
+	syntax := common.NewSyntax(input)
 	for i := range patterns {
-		result, ok, err := common.MatchSyntax(common.NewSyntax(input), patterns[i], literals)
+		result, ok, err := common.MatchSyntax(syntax, patterns[i], literals)
 		if err != nil {
 			return nil, err
 		} else if ok {
@@ -286,7 +287,7 @@ func syntaxCaseMatch(continuation common.Continuation, input common.Datum, liter
 			)
 		}
 	}
-	return nil, fmt.Errorf("bad syntax")
+	return nil, fmt.Errorf("in macro use at %v: bad syntax", syntax.SourceLocation())
 }
 
 // SyntaxTemplate evaluates to syntax handling repitition and pattern variable references accordingly.

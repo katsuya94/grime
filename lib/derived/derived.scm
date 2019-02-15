@@ -17,34 +17,34 @@
     cond)
   (import
     (for (only (core)
-           syntax
+           car
+           cdr
            define-syntax
+           error
            identifier?
+           if
+           lambda
            null?
            pair?
            proc?
-           error
-           if
-           car
-           cdr
-           lambda
+           syntax
            syntax-case)
          run)
     (for (only (core)
-           syntax
-           begin
-           ~let
-           ~define
-           lambda
-           syntax-case
            ...
            _
-           identifier?
-           list
+           begin
            generate-temporaries
-           not
+           identifier?
            if
-           set!)
+           lambda
+           list
+           not
+           set!
+           syntax
+           syntax-case
+           ~define
+           ~let)
          expand))
 
   (define-syntax define
@@ -83,14 +83,24 @@
         [(_ ((p e0) ...) e1 e2 ...)
          #'(syntax-case (list e0 ...) ()
              ((p ...) (begin e1 e2 ...)))])))
+  
+  (define (unique-ids? ls)
+    (or (null? ls)
+        (and (let notmem? ([x (car ls)] [ls (cdr ls)])
+               (or (null? ls)
+                   (and (not (bound-identifier=? x (car ls)))
+                        (notmem? x (cdr ls)))))
+             (unique-ids? (cdr ls)))))
 
   (define-syntax let
     (lambda (x)
       (syntax-case x ()
         [(_ v ((i e) ...) b1 b2 ...)
+         (identifier? #'v)
          #'(letrec* ((v (lambda (i ...) b1 b2 ...)))
-             (let ((i e) ...) b1 b2 ...))]
+             (v e ...))]
         [(_ ((i e) ...) b1 b2 ...)
+         (unique-ids? #'(i ...))
          (with-syntax
            ([(t ...) (generate-temporaries #'(i ...))])
            #'(let* ((t e) ...)
@@ -101,6 +111,7 @@
     (lambda (x)
       (syntax-case x ()
         [(_ ((i e) ...) b1 b2 ...)
+         (unique-ids? #'(i ...))
          (with-syntax
            ([(t ...) (generate-temporaries #'(i ...))])
            #'(let* ((i #f) ...)

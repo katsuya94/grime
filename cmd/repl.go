@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/katsuya94/grime/common"
@@ -22,24 +23,32 @@ var replCmd = &cobra.Command{
 	Use:   "repl",
 	Short: "Start an interactive REPL",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		rt, err := newRuntime()
+	Run: func(cmd *cobra.Command, args []string) {
+		err := repl()
 		if err != nil {
-			return err
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
-		err = rt.Instantiate([]common.Symbol{common.Symbol("grime")})
-		if err != nil {
-			return err
-		}
-		bindings := common.NewBindingSet()
-		for _, name := range libraryNames {
-			b, err := rt.BindingsFor(name)
-			if err != nil {
-				return err
-			}
-			bindings.Merge(b)
-		}
-		runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
-		return nil
 	},
+}
+
+func repl() error {
+	rt, err := newRuntime()
+	if err != nil {
+		return err
+	}
+	err = rt.Instantiate([]common.Symbol{common.Symbol("grime")})
+	if err != nil {
+		return err
+	}
+	bindings := common.NewBindingSet()
+	for _, name := range libraryNames {
+		b, err := rt.BindingsFor(name)
+		if err != nil {
+			return err
+		}
+		bindings.Merge(b)
+	}
+	runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
+	return nil
 }

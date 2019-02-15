@@ -22,7 +22,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		var patternVariables []*common.PatternVariable
 		for patternVariable, n := range patternVariablesUnexpanded {
 			if n > 0 {
-				return nil, fmt.Errorf("compile: encountered unexpanded pattern variable")
+				return nil, fmt.Errorf("compile: in syntax template at %v: encountered unexpanded pattern variable", common.NewSyntax(form.Datum).SourceLocation())
 			}
 			patternVariables = append(patternVariables, patternVariable)
 		}

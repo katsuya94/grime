@@ -9,7 +9,7 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func TestEvaluateExpression(t *testing.T) {
+func TestCore(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
@@ -222,13 +222,13 @@ func TestEvaluateExpression(t *testing.T) {
 			"syntax-case failure",
 			"(syntax-case #'bar () ((id) #'foo))",
 			"",
-			"bad syntax",
+			"in macro use at string:1:16: bad syntax",
 		},
 		{
 			"syntax-case fender",
 			"(syntax-case #'bar () (_ #f #'foo))",
 			"",
-			"bad syntax",
+			"in macro use at string:1:16: bad syntax",
 		},
 	}
 	for _, test := range tests {
