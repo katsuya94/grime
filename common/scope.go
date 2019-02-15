@@ -9,29 +9,32 @@ type scopeListElement struct {
 	phase int
 }
 
-// ScopeList is a stack of Scopes, giving the top (innermost) scope precendence when resolving bindings.
-type ScopeList []scopeListElement
+// ScopeList is a stack of Scopes, giving the top (innermost) scope precendence when resolving bindings. Implemented as a linked list, ensuring that syntaxes referencing outer scopes are not affected.
+type ScopeList struct {
+	scope Scope
+	phase int
+	next  *ScopeList
+}
 
 func NewScopeList() *ScopeList {
-	return &ScopeList{}
+	return nil
 }
 
 func (l *ScopeList) Get(id Identifier) Location {
-	for i := len(*l) - 1; i >= 0; i-- {
-		element := (*l)[i]
-		if element.phase != LEXICAL && element.phase != id.phase {
-			continue
-		}
-		location := element.Get(id)
+	if l == nil {
+		return nil
+	}
+	if l.phase == LEXICAL || l.phase == id.phase {
+		location := l.scope.Get(id)
 		if location != nil {
 			return location
 		}
 	}
-	return nil
+	return l.next.Get(id)
 }
 
-func (l *ScopeList) Push(scope Scope, phase int) {
-	*l = append(*l, scopeListElement{scope, phase})
+func (l *ScopeList) Push(scope Scope, phase int) *ScopeList {
+	return &ScopeList{scope, phase, l}
 }
 
 // Scope is a set of mappings from Identifiers to Locations.

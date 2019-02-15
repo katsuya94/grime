@@ -153,7 +153,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern, err := compilePattern(form.Patterns[i])
+			pattern, err := compilePattern(common.NewSyntax(form.Patterns[i]))
 			if err != nil {
 				return nil, err
 			}
@@ -282,20 +282,8 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 	return syntax.Form(), map[*common.PatternVariable]int{}, nil
 }
 
-// TODO: refactor to use common.Syntax
-func compilePattern(datum common.Datum) (common.Datum, error) {
-	syntax, isSyntax := datum.(common.WrappedSyntax)
-	if isSyntax {
-		datum = syntax.Datum()
-	}
-	switch datum := datum.(type) {
-	case common.Boolean, common.Number, common.Character, common.String:
-		return datum, nil
-	case common.Symbol:
-		if !isSyntax {
-			panic("encountered unwrapped symbol in pattern")
-		}
-		id, _ := syntax.Identifier()
+func compilePattern(syntax common.Syntax) (common.Datum, error) {
+	if id, ok := syntax.Identifier(); ok {
 		location := id.Location()
 		if location == underscoreKeyword {
 			return common.Underscore, nil
@@ -303,20 +291,11 @@ func compilePattern(datum common.Datum) (common.Datum, error) {
 		if location == ellipsisKeyword {
 			return common.Ellipsis, nil
 		}
-		return datum, nil
-	case common.Pair:
-		var (
-			firstPattern common.Datum
-			restPattern  common.Datum
-		)
-		if isSyntax {
-			pair := syntax.PushDown().(common.Pair)
-			firstPattern = pair.First
-			restPattern = pair.Rest
-		} else {
-			firstPattern = datum.First
-			restPattern = datum.Rest
-		}
+		return syntax.Datum(), nil
+	}
+	if pair, ok := syntax.Pair(); ok {
+		firstPattern := common.NewSyntax(pair.First)
+		restPattern := common.NewSyntax(pair.Rest)
 		first, err := compilePattern(firstPattern)
 		if err != nil {
 			return nil, err
@@ -326,10 +305,6 @@ func compilePattern(datum common.Datum) (common.Datum, error) {
 			return nil, err
 		}
 		return common.Pair{first, rest}, nil
-	default:
-		if datum == common.Null {
-			return common.Null, nil
-		}
-		return nil, fmt.Errorf("compile: unhandled pattern form: %v", common.Write(datum))
 	}
+	return syntax.Datum(), nil
 }

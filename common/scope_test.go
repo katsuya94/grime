@@ -28,8 +28,7 @@ func TestScopeList_GetOtherIdentifier(t *testing.T) {
 	location := location()
 	scope := NewScope()
 	scope.Set(id, location)
-	scopeList := NewScopeList()
-	scopeList.Push(scope, 0)
+	scopeList := NewScopeList().Push(scope, 0)
 	other := NewIdentifier(Symbol("other"))
 	require.Nil(t, scopeList.Get(other))
 }
@@ -38,8 +37,7 @@ func TestScopeList_GetOtherPhase(t *testing.T) {
 	location := location()
 	scope := NewScope()
 	scope.Set(id, location)
-	scopeList := NewScopeList()
-	scopeList.Push(scope, 0)
+	scopeList := NewScopeList().Push(scope, 0)
 	other, _ := id.Next().Identifier()
 	require.Nil(t, scopeList.Get(other))
 }
@@ -49,8 +47,7 @@ func TestScopeList_GetSamePhase(t *testing.T) {
 	location := location()
 	scope := NewScope()
 	scope.Set(id, location)
-	scopeList := NewScopeList()
-	scopeList.Push(scope, 0)
+	scopeList := NewScopeList().Push(scope, 0)
 	require.Exactly(t, location, scopeList.Get(id))
 }
 
@@ -59,8 +56,7 @@ func TestScopeList_GetLexical(t *testing.T) {
 	location := location()
 	scope := NewScope()
 	scope.Set(id, location)
-	scopeList := NewScopeList()
-	scopeList.Push(scope, LEXICAL)
+	scopeList := NewScopeList().Push(scope, LEXICAL)
 	next, _ := id.Next().Identifier()
 	require.Exactly(t, location, scopeList.Get(next))
 }
@@ -71,9 +67,7 @@ func TestScopeList_GetMany(t *testing.T) {
 	outer := NewScope()
 	outer.Set(id, location)
 	inner := NewScope()
-	scopeList := NewScopeList()
-	scopeList.Push(outer, 0)
-	scopeList.Push(inner, 0)
+	scopeList := NewScopeList().Push(outer, 0).Push(inner, 0)
 	require.Exactly(t, location, scopeList.Get(id))
 }
 
@@ -85,8 +79,6 @@ func TestScopeList_GetShadow(t *testing.T) {
 	outer.Set(id, other)
 	inner := NewScope()
 	inner.Set(id, location)
-	scopeList := NewScopeList()
-	scopeList.Push(outer, 0)
-	scopeList.Push(inner, 0)
+	scopeList := NewScopeList().Push(outer, 0).Push(inner, 0)
 	require.Exactly(t, location, scopeList.Get(id))
 }
