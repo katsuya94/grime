@@ -13,31 +13,75 @@ var (
 	})}
 )
 
+var patternScope BaseScope
+
+func init() {
+	patternScope = NewScope()
+	patternScope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
+	patternScope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
+}
+
 func Pattern(d Datum) Syntax {
-	scope := NewScope()
-	scope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
-	scope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
 	syntax := NewSyntax(NewWrappedSyntax(d, nil))
-	syntax.Push(scope, LEXICAL)
+	syntax.Push(patternScope, LEXICAL)
 	return syntax
+}
+
+type MatchResult map[Identifier][]Syntax
+
+func NewEmptyMatchResult() MatchResult {
+	return MatchResult{}
+}
+
+func NewSingleMatchResult(id Identifier, syntax Syntax) MatchResult {
+	return MatchResult{id: {syntax}}
+}
+
+func (mr MatchResult) Merge(other MatchResult) MatchResult {
+	merged := NewEmptyMatchResult()
+	// TODO
 }
 
 type syntaxMatcher struct {
 	literals []Identifier
 }
 
-func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (map[Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResult, bool, error) {
 	if pattern, ok := pattern.Identifier(); ok {
 		if id, ok := input.Identifier(); ok {
 			location := id.Location()
 			for _, literal := range m.literals {
 				l := literal.Location()
 				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
-					return map[Symbol]interface{}{}, true, nil
+					return NewEmptyMatchResult(), true, nil
 				}
 			}
 		}
-		return map[Identifier]interface{}{p: input}, true, nil
+		return NewSingleMatchResult(pattern, input), true, nil
+	}
+	if pattern, ok := pattern.Pair(); ok {
+		if rest, ok := NewSyntax(pattern.Rest).Pair(); ok {
+			if rest.First == Ellipsis {
+				return m.matchEllipsis(input, NewSyntax(pattern.First), NewSyntax(rest.Rest))
+			}
+		}
+		input, ok := input.Pair()
+		if !ok {
+			return nil, false, nil
+		}
+		firstResult, match, err := m.match(NewSyntax(input.First), NewSyntax(pattern.First))
+		if err != nil {
+			return nil, false, err
+		} else if !match {
+			return nil, false, nil
+		}
+		restResult, match, err := m.match(NewSyntax(input.Rest), NewSyntax(pattern.Rest))
+		if err != nil {
+			return nil, false, err
+		} else if !match {
+			return nil, false, nil
+		}
+		return firstResult.Merge(restResult), true, nil
 	}
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
@@ -45,18 +89,6 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (map[Symbol]interfac
 			return map[Symbol]interface{}{}, true, nil
 		}
 		return nil, false, nil
-	case Symbol:
-		if location, ok := m.literals[p]; ok {
-			id, ok := input.Identifier()
-			if !ok {
-				return nil, false, nil
-			}
-			if (location == nil && id.Name() == p) || (location != nil && id.Location() == location) {
-				return map[Symbol]interface{}{}, true, nil
-			}
-			return nil, false, nil
-		}
-		return map[Symbol]interface{}{p: input}, true, nil
 	case Pair:
 		if rest, ok := p.Rest.(Pair); ok {
 			if rest.First == Ellipsis {
@@ -102,7 +134,7 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (map[Symbol]interfac
 	}
 }
 
-func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Datum, restpattern Datum) (map[Symbol]interface{}, bool, error) {
+func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpattern Syntax) (MatchResult, bool, error) {
 	var (
 		result     map[Symbol]interface{}
 		subresults []map[Symbol]interface{}
