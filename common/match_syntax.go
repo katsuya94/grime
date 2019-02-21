@@ -27,42 +27,46 @@ func Pattern(d Datum) Syntax {
 	return syntax
 }
 
-type MatchResult map[Identifier][]Syntax
-
-func NewEmptyMatchResult() MatchResult {
-	return MatchResult{}
+type MatchResult struct {
+	id    Identifier
+	match interface{}
 }
 
-func NewSingleMatchResult(id Identifier, syntax Syntax) MatchResult {
-	return MatchResult{id: {syntax}}
+type MatchResultSet []MatchResult
+
+type MatchInfo struct {
+	id      Identifier
+	nesting int
 }
 
-func (mr MatchResult) Merge(other MatchResult) MatchResult {
-	merged := NewEmptyMatchResult()
-	// TODO
-}
+type MatchInfoSet []MatchInfo
 
 type syntaxMatcher struct {
 	literals []Identifier
 }
 
-func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResult, bool, error) {
+func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, bool, error) {
 	if pattern, ok := pattern.Identifier(); ok {
 		if id, ok := input.Identifier(); ok {
 			location := id.Location()
 			for _, literal := range m.literals {
 				l := literal.Location()
 				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
-					return NewEmptyMatchResult(), true, nil
+					return nil, true, nil
 				}
 			}
+			if id.Location() == UnderscoreKeyword {
+				return nil, true, nil
+			}
 		}
-		return NewSingleMatchResult(pattern, input), true, nil
+		return MatchResultSet{{pattern, input}}, true, nil
 	}
 	if pattern, ok := pattern.Pair(); ok {
 		if rest, ok := NewSyntax(pattern.Rest).Pair(); ok {
-			if rest.First == Ellipsis {
-				return m.matchEllipsis(input, NewSyntax(pattern.First), NewSyntax(rest.Rest))
+			if id, ok := NewSyntax(rest.First).Identifier(); ok {
+				if id.Location() == EllipsisKeyword {
+					return m.matchEllipsis(input, NewSyntax(pattern.First), NewSyntax(rest.Rest))
+				}
 			}
 		}
 		input, ok := input.Pair()
@@ -81,63 +85,18 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResult, bool, 
 		} else if !match {
 			return nil, false, nil
 		}
-		return firstResult.Merge(restResult), true, nil
+		return append(firstResult, restResult...), true, nil
 	}
-	switch p := pattern.(type) {
-	case Boolean, Number, Character, String:
-		if input.Unwrap() == p {
-			return map[Symbol]interface{}{}, true, nil
-		}
-		return nil, false, nil
-	case Pair:
-		if rest, ok := p.Rest.(Pair); ok {
-			if rest.First == Ellipsis {
-				return m.matchEllipsis(input, p.First, rest.Rest)
-			}
-		}
-		pair, ok := input.Pair()
-		if !ok {
-			return nil, false, nil
-		}
-		first := Syntax{pair.First}
-		rest := Syntax{pair.Rest}
-		firstResult, match, err := m.match(first, p.First)
-		if err != nil {
-			return nil, false, err
-		} else if !match {
-			return nil, false, nil
-		}
-		restResult, match, err := m.match(rest, p.Rest)
-		if err != nil {
-			return nil, false, err
-		} else if !match {
-			return nil, false, nil
-		}
-		result := map[Symbol]interface{}{}
-		for k, v := range firstResult {
-			result[k] = v
-		}
-		for k, v := range restResult {
-			result[k] = v
-		}
-		return result, true, nil
-	default:
-		if p == Null {
-			if input.Unwrap() == Null {
-				return map[Symbol]interface{}{}, true, nil
-			}
-			return nil, false, nil
-		} else if p == Underscore {
-			return map[Symbol]interface{}{}, true, nil
-		}
-		return nil, false, fmt.Errorf("match: unhandled pattern %#v", p)
+	if input.Unwrap() == pattern.Unwrap() {
+		return nil, true, nil
 	}
+	return nil, false, nil
 }
 
-func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpattern Syntax) (MatchResult, bool, error) {
+func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpattern Syntax) (MatchResultSet, bool, error) {
 	var (
-		result     map[Symbol]interface{}
-		subresults []map[Symbol]interface{}
+		result     MatchResultSet
+		subresults []MatchResultSet
 	)
 	for {
 		pair, ok := input.Pair()
@@ -152,8 +111,8 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatte
 			result = restResult
 			break
 		}
-		first := Syntax{pair.First}
-		rest := Syntax{pair.Rest}
+		first := NewSyntax(pair.First)
+		rest := NewSyntax(pair.Rest)
 		subresult, ok, err := m.match(first, subpattern)
 		if err != nil {
 			return nil, false, err
@@ -189,18 +148,18 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatte
 	if err != nil {
 		return nil, false, err
 	}
-	for name, _ := range patternVariables {
-		result[name] = []interface{}{}
+	for _, patternVariable := range patternVariables {
+		result = append(result, MatchResult{patternVariable.id, []interface{}{}})
 	}
 	for _, subresult := range subresults {
-		for k, v := range subresult {
-			result[k] = append(result[k].([]interface{}), v)
+		for _, match := range subresult {
+			result.push(match)
 		}
 	}
 	return result, true, nil
 }
 
-func PatternVariables(pattern Syntax, literals map[Symbol]Location) (map[Symbol]int, error) {
+func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, error) {
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
 		return nil, nil
