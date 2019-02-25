@@ -34,6 +34,22 @@ type MatchResult struct {
 
 type MatchResultSet []MatchResult
 
+func (mrs MatchResultSet) push(other MatchResultSet) {
+	for _, other := range other {
+		found := false
+		for i := range mrs {
+			if other.id.Equal(mrs[i].id) {
+				mrs[i].match = append(mrs[i].match.([]interface{}), other.match)
+				found = true
+				break
+			}
+		}
+		if !found {
+			panic("could not resolve pattern variable in match result set")
+		}
+	}
+}
+
 type MatchInfo struct {
 	id      Identifier
 	nesting int
@@ -152,14 +168,67 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatte
 		result = append(result, MatchResult{patternVariable.id, []interface{}{}})
 	}
 	for _, subresult := range subresults {
-		for _, match := range subresult {
-			result.push(match)
-		}
+		result.push(subresult)
 	}
 	return result, true, nil
 }
 
 func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, error) {
+	if pattern, ok := pattern.Identifier(); ok {
+		if id, ok := input.Identifier(); ok {
+			location := id.Location()
+			for _, literal := range m.literals {
+				l := literal.Location()
+				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
+					return nil, nil
+				}
+			}
+			if id.Location() == UnderscoreKeyword {
+				return nil, nil
+			}
+		}
+		return MatchInfoSet{{pattern, 0}}, nil
+	}
+	if pattern, ok := pattern.Pair(); ok {
+		if rest, ok := NewSyntax(pattern.Rest).Pair(); ok {
+			if id, ok := NewSyntax(rest.First).Identifier(); ok {
+				if id.Location() == EllipsisKeyword {
+					subpatternVariables, err := PatternVariables(NewSyntax(pattern.First), literals)
+					if err != nil {
+						return nil, err
+					}
+					patternVariables := make(MatchInfoSet, len(subpatternVariables))
+					for i := range subpatternVariables {
+						patternVariables[i] = MatchInfo{
+							subpatternVariables[i].id,
+							subpatternVariables[i].nesting + 1,
+						}
+					}
+					return patternVariables, nil
+				}
+			}
+		}
+		firstPatternVariables, err := PatternVariables(NewSyntax(pattern.First), literals)
+		if err != nil {
+			return nil, err
+		}
+		restPatternVariables, err := PatternVariables(NewSyntax(pattern.Rest), literals)
+		if err != nil {
+			return nil, err
+		}
+		for name, n := range firsPatternVariables {
+			if _, ok := patternVariables[name]; ok {
+				return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
+			}
+			patternVariables[name] = n
+		}
+		return append(firstPatternVariables, restPatternVariables...), nil
+	}
+	if input.Unwrap() == pattern.Unwrap() {
+		return nil, true, nil
+	}
+	return nil, false, nil
+
 	switch p := pattern.(type) {
 	case Boolean, Number, Character, String:
 		return nil, nil

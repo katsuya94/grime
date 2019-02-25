@@ -21,8 +21,16 @@ func (id Identifier) Mark(m *M) Identifier {
 	return Identifier{id.WrappedSyntax.Mark(m).(WrappedSyntax)}
 }
 
+func (id Identifier) Unmarked() bool {
+	return (markSet{}).subset(id.marks)
+}
+
+func (id Identifier) CapturedBy(other Identifier) bool {
+	return id.Name() == other.Name() && id.marks.subset(other.marks)
+}
+
 func (id Identifier) Equal(other Identifier) bool {
-	return id.Name() == other.Name() && id.marks.subset(other.marks) && other.marks.subset(id.marks)
+	return id.CapturedBy(other) && other.CapturedBy(id)
 }
 
 // IsSyntax determines whether a Datum is a Syntax object.
