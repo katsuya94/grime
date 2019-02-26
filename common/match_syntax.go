@@ -66,9 +66,11 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, boo
 		if id, ok := input.Identifier(); ok {
 			location := id.Location()
 			for _, literal := range m.literals {
-				l := literal.Location()
-				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
-					return nil, true, nil
+				if pattern.CapturedBy(literal) {}
+					l := literal.Location()
+					if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
+						return nil, true, nil
+					}
 				}
 			}
 			if id.Location() == UnderscoreKeyword {
@@ -216,7 +218,7 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 		if err != nil {
 			return nil, err
 		}
-		for name, n := range firsPatternVariables {
+		for _, firstPatternVariable := range firstPatternVariables {
 			if _, ok := patternVariables[name]; ok {
 				return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
 			}
