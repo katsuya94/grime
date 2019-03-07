@@ -66,7 +66,7 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, boo
 		if id, ok := input.Identifier(); ok {
 			location := id.Location()
 			for _, literal := range m.literals {
-				if pattern.CapturedBy(literal) {}
+				if pattern.CapturedBy(literal) {
 					l := literal.Location()
 					if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
 						return nil, true, nil
@@ -177,15 +177,8 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatte
 
 func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, error) {
 	if pattern, ok := pattern.Identifier(); ok {
-		if id, ok := input.Identifier(); ok {
-			location := id.Location()
-			for _, literal := range m.literals {
-				l := literal.Location()
-				if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
-					return nil, nil
-				}
-			}
-			if id.Location() == UnderscoreKeyword {
+		for _, literal := range literals {
+			if pattern.CapturedBy(literal) {
 				return nil, nil
 			}
 		}
@@ -218,9 +211,13 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 		if err != nil {
 			return nil, err
 		}
+
 		for _, firstPatternVariable := range firstPatternVariables {
-			if _, ok := patternVariables[name]; ok {
-				return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
+			for _, restPatternVariables := range restPatternVariables {
+
+				if _, ok := patternVariables[name]; ok {
+					return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
+				}
 			}
 			patternVariables[name] = n
 		}
@@ -281,6 +278,6 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 	}
 }
 
-func MatchSyntax(input Syntax, pattern Datum, literals []Identifier) (map[Symbol]interface{}, bool, error) {
+func MatchSyntax(input Syntax, pattern Datum, literals []Identifier) (MatchResultSet, bool, error) {
 	return &syntaxMatcher{literals}.match(input, pattern)
 }

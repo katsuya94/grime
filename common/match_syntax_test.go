@@ -6,9 +6,13 @@ import (
 
 	. "github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/test"
 )
 
-// TODO: test pattern matching logic for unwrapped cases as well
+func TestMatchSyntax_Literal(t *testing.T) {
+	test.Syntax("")
+}
+
 func TestMatchSyntax(t *testing.T) {
 	tests := []struct {
 		name     string
