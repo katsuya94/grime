@@ -61,16 +61,15 @@ type syntaxMatcher struct {
 	literals []Identifier
 }
 
-func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, bool, error) {
+func (m syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, bool, error) {
 	if pattern, ok := pattern.Identifier(); ok {
 		if id, ok := input.Identifier(); ok {
 			location := id.Location()
 			for _, literal := range m.literals {
-				if pattern.CapturedBy(literal) {
+				if pattern.Equal(literal) {
 					l := literal.Location()
-					if (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l) {
-						return nil, true, nil
-					}
+					match := (location == nil && l == nil && pattern.Equal(id)) || (location != nil && l != nil && location == l)
+					return nil, match, nil
 				}
 			}
 			if id.Location() == UnderscoreKeyword {
@@ -111,7 +110,7 @@ func (m *syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, boo
 	return nil, false, nil
 }
 
-func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpattern Syntax) (MatchResultSet, bool, error) {
+func (m syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpattern Syntax) (MatchResultSet, bool, error) {
 	var (
 		result     MatchResultSet
 		subresults []MatchResultSet
@@ -178,7 +177,7 @@ func (m *syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatte
 func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, error) {
 	if pattern, ok := pattern.Identifier(); ok {
 		for _, literal := range literals {
-			if pattern.CapturedBy(literal) {
+			if pattern.Equal(literal) {
 				return nil, nil
 			}
 		}
@@ -213,71 +212,17 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 		}
 
 		for _, firstPatternVariable := range firstPatternVariables {
-			for _, restPatternVariables := range restPatternVariables {
-
-				if _, ok := patternVariables[name]; ok {
-					return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
+			for _, restPatternVariable := range restPatternVariables {
+				if firstPatternVariable.id.Equal(restPatternVariable.id) {
+					return nil, fmt.Errorf("match: duplicate pattern variable %v", firstPatternVariable.id.Name())
 				}
 			}
-			patternVariables[name] = n
 		}
 		return append(firstPatternVariables, restPatternVariables...), nil
 	}
-	if input.Unwrap() == pattern.Unwrap() {
-		return nil, true, nil
-	}
-	return nil, false, nil
-
-	switch p := pattern.(type) {
-	case Boolean, Number, Character, String:
-		return nil, nil
-	case Symbol:
-		if _, ok := literals[p]; ok {
-			return nil, nil
-		} else {
-			return map[Symbol]int{p: 0}, nil
-		}
-	case Pair:
-		if rest, ok := p.Rest.(Pair); ok {
-			if rest.First == Ellipsis {
-				subpatternVariables, err := PatternVariables(p.First, literals)
-				if err != nil {
-					return nil, err
-				}
-				patternVariables := make(map[Symbol]int, len(subpatternVariables))
-				for name, n := range subpatternVariables {
-					patternVariables[name] = n + 1
-				}
-				return patternVariables, nil
-			}
-		}
-		firstPatternVariables, err := PatternVariables(p.First, literals)
-		if err != nil {
-			return nil, err
-		}
-		restPatternVariables, err := PatternVariables(p.Rest, literals)
-		if err != nil {
-			return nil, err
-		}
-		patternVariables := make(map[Symbol]int, len(firstPatternVariables)+len(restPatternVariables))
-		for name, n := range firstPatternVariables {
-			patternVariables[name] = n
-		}
-		for name, n := range restPatternVariables {
-			if _, ok := patternVariables[name]; ok {
-				return nil, fmt.Errorf("match: duplicate pattern variable %v", name)
-			}
-			patternVariables[name] = n
-		}
-		return patternVariables, nil
-	default:
-		if p == Null || p == Underscore || p == Ellipsis {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("match: unhandled pattern %#v", p)
-	}
+	return nil, nil
 }
 
-func MatchSyntax(input Syntax, pattern Datum, literals []Identifier) (MatchResultSet, bool, error) {
-	return &syntaxMatcher{literals}.match(input, pattern)
+func MatchSyntax(input Syntax, pattern Syntax, literals []Identifier) (MatchResultSet, bool, error) {
+	return syntaxMatcher{literals}.match(input, pattern)
 }

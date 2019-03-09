@@ -1,18 +1,56 @@
 package common_test
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	. "github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/read"
 	"github.com/katsuya94/grime/test"
 )
 
-func TestMatchSyntax_Literal(t *testing.T) {
-	test.Syntax("")
+func TestMatchSyntaxLiteralMatchId(t *testing.T) {
+	input := test.Syntax("literal")
+	pattern := test.Syntax("literal")
+	literals := []Identifier{test.Identifier("literal")}
+	mrs, ok, err := MatchSyntax(input, pattern, literals)
+	require.Empty(t, mrs)
+	require.True(t, ok)
+	require.NoError(t, err)
 }
 
+func TestMatchSyntaxLiteralMatchLocation(t *testing.T) {
+	locations := make([]Variable, 1)
+	input := test.WithBinding(test.Identifier("input"), &locations[0], test.Syntax("input"))
+	pattern := test.WithBinding(test.Identifier("literal"), &locations[0], test.Syntax("literal"))
+	literalId, _ := test.WithBinding(test.Identifier("literal"), &locations[0], test.Syntax("literal")).Identifier()
+	literals := []Identifier{literalId}
+	mrs, ok, err := MatchSyntax(input, pattern, literals)
+	require.Empty(t, mrs)
+	require.True(t, ok)
+	require.NoError(t, err)
+}
+
+func TestMatchSyntaxLiteralNoMatchId(t *testing.T) {
+	input := test.Syntax("different")
+	pattern := test.Syntax("literal")
+	literals := []Identifier{test.Identifier("literal")}
+	_, ok, err := MatchSyntax(input, pattern, literals)
+	require.False(t, ok)
+	require.NoError(t, err)
+}
+func TestMatchSyntaxLiteralNoMatchLocation(t *testing.T) {
+	locations := make([]Variable, 2)
+	input := test.WithBinding(test.Identifier("literal"), &locations[0], test.Syntax("literal"))
+	pattern := test.WithBinding(test.Identifier("literal"), &locations[1], test.Syntax("literal"))
+	literalId, _ := test.WithBinding(test.Identifier("literal"), &locations[1], test.Syntax("literal")).Identifier()
+	literals := []Identifier{literalId}
+	_, ok, err := MatchSyntax(input, pattern, literals)
+	require.False(t, ok)
+	require.NoError(t, err)
+}
+
+/*
 func TestMatchSyntax(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -322,3 +360,4 @@ func TestMatchSyntax(t *testing.T) {
 		})
 	}
 }
+*/
