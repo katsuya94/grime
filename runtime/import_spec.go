@@ -30,23 +30,37 @@ var (
 	PatternSubVersionReferenceNot = common.Pattern(read.MustReadDatum("(not sub-version-reference)"))
 )
 
+func id(s string) common.Identifier {
+	return common.NewIdentifier(common.Symbol(s))
+}
+
+func ids(s ...string) []common.Identifier {
+	ids := make([]common.Identifier, len(s))
+	for i, s := range s {
+		ids[i] = id(s)
+	}
+	return ids
+}
+
+func extract(result common.MatchResultSet, s string) interface{} {
+	return result.Get(id(s))
+}
+
 type importSpec struct {
 	importSet importSet
 	levels    []int
 }
 
 func newImportSpec(d common.Syntax) (importSpec, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportSpecFor, map[common.Symbol]common.Location{
-		common.Symbol("for"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportSpecFor, []common.Identifier{common.NewIdentifier(common.Symbol("for"))}); err != nil {
 		return importSpec{}, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
+		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
 		if err != nil {
 			return importSpec{}, err
 		}
 		var levels []int
-		for _, d := range result[common.Symbol("import-level")].([]interface{}) {
+		for _, d := range result.Get(common.NewIdentifier(common.Symbol("import-level"))).([]interface{}) {
 			level, err := newImportLevel(d.(common.Syntax))
 			if err != nil {
 				return importSpec{}, err
@@ -78,12 +92,10 @@ func (spec importSpec) libraryName() []common.Symbol {
 }
 
 func newImportLevel(d common.Syntax) (int, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportLevelMeta, map[common.Symbol]common.Location{
-		common.Symbol("meta"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportLevelMeta, []common.Identifier{common.NewIdentifier(common.Symbol("meta"))}); err != nil {
 		return 0, err
 	} else if ok {
-		number, ok := result[common.Symbol("n")].(common.Syntax).Unwrap().(common.Number)
+		number, ok := result.Get(common.NewIdentifier(common.Symbol("n"))).(common.Syntax).Unwrap().(common.Number)
 		if !ok {
 			return 0, fmt.Errorf("runtime: malformed import level")
 		}
@@ -93,16 +105,12 @@ func newImportLevel(d common.Syntax) (int, error) {
 		}
 		return int(n), nil
 	}
-	if _, ok, err := common.MatchSyntax(d, PatternImportLevelRun, map[common.Symbol]common.Location{
-		common.Symbol("run"): nil,
-	}); err != nil {
+	if _, ok, err := common.MatchSyntax(d, PatternImportLevelRun, []common.Identifier{common.NewIdentifier(common.Symbol("run"))}); err != nil {
 		return 0, err
 	} else if ok {
 		return 0, nil
 	}
-	if _, ok, err := common.MatchSyntax(d, PatternImportLevelExpand, map[common.Symbol]common.Location{
-		common.Symbol("expand"): nil,
-	}); err != nil {
+	if _, ok, err := common.MatchSyntax(d, PatternImportLevelExpand, []common.Identifier{common.NewIdentifier(common.Symbol("expand"))}); err != nil {
 		return 0, err
 	} else if ok {
 		return 1, nil
@@ -116,24 +124,20 @@ type importSet interface {
 }
 
 func newImportSet(d common.Syntax) (importSet, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetLibrary, map[common.Symbol]common.Location{
-		common.Symbol("library"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetLibrary, []common.Identifier{common.NewIdentifier(common.Symbol("library"))}); err != nil {
 		return nil, err
 	} else if ok {
-		return newLibraryReference(result[common.Symbol("library-reference")].(common.Syntax))
+		return newLibraryReference(result.Get(common.NewIdentifier(common.Symbol("library-reference"))).(common.Syntax))
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetOnly, map[common.Symbol]common.Location{
-		common.Symbol("only"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetOnly, []common.Identifier{common.NewIdentifier(common.Symbol("only"))}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
+		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
-		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
+		for _, d := range result.Get(common.NewIdentifier(common.Symbol("identifier"))).([]interface{}) {
 			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -142,17 +146,15 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetOnly{iSet, ids}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetExcept, map[common.Symbol]common.Location{
-		common.Symbol("except"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetExcept, []common.Identifier{common.NewIdentifier(common.Symbol("except"))}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
+		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
-		for _, d := range result[common.Symbol("identifier")].([]interface{}) {
+		for _, d := range result.Get(common.NewIdentifier(common.Symbol("identifier"))).([]interface{}) {
 			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -161,16 +163,14 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetExcept{iSet, ids}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetPrefix, map[common.Symbol]common.Location{
-		common.Symbol("prefix"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntax(d, PatternImportSetPrefix, []common.Identifier{common.NewIdentifier(common.Symbol("prefix"))}); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
+		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
-		id, ok := result[common.Symbol("identifier")].(common.Syntax).Unwrap().(common.Symbol)
+		id, ok := result.Get(common.NewIdentifier(common.Symbol("identifier"))).(common.Syntax).Unwrap().(common.Symbol)
 		if !ok {
 			return nil, fmt.Errorf("runtime: malformed import set")
 		}

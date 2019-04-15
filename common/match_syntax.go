@@ -50,6 +50,15 @@ func (mrs MatchResultSet) push(other MatchResultSet) {
 	}
 }
 
+func (mrs MatchResultSet) Get(id Identifier) interface{} {
+	for _, mr := range mrs {
+		if id.Equal(mr.id) {
+			return mr.match
+		}
+	}
+	return nil
+}
+
 type MatchInfo struct {
 	id      Identifier
 	nesting int
