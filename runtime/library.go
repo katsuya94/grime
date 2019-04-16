@@ -30,17 +30,13 @@ type Library struct {
 
 func NewLibrary(source common.Syntax) (*Library, error) {
 	library := &Library{}
-	result, ok, err := common.MatchSyntax(source, PatternLibrary, map[common.Symbol]common.Location{
-		common.Symbol("library"): nil,
-		common.Symbol("export"):  nil,
-		common.Symbol("import"):  nil,
-	})
+	result, ok, err := common.MatchSyntaxSimple(source, PatternLibrary, "library", "export", "import")
 	if err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, fmt.Errorf("runtime: malformed library")
 	}
-	libraryName := result[common.Symbol("library-name")].([]interface{})
+	libraryName := result.Get("library-name").([]interface{})
 	if len(libraryName) == 0 {
 		return nil, fmt.Errorf("runtime: malformed library")
 	}
@@ -53,13 +49,13 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := common.MatchSyntax(libraryName[i].(common.Syntax), PatternVersion, map[common.Symbol]common.Location{})
+		result, ok, err := common.MatchSyntaxSimple(libraryName[i].(common.Syntax), PatternVersion)
 		if err != nil {
 			return nil, err
 		} else if !ok {
 			return nil, fmt.Errorf("runtime: malformed library name")
 		}
-		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
+		for _, d := range result.Get("sub-version").([]interface{}) {
 			subV, err := newSubVersion(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -69,21 +65,21 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 	} else if i < len(libraryName)-1 {
 		return nil, fmt.Errorf("runtime: malformed library name")
 	}
-	for _, d := range result[common.Symbol("export-spec")].([]interface{}) {
+	for _, d := range result.Get("export-spec").([]interface{}) {
 		exportSpecs, err := newExportSpecs(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.exportSpecs = append(library.exportSpecs, exportSpecs...)
 	}
-	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
+	for _, d := range result.Get("import-spec").([]interface{}) {
 		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
-	for _, d := range result[common.Symbol("body")].([]interface{}) {
+	for _, d := range result.Get("body").([]interface{}) {
 		library.body = append(library.body, d.(common.Syntax))
 	}
 	null := source
@@ -161,13 +157,11 @@ func (l *Library) AddScope(scope common.Scope) {
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternExportRename, map[common.Symbol]common.Location{
-		common.Symbol("rename"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternExportRename, "rename"); err != nil {
 		return nil, err
 	} else if ok {
 		var internalIdentifiers []common.Symbol
-		for _, d := range result[common.Symbol("internal")].([]interface{}) {
+		for _, d := range result.Get("internal").([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
@@ -175,7 +169,7 @@ func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
 			}
 		}
 		var externalIdentifiers []common.Symbol
-		for _, d := range result[common.Symbol("external")].([]interface{}) {
+		for _, d := range result.Get("external").([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {

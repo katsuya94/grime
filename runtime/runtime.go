@@ -56,16 +56,14 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.Syntax, nullSourceLocationTree common.SourceLocationTree) error {
-	result, ok, err := common.MatchSyntax(topLevelProgram[0], PatternTopLevelProgramImportForm, map[common.Symbol]common.Location{
-		common.Symbol("import"): nil,
-	})
+	result, ok, err := common.MatchSyntaxSimple(topLevelProgram[0], PatternTopLevelProgramImportForm, "import")
 	if err != nil {
 		return err
 	} else if !ok {
 		return fmt.Errorf("runtime: malformed top-level program import form")
 	}
 	var library Library
-	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
+	for _, d := range result.Get("import-spec").([]interface{}) {
 		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil

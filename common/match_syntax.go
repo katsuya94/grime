@@ -235,3 +235,20 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 func MatchSyntax(input Syntax, pattern Syntax, literals []Identifier) (MatchResultSet, bool, error) {
 	return syntaxMatcher{literals}.match(input, pattern)
 }
+
+type MatchResultSetSimple struct {
+	MatchResultSet
+}
+
+func (mrss MatchResultSetSimple) Get(idStr string) interface{} {
+	return mrss.MatchResultSet.Get(NewIdentifier(Symbol(idStr)))
+}
+
+func MatchSyntaxSimple(input Syntax, pattern Syntax, literalStrs ...string) (MatchResultSetSimple, bool, error) {
+	literals := make([]Identifier, len(literalStrs))
+	for i, literalStr := range literalStrs {
+		literals[i] = NewIdentifier(Symbol(literalStr))
+	}
+	result, ok, err := MatchSyntax(input, pattern, literals)
+	return MatchResultSetSimple{result}, ok, err
+}

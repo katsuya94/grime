@@ -52,15 +52,15 @@ type importSpec struct {
 }
 
 func newImportSpec(d common.Syntax) (importSpec, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportSpecFor, []common.Identifier{common.NewIdentifier(common.Symbol("for"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSpecFor, "for"); err != nil {
 		return importSpec{}, err
 	} else if ok {
-		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
+		iSet, err := newImportSet(result.Get("import-set").(common.Syntax))
 		if err != nil {
 			return importSpec{}, err
 		}
 		var levels []int
-		for _, d := range result.Get(common.NewIdentifier(common.Symbol("import-level"))).([]interface{}) {
+		for _, d := range result.Get("import-level").([]interface{}) {
 			level, err := newImportLevel(d.(common.Syntax))
 			if err != nil {
 				return importSpec{}, err
@@ -92,10 +92,10 @@ func (spec importSpec) libraryName() []common.Symbol {
 }
 
 func newImportLevel(d common.Syntax) (int, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportLevelMeta, []common.Identifier{common.NewIdentifier(common.Symbol("meta"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportLevelMeta, "meta"); err != nil {
 		return 0, err
 	} else if ok {
-		number, ok := result.Get(common.NewIdentifier(common.Symbol("n"))).(common.Syntax).Unwrap().(common.Number)
+		number, ok := result.Get("n").(common.Syntax).Unwrap().(common.Number)
 		if !ok {
 			return 0, fmt.Errorf("runtime: malformed import level")
 		}
@@ -105,12 +105,12 @@ func newImportLevel(d common.Syntax) (int, error) {
 		}
 		return int(n), nil
 	}
-	if _, ok, err := common.MatchSyntax(d, PatternImportLevelRun, []common.Identifier{common.NewIdentifier(common.Symbol("run"))}); err != nil {
+	if _, ok, err := common.MatchSyntaxSimple(d, PatternImportLevelRun, "run"); err != nil {
 		return 0, err
 	} else if ok {
 		return 0, nil
 	}
-	if _, ok, err := common.MatchSyntax(d, PatternImportLevelExpand, []common.Identifier{common.NewIdentifier(common.Symbol("expand"))}); err != nil {
+	if _, ok, err := common.MatchSyntaxSimple(d, PatternImportLevelExpand, "expand"); err != nil {
 		return 0, err
 	} else if ok {
 		return 1, nil
@@ -124,20 +124,20 @@ type importSet interface {
 }
 
 func newImportSet(d common.Syntax) (importSet, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetLibrary, []common.Identifier{common.NewIdentifier(common.Symbol("library"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSetLibrary, "library"); err != nil {
 		return nil, err
 	} else if ok {
-		return newLibraryReference(result.Get(common.NewIdentifier(common.Symbol("library-reference"))).(common.Syntax))
+		return newLibraryReference(result.Get("library-reference").(common.Syntax))
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetOnly, []common.Identifier{common.NewIdentifier(common.Symbol("only"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSetOnly, "only"); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
+		iSet, err := newImportSet(result.Get("import-set").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
-		for _, d := range result.Get(common.NewIdentifier(common.Symbol("identifier"))).([]interface{}) {
+		for _, d := range result.Get("identifier").([]interface{}) {
 			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -146,15 +146,15 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetOnly{iSet, ids}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetExcept, []common.Identifier{common.NewIdentifier(common.Symbol("except"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSetExcept, "except"); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
+		iSet, err := newImportSet(result.Get("import-set").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var ids []common.Symbol
-		for _, d := range result.Get(common.NewIdentifier(common.Symbol("identifier"))).([]interface{}) {
+		for _, d := range result.Get("identifier").([]interface{}) {
 			id, ok := d.(common.Syntax).Unwrap().(common.Symbol)
 			if !ok {
 				return nil, fmt.Errorf("runtime: malformed import set")
@@ -163,30 +163,28 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetExcept{iSet, ids}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetPrefix, []common.Identifier{common.NewIdentifier(common.Symbol("prefix"))}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSetPrefix, "prefix"); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result.Get(common.NewIdentifier(common.Symbol("import-set"))).(common.Syntax))
+		iSet, err := newImportSet(result.Get("import-set").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
-		id, ok := result.Get(common.NewIdentifier(common.Symbol("identifier"))).(common.Syntax).Unwrap().(common.Symbol)
+		id, ok := result.Get("identifier").(common.Syntax).Unwrap().(common.Symbol)
 		if !ok {
 			return nil, fmt.Errorf("runtime: malformed import set")
 		}
 		return importSetPrefix{iSet, id}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternImportSetRename, map[common.Symbol]common.Location{
-		common.Symbol("rename"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternImportSetRename, "rename"); err != nil {
 		return nil, err
 	} else if ok {
-		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
+		iSet, err := newImportSet(result.Get("import-set").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		var externalIdentifiers []common.Symbol
-		for _, d := range result[common.Symbol("external")].([]interface{}) {
+		for _, d := range result.Get("external").([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {
@@ -194,7 +192,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 			}
 		}
 		var internalIdentifiers []common.Symbol
-		for _, d := range result[common.Symbol("internal")].([]interface{}) {
+		for _, d := range result.Get("internal").([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
@@ -441,13 +439,13 @@ type importSetLibraryReference struct {
 
 func newLibraryReference(d common.Syntax) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
-	result, ok, err := common.MatchSyntax(d, PatternLibraryReference, map[common.Symbol]common.Location{})
+	result, ok, err := common.MatchSyntaxSimple(d, PatternLibraryReference)
 	if err != nil {
 		return importSetLibraryReference{}, err
 	} else if !ok {
 		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
-	libraryName := result[common.Symbol("library-name")].([]interface{})
+	libraryName := result.Get("library-name").([]interface{})
 	if len(libraryName) == 0 {
 		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
@@ -486,13 +484,11 @@ type versionReference interface {
 }
 
 func newVersionReference(d common.Syntax) (versionReference, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceAnd, map[common.Symbol]common.Location{
-		common.Symbol("and"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternVersionReferenceAnd, "and"); err != nil {
 		return nil, err
 	} else if ok {
 		var vRefs []versionReference
-		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
+		for _, d := range result.Get("version-reference").([]interface{}) {
 			vRef, err := newVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -501,13 +497,11 @@ func newVersionReference(d common.Syntax) (versionReference, error) {
 		}
 		return versionReferenceAnd{vRefs}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceOr, map[common.Symbol]common.Location{
-		common.Symbol("or"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternVersionReferenceOr, "or"); err != nil {
 		return nil, err
 	} else if ok {
 		var vRefs []versionReference
-		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
+		for _, d := range result.Get("version-reference").([]interface{}) {
 			vRef, err := newVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -516,22 +510,20 @@ func newVersionReference(d common.Syntax) (versionReference, error) {
 		}
 		return versionReferenceOr{vRefs}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternVersionReferenceNot, map[common.Symbol]common.Location{
-		common.Symbol("not"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternVersionReferenceNot, "not"); err != nil {
 		return nil, err
 	} else if ok {
-		vRef, err := newVersionReference(result[common.Symbol("version-reference")].(common.Syntax))
+		vRef, err := newVersionReference(result.Get("version-reference").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return versionReferenceNot{vRef}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferences, map[common.Symbol]common.Location{}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferences); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
-		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+		for _, d := range result.Get("sub-version-reference").([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -598,35 +590,29 @@ type subVersionReference interface {
 }
 
 func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceGte, map[common.Symbol]common.Location{
-		common.Symbol(">="): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferenceGte, ">="); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
+		subV, err := newSubVersion(result.Get("sub-version").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return subVersionReferenceGte{subV}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceLte, map[common.Symbol]common.Location{
-		common.Symbol("<="): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferenceLte, "<="); err != nil {
 		return nil, err
 	} else if ok {
-		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
+		subV, err := newSubVersion(result.Get("sub-version").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return subVersionReferenceLte{subV}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceAnd, map[common.Symbol]common.Location{
-		common.Symbol("and"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferenceAnd, "and"); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
-		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+		for _, d := range result.Get("sub-version-reference").([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -635,13 +621,11 @@ func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
 		}
 		return subVersionReferenceAnd{subVRefs}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceOr, map[common.Symbol]common.Location{
-		common.Symbol("or"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferenceOr, "or"); err != nil {
 		return nil, err
 	} else if ok {
 		var subVRefs []subVersionReference
-		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
+		for _, d := range result.Get("sub-version-reference").([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -650,12 +634,10 @@ func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
 		}
 		return subVersionReferenceOr{subVRefs}, nil
 	}
-	if result, ok, err := common.MatchSyntax(d, PatternSubVersionReferenceNot, map[common.Symbol]common.Location{
-		common.Symbol("not"): nil,
-	}); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(d, PatternSubVersionReferenceNot, "not"); err != nil {
 		return nil, err
 	} else if ok {
-		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")].(common.Syntax))
+		subVRef, err := newSubVersionReference(result.Get("sub-version-reference").(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
