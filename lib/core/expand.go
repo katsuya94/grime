@@ -16,13 +16,13 @@ var (
 	PatternApplication                 = common.Pattern(read.MustReadDatum("(procedure arguments ...)"))
 )
 
+var setIdentifier = common.NewIdentifier(common.Symbol("set!")).Bind(setKeyword)
+
 func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	// TODO: what happens if we limit this to WrappedSyntax only?
 	// r6rs-lib 12.3 seems to imply that transformers should only take wrapped syntax objects,
 	// however macro uses would then often be unable to expand into macro uses
-	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet, map[common.Symbol]common.Location{
-		common.Symbol("set!"): setKeyword,
-	}); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet, []common.Identifier{setIdentifier}); ok || err != nil {
 		return form, ok, err
 	}
 	if form, ok, err := expandMacroMatching(form, PatternMacroUseList, nil); ok || err != nil {
@@ -34,12 +34,12 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier, nil); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok, err := common.MatchSyntax(common.NewSyntax(form), PatternApplication, nil); err != nil {
+	if result, ok, err := common.MatchSyntaxSimple(common.NewSyntax(form), PatternApplication); err != nil {
 		return nil, false, err
 	} else if ok {
-		procedure := result[common.Symbol("procedure")].(common.Syntax).Datum()
+		procedure := result.Get("procedure").(common.Syntax).Datum()
 		var arguments []common.Datum
-		for _, syntax := range result[common.Symbol("arguments")].([]interface{}) {
+		for _, syntax := range result.Get("arguments").([]interface{}) {
 			arguments = append(arguments, syntax.(common.Syntax).Datum())
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
@@ -51,14 +51,14 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	return nil, false, nil
 }
 
-func expandMacroMatching(form common.Datum, pattern common.Datum, literals map[common.Symbol]common.Location) (common.Datum, bool, error) {
+func expandMacroMatching(form common.Datum, pattern common.Syntax, literals []common.Identifier) (common.Datum, bool, error) {
 	result, ok, err := common.MatchSyntax(common.NewSyntax(form), pattern, literals)
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
 		return nil, false, nil
 	}
-	id, ok := result[common.Symbol("keyword")].(common.Syntax).Identifier()
+	id, ok := result.Get(common.NewIdentifier(common.Symbol("keyword"))).(common.Syntax).Identifier()
 	if !ok {
 		return nil, false, nil
 	}

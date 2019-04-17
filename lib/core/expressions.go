@@ -214,12 +214,17 @@ func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, err
 	return common.CallC(c, e.Variable.Value)
 }
 
+type patternVariableBinding struct {
+	id              common.Identifier
+	patternVariable *common.PatternVariable
+}
+
 // SyntaxCase evaluates its input and evaluates to an output according to pattern matching and fender expressions.
 type SyntaxCase struct {
 	Input                   common.Expression
 	Literals                []common.Identifier
-	Patterns                []common.Datum
-	PatternVariableBindings []map[common.Symbol]*common.PatternVariable
+	Patterns                []common.Syntax
+	PatternVariableBindings [][]patternVariableBinding
 	Fenders                 []common.Expression
 	Outputs                 []common.Expression
 }
@@ -234,8 +239,8 @@ func (e SyntaxCase) Evaluate(c common.Continuation) (common.EvaluationResult, er
 type syntaxCaseInputEvaluated struct {
 	continuation            common.Continuation
 	literals                []common.Identifier
-	patterns                []common.Datum
-	patternVariableBindings []map[common.Symbol]*common.PatternVariable
+	patterns                []common.Syntax
+	patternVariableBindings [][]patternVariableBinding
 	fenders                 []common.Expression
 	outputs                 []common.Expression
 }
@@ -252,8 +257,8 @@ type syntaxCaseFenderEvaluated struct {
 	input                   common.Datum
 	literals                []common.Identifier
 	output                  common.Expression
-	patterns                []common.Datum
-	patternVariableBindings []map[common.Symbol]*common.PatternVariable
+	patterns                []common.Syntax
+	patternVariableBindings [][]patternVariableBinding
 	fenders                 []common.Expression
 	outputs                 []common.Expression
 }
@@ -265,15 +270,19 @@ func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult
 	return common.EvalC(c.continuation, c.output)
 }
 
-func syntaxCaseMatch(continuation common.Continuation, input common.Datum, literals map[common.Symbol]common.Location, patterns []common.Datum, patternVariableBindings []map[common.Symbol]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
+func syntaxCaseMatch(continuation common.Continuation, input common.Datum, literals []common.Identifier, patterns []common.Syntax, patternVariableBindings [][]patternVariableBinding, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
 	syntax := common.NewSyntax(input)
 	for i := range patterns {
 		result, ok, err := common.MatchSyntax(syntax, patterns[i], literals)
 		if err != nil {
 			return nil, err
 		} else if ok {
-			for name, match := range result {
-				(*patternVariableBindings[i][name]).Match = match
+			for _, mr := range result {
+				for _, patternVariableBinding := range patternVariableBindings[i] {
+					if mr.Id.Equal(patternVariableBinding.id) {
+						(*patternVariableBinding.patternVariable).Match = mr.Match
+					}
+				}
 			}
 			return common.EvalC(
 				syntaxCaseFenderEvaluated{

@@ -25,6 +25,13 @@ func (id Identifier) Equal(other Identifier) bool {
 	return id.Name() == other.Name() && id.marks.equal(other.marks)
 }
 
+func (id Identifier) Bind(location Location) Identifier {
+	scope := NewScope()
+	scope.Set(id, location)
+	id, _ = id.Push(scope, LEXICAL).Identifier()
+	return id
+}
+
 // IsSyntax determines whether a Datum is a Syntax object.
 func IsSyntax(d Datum) bool {
 	switch d := d.(type) {

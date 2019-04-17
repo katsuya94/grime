@@ -28,8 +28,8 @@ func Pattern(d Datum) Syntax {
 }
 
 type MatchResult struct {
-	id    Identifier
-	match interface{}
+	Id    Identifier
+	Match interface{}
 }
 
 type MatchResultSet []MatchResult
@@ -38,8 +38,8 @@ func (mrs MatchResultSet) push(other MatchResultSet) {
 	for _, other := range other {
 		found := false
 		for i := range mrs {
-			if other.id.Equal(mrs[i].id) {
-				mrs[i].match = append(mrs[i].match.([]interface{}), other.match)
+			if other.Id.Equal(mrs[i].Id) {
+				mrs[i].Match = append(mrs[i].Match.([]interface{}), other.Match)
 				found = true
 				break
 			}
@@ -52,16 +52,16 @@ func (mrs MatchResultSet) push(other MatchResultSet) {
 
 func (mrs MatchResultSet) Get(id Identifier) interface{} {
 	for _, mr := range mrs {
-		if id.Equal(mr.id) {
-			return mr.match
+		if id.Equal(mr.Id) {
+			return mr.Match
 		}
 	}
 	return nil
 }
 
 type MatchInfo struct {
-	id      Identifier
-	nesting int
+	Id      Identifier
+	Nesting int
 }
 
 type MatchInfoSet []MatchInfo
@@ -175,7 +175,7 @@ func (m syntaxMatcher) matchEllipsis(input Syntax, subpattern Syntax, restpatter
 		return nil, false, err
 	}
 	for _, patternVariable := range patternVariables {
-		result = append(result, MatchResult{patternVariable.id, []interface{}{}})
+		result = append(result, MatchResult{patternVariable.Id, []interface{}{}})
 	}
 	for _, subresult := range subresults {
 		result.push(subresult)
@@ -203,8 +203,8 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 					patternVariables := make(MatchInfoSet, len(subpatternVariables))
 					for i := range subpatternVariables {
 						patternVariables[i] = MatchInfo{
-							subpatternVariables[i].id,
-							subpatternVariables[i].nesting + 1,
+							subpatternVariables[i].Id,
+							subpatternVariables[i].Nesting + 1,
 						}
 					}
 					return patternVariables, nil
@@ -222,8 +222,8 @@ func PatternVariables(pattern Syntax, literals []Identifier) (MatchInfoSet, erro
 
 		for _, firstPatternVariable := range firstPatternVariables {
 			for _, restPatternVariable := range restPatternVariables {
-				if firstPatternVariable.id.Equal(restPatternVariable.id) {
-					return nil, fmt.Errorf("match: duplicate pattern variable %v", firstPatternVariable.id.Name())
+				if firstPatternVariable.Id.Equal(restPatternVariable.Id) {
+					return nil, fmt.Errorf("match: duplicate pattern variable %v", firstPatternVariable.Id.Name())
 				}
 			}
 		}

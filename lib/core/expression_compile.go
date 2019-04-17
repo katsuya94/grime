@@ -147,23 +147,23 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			literals = append(literals, literal)
 		}
 		var (
-			patterns                []common.Datum
-			patternVariableBindings []map[common.Symbol]*common.PatternVariable
+			patterns                []common.Syntax
+			patternVariableBindings [][]patternVariableBinding
 			fenderExpressions       []common.Expression
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern := form.Patterns[i]
-			patternVariables, err := common.PatternVariables(common.NewSyntax(pattern), literals)
+			pattern := common.NewSyntax(form.Patterns[i])
+			mis, err := common.PatternVariables(pattern, literals)
 			if err != nil {
 				return nil, err
 			}
-			bindings := map[common.Symbol]*common.PatternVariable{}
+			bindings := []patternVariableBinding{}
 			scope := common.NewScope()
-			for name, n := range patternVariables {
-				patternVariable := &common.PatternVariable{nil, n}
-				bindings[name] = patternVariable
-				err := scope.Set(common.NewIdentifier(name), patternVariable)
+			for _, mi := range mis {
+				patternVariable := &common.PatternVariable{nil, mi.Nesting}
+				bindings = append(bindings, patternVariableBinding{mi.Id, patternVariable})
+				err := scope.Set(mi.Id, patternVariable)
 				if err != nil {
 					return nil, err
 				}
