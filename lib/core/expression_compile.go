@@ -136,6 +136,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			return nil, err
 		}
 		literals := []common.Identifier{}
+		literalScope := common.NewScope()
 		for _, literal := range form.Literals {
 			location := literal.Location()
 			if location == common.UnderscoreKeyword {
@@ -145,6 +146,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
 			literals = append(literals, literal)
+			literalScope.Set(literal, &common.Literal{literal})
 		}
 		var (
 			patterns                []common.Syntax
@@ -153,7 +155,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions       []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern := common.NewSyntax(form.Patterns[i])
+			pattern := common.NewSyntax(form.Patterns[i]).Push(literalScope, common.LEXICAL)
 			mis, err := common.PatternVariables(pattern, literals)
 			if err != nil {
 				return nil, err
