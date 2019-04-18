@@ -28,7 +28,10 @@ func (id Identifier) Equal(other Identifier) bool {
 func (id Identifier) Bind(location Location) Identifier {
 	scope := NewScope()
 	scope.Set(id, location)
-	id, _ = id.Push(scope, LEXICAL).Identifier()
+	id, ok := id.Push(scope, LEXICAL).Identifier()
+	if !ok {
+		panic("expected identifier")
+	}
 	return id
 }
 

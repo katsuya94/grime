@@ -81,9 +81,9 @@ func (m syntaxMatcher) match(input Syntax, pattern Syntax) (MatchResultSet, bool
 					return nil, match, nil
 				}
 			}
-			if id.Location() == UnderscoreKeyword {
-				return nil, true, nil
-			}
+		}
+		if pattern.Location() == &UnderscoreKeyword {
+			return nil, true, nil
 		}
 		return MatchResultSet{{pattern, input}}, true, nil
 	}
