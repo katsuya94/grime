@@ -25,6 +25,10 @@ func (id Identifier) Equal(other Identifier) bool {
 	return id.Name() == other.Name() && id.marks.equal(other.marks)
 }
 
+func (id Identifier) CapturedBy(other Identifier) bool {
+	return id.Name() == other.Name() && id.marks.subset(other.marks)
+}
+
 func (id Identifier) Bind(location Location) Identifier {
 	scope := NewScope()
 	scope.Set(id, location)

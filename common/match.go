@@ -11,15 +11,24 @@ type patternLiteral struct {
 }
 
 func (p patternLiteral) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
-	if syntax, ok := syntax.Identifier(); ok {
-		syntaxLocation := syntax.Location()
-		patternLocation := p.id.Location()
-		if (syntaxLocation == nil && patternLocation == nil && syntax.Equal(p.id)) ||
-			(syntaxLocation != nil && patternLocation != nil && syntaxLocation == patternLocation) {
-			return map[*PatternVariable]interface{}{}, true
-		}
+	id, ok := syntax.Identifier()
+	if !ok {
+		return nil, false
 	}
-	return nil, false
+	syntaxLocation := id.Location()
+	patternLocation := p.id.Location()
+	if syntaxLocation == nil && patternLocation == nil {
+		if !id.Equal(p.id) {
+			return nil, false
+		}
+	} else if syntaxLocation != nil && patternLocation != nil {
+		if syntaxLocation != patternLocation {
+			return nil, false
+		}
+	} else {
+		return nil, false
+	}
+	return map[*PatternVariable]interface{}{}, true
 }
 
 type patternUnderscore struct{}
@@ -37,8 +46,9 @@ func (p patternVariable) Match(syntax Syntax) (map[*PatternVariable]interface{},
 }
 
 type patternEllipsis struct {
-	subPattern  Pattern
-	restPattern Pattern
+	subPattern          Pattern
+	subPatternVariables []*PatternVariable
+	restPattern         Pattern
 }
 
 func (p patternEllipsis) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
@@ -48,33 +58,42 @@ func (p patternEllipsis) Match(syntax Syntax) (map[*PatternVariable]interface{},
 	)
 	for {
 		if pair, ok := syntax.Pair(); ok {
+			// If the syntax is a pair...
 			first := NewSyntax(pair.First)
 			rest := NewSyntax(pair.Rest)
 			if subResult, ok := p.subPattern.Match(first); ok {
+				// And its first matches subPattern...
 				subResults = append(subResults, subResult)
-				restResult, ok := p.restPattern.Match(rest)
-				if ok {
-					_, ok := p.Match(rest)
-					if !ok {
-						// If the rest matches the restpattern, but does not match the ellipsis, we are done.
+				if restResult, ok := p.restPattern.Match(rest); ok {
+					// And its rest matches restPattern...
+					if _, ok := p.Match(rest); !ok {
+						// But its rest does not match the ellipsis, we are done.
 						result = restResult
 						break
 					}
 				}
-				// Otherwise continue.
+				// And the rest doesn't need to match restPattern, continue.
 				syntax = rest
 				continue
 			}
 		}
-		restResult, ok := p.restPattern.Match(syntax)
-		if !ok {
-			return nil, false
+		// If the syntax is not a pair or its first doesn't match subPattern...
+		if restResult, ok := p.restPattern.Match(syntax); !ok {
+			// And the syntax matches restPattern, we are done.
+			result = restResult
+			break
 		}
-		// If the input is not a pair and it matches restPattern, we are done.
-		result = restResult
-		break
+		// And the syntax does not match restPattern, fail.
+		return nil, false
 	}
-	// TODO: aggregate results
+	for _, patternVariable := range p.subPatternVariables {
+		result[patternVariable] = []interface{}{}
+	}
+	for _, subResult := range subResults {
+		for _, patternVariable := range p.subPatternVariables {
+			result[patternVariable] = append(result[patternVariable].([]interface{}), subResult[patternVariable])
+		}
+	}
 	return result, true
 }
 
@@ -83,8 +102,38 @@ type patternPair struct {
 	rest  Pattern
 }
 
+func (p patternPair) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	pair, ok := syntax.Pair()
+	if !ok {
+		return nil, false
+	}
+	firstResult, ok := p.first.Match(NewSyntax(pair.First))
+	if !ok {
+		return nil, false
+	}
+	restResult, ok := p.rest.Match(NewSyntax(pair.Rest))
+	if !ok {
+		return nil, false
+	}
+	result := map[*PatternVariable]interface{}{}
+	for patternVariable, match := range firstResult {
+		result[patternVariable] = match
+	}
+	for patternVariable, match := range restResult {
+		result[patternVariable] = match
+	}
+	return result, true
+}
+
 type patternDatum struct {
 	datum Datum
+}
+
+func (p patternDatum) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	if syntax.Datum() != p.datum {
+		return nil, false
+	}
+	return map[*PatternVariable]interface{}{}, true
 }
 
 type PatternVariableInfo struct {
@@ -115,19 +164,21 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 					if err != nil {
 						return nil, nil, err
 					}
+					subPatternVariables := []*PatternVariable{}
 					for _, subPatternVariableInfo := range subPatternVariableInfos {
-						subpatternVariableInfo.PatternVariable.Nesting++
+						subPatternVariableInfo.PatternVariable.Nesting++
+						subPatternVariables = append(subPatternVariables, subPatternVariableInfo.PatternVariable)
 					}
 					cddr := NewSyntax(cdr.Rest)
 					restPattern, restPatternVariableInfos, err := CompilePattern(cddr)
 					if err != nil {
 						return nil, nil, err
 					}
-					patternVariableInfos, err := mergePatternVariableInfos(subpatternVariableInfos, restPatternVariableInfos)
+					patternVariableInfos, err := mergePatternVariableInfos(subPatternVariableInfos, restPatternVariableInfos)
 					if err != nil {
 						return nil, nil, err
 					}
-					return patternEllipsis{subPattern, restPattern}, patternVariableInfos, nil
+					return patternEllipsis{subPattern, subPatternVariables, restPattern}, patternVariableInfos, nil
 				}
 			}
 		}
@@ -143,7 +194,7 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		return patternPair{firstPattern, restPattern}, append(firstPatternVariables, restPatternVariables...), nil
+		return patternPair{firstPattern, restPattern}, patternVariableInfos, nil
 	}
 	return patternDatum{syntax.Datum()}, nil, nil
 }
@@ -156,5 +207,5 @@ func mergePatternVariableInfos(leftPatternVariableInfos, rightPatternVariableInf
 			}
 		}
 	}
-	return append(leftPatternVariableInfos, rightPatternVariableInfos), nil
+	return append(leftPatternVariableInfos, rightPatternVariableInfos...), nil
 }

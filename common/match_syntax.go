@@ -21,11 +21,11 @@ func init() {
 	patternScope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
 }
 
-func Pattern(d Datum) Syntax {
-	syntax := NewSyntax(NewWrappedSyntax(d, nil))
-	syntax.Push(patternScope, LEXICAL)
-	return syntax
-}
+// func Pattern(d Datum) Syntax {
+// 	syntax := NewSyntax(NewWrappedSyntax(d, nil))
+// 	syntax.Push(patternScope, LEXICAL)
+// 	return syntax
+// }
 
 type MatchResult struct {
 	Id    Identifier
