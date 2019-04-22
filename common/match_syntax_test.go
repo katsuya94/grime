@@ -49,7 +49,17 @@ func TestMatchSyntaxLiteralNoMatchLocation(t *testing.T) {
 	require.False(t, ok)
 	require.NoError(t, err)
 }
+
 func TestMatchSyntaxUnderscoreMatchAnything(t *testing.T) {
+	input := test.Syntax("anything")
+	pattern := test.WithBinding(test.Identifier("_"), &UnderscoreKeyword, test.Syntax("_"))
+	mrs, ok, err := MatchSyntax(input, pattern, nil)
+	require.Empty(t, mrs)
+	require.True(t, ok)
+	require.NoError(t, err)
+}
+
+func TestMatchSyntaxPatternVariableMatchAnything(t *testing.T) {
 	input := test.Syntax("anything")
 	pattern := test.WithBinding(test.Identifier("_"), &UnderscoreKeyword, test.Syntax("_"))
 	mrs, ok, err := MatchSyntax(input, pattern, nil)

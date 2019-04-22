@@ -6,22 +6,76 @@ type Pattern interface {
 	Match(Syntax) (map[*PatternVariable]interface{}, bool)
 }
 
-type patternDatum struct {
-	datum Datum
-}
-
 type patternLiteral struct {
 	id Identifier
 }
 
+func (p patternLiteral) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	if syntax, ok := syntax.Identifier(); ok {
+		syntaxLocation := syntax.Location()
+		patternLocation := p.id.Location()
+		if (syntaxLocation == nil && patternLocation == nil && syntax.Equal(p.id)) ||
+			(syntaxLocation != nil && patternLocation != nil && syntaxLocation == patternLocation) {
+			return map[*PatternVariable]interface{}{}, true
+		}
+	}
+	return nil, false
+}
+
 type patternUnderscore struct{}
+
+func (p patternUnderscore) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	return map[*PatternVariable]interface{}{}, true
+}
 
 type patternVariable struct {
 	patternVariable *PatternVariable
 }
 
+func (p patternVariable) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	return map[*PatternVariable]interface{}{p.patternVariable: syntax}, true
+}
+
 type patternEllipsis struct {
-	pattern Pattern
+	subPattern  Pattern
+	restPattern Pattern
+}
+
+func (p patternEllipsis) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+	var (
+		result     map[*PatternVariable]interface{}
+		subResults []map[*PatternVariable]interface{}
+	)
+	for {
+		if pair, ok := syntax.Pair(); ok {
+			first := NewSyntax(pair.First)
+			rest := NewSyntax(pair.Rest)
+			if subResult, ok := p.subPattern.Match(first); ok {
+				subResults = append(subResults, subResult)
+				restResult, ok := p.restPattern.Match(rest)
+				if ok {
+					_, ok := p.Match(rest)
+					if !ok {
+						// If the rest matches the restpattern, but does not match the ellipsis, we are done.
+						result = restResult
+						break
+					}
+				}
+				// Otherwise continue.
+				syntax = rest
+				continue
+			}
+		}
+		restResult, ok := p.restPattern.Match(syntax)
+		if !ok {
+			return nil, false
+		}
+		// If the input is not a pair and it matches restPattern, we are done.
+		result = restResult
+		break
+	}
+	// TODO: aggregate results
+	return result, true
 }
 
 type patternPair struct {
@@ -29,9 +83,13 @@ type patternPair struct {
 	rest  Pattern
 }
 
+type patternDatum struct {
+	datum Datum
+}
+
 type PatternVariableInfo struct {
+	Id              Identifier
 	PatternVariable *PatternVariable
-	Nesting         int
 }
 
 func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
@@ -46,44 +104,57 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 		if location == &EllipsisKeyword {
 			return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
 		}
-		// make patten variable
+		variable := &PatternVariable{}
+		return patternVariable{variable}, []PatternVariableInfo{{syntax, variable}}, nil
 	}
-	if pattern, ok := pattern.Pair(); ok {
-		if rest, ok := NewSyntax(pattern.Rest).Pair(); ok {
-			if id, ok := NewSyntax(rest.First).Identifier(); ok {
-				if id.Location() == EllipsisKeyword {
-					subpatternVariables, err := PatternVariables(NewSyntax(pattern.First), literals)
+	if syntax, ok := syntax.Pair(); ok {
+		if cdr, ok := NewSyntax(syntax.Rest).Pair(); ok {
+			if cadr, ok := NewSyntax(cdr.First).Identifier(); ok {
+				if cadr.Location() == EllipsisKeyword {
+					subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First))
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
-					patternVariables := make(MatchInfoSet, len(subpatternVariables))
-					for i := range subpatternVariables {
-						patternVariables[i] = MatchInfo{
-							subpatternVariables[i].Id,
-							subpatternVariables[i].Nesting + 1,
-						}
+					for _, subPatternVariableInfo := range subPatternVariableInfos {
+						subpatternVariableInfo.PatternVariable.Nesting++
 					}
-					return patternVariables, nil
+					cddr := NewSyntax(cdr.Rest)
+					restPattern, restPatternVariableInfos, err := CompilePattern(cddr)
+					if err != nil {
+						return nil, nil, err
+					}
+					patternVariableInfos, err := mergePatternVariableInfos(subpatternVariableInfos, restPatternVariableInfos)
+					if err != nil {
+						return nil, nil, err
+					}
+					return patternEllipsis{subPattern, restPattern}, patternVariableInfos, nil
 				}
 			}
 		}
-		firstPatternVariables, err := PatternVariables(NewSyntax(pattern.First), literals)
+		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		restPatternVariables, err := PatternVariables(NewSyntax(pattern.Rest), literals)
+		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-
-		for _, firstPatternVariable := range firstPatternVariables {
-			for _, restPatternVariable := range restPatternVariables {
-				if firstPatternVariable.Id.Equal(restPatternVariable.Id) {
-					return nil, fmt.Errorf("match: duplicate pattern variable %v", firstPatternVariable.Id.Name())
-				}
-			}
+		patternVariableInfos, err := mergePatternVariableInfos(firstPatternVariableInfos, restPatternVariableInfos)
+		if err != nil {
+			return nil, nil, err
 		}
-		return append(firstPatternVariables, restPatternVariables...), nil
+		return patternPair{firstPattern, restPattern}, append(firstPatternVariables, restPatternVariables...), nil
 	}
-	return nil, nil
+	return patternDatum{syntax.Datum()}, nil, nil
+}
+
+func mergePatternVariableInfos(leftPatternVariableInfos, rightPatternVariableInfos []PatternVariableInfo) ([]PatternVariableInfo, error) {
+	for _, leftPatternVariableInfo := range leftPatternVariableInfos {
+		for _, rightPatternVariableInfo := range rightPatternVariableInfos {
+			if leftPatternVariableInfo.Id.Equal(rightPatternVariableInfo.Id) {
+				return nil, fmt.Errorf("pattern: duplicate pattern variable %v", leftPatternVariableInfo.Id.Name())
+			}
+		}
+	}
+	return append(leftPatternVariableInfos, rightPatternVariableInfos), nil
 }
