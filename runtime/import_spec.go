@@ -16,7 +16,7 @@ var (
 	PatternLibraryReference       = common.MustCompileSimplePattern(read.MustReadDatum("(library-name ...)"))
 	PatternImportSetLibrary       = common.MustCompileSimplePattern(read.MustReadDatum("(library library-reference)"), common.Symbol("library"))
 	PatternImportSetOnly          = common.MustCompileSimplePattern(read.MustReadDatum("(only import-set identifier ...)"), common.Symbol("only"))
-	PatternImportSetExcept        = common.MustCompileSimplePattern(read.MustReadDatum("(except import-set identifier ...)"), common.Symbol("execpt"))
+	PatternImportSetExcept        = common.MustCompileSimplePattern(read.MustReadDatum("(except import-set identifier ...)"), common.Symbol("except"))
 	PatternImportSetPrefix        = common.MustCompileSimplePattern(read.MustReadDatum("(prefix import-set identifier)"), common.Symbol("prefix"))
 	PatternImportSetRename        = common.MustCompileSimplePattern(read.MustReadDatum("(rename import-set (external internal) ...)"), common.Symbol("rename"))
 	PatternSubVersionReferences   = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version-reference ...)"))
@@ -29,22 +29,6 @@ var (
 	PatternSubVersionReferenceOr  = common.MustCompileSimplePattern(read.MustReadDatum("(or sub-version-reference ...)"), common.Symbol("or"))
 	PatternSubVersionReferenceNot = common.MustCompileSimplePattern(read.MustReadDatum("(not sub-version-reference)"), common.Symbol("not"))
 )
-
-func id(s string) common.Identifier {
-	return common.NewIdentifier(common.Symbol(s))
-}
-
-func ids(s ...string) []common.Identifier {
-	ids := make([]common.Identifier, len(s))
-	for i, s := range s {
-		ids[i] = id(s)
-	}
-	return ids
-}
-
-func extract(result common.MatchResultSet, s string) interface{} {
-	return result.Get(id(s))
-}
 
 type importSpec struct {
 	importSet importSet
@@ -120,7 +104,6 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		return newLibraryReference(result[common.Symbol("library-reference")].(common.Syntax))
 	}
 	if result, ok := PatternImportSetOnly.Match(d); ok {
-		return newLibraryReference(result[common.Symbol("library-reference")].(common.Syntax))
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err

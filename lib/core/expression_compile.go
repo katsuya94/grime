@@ -146,26 +146,28 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
 			literals = append(literals, literal)
-			literalScope.Set(literal, &common.Literal{literal})
-		}
-		var (
-			patterns                []common.Syntax
-			patternVariableBindings [][]patternVariableBinding
-			fenderExpressions       []common.Expression
-			outputExpressions       []common.Expression
-		)
-		for i := range form.Patterns {
-			pattern := common.NewSyntax(form.Patterns[i]).Push(literalScope, common.LEXICAL)
-			mis, err := common.PatternVariables(pattern, literals)
+			err := literalScope.Set(literal, &common.Literal{literal})
 			if err != nil {
 				return nil, err
 			}
-			bindings := []patternVariableBinding{}
+		}
+		var (
+			patterns          []common.Pattern
+			patternVariabless [][]*common.PatternVariable
+			fenderExpressions []common.Expression
+			outputExpressions []common.Expression
+		)
+		for i := range form.Patterns {
+			pattern := common.NewSyntax(form.Patterns[i]).Push(literalScope, common.LEXICAL)
+			compiled, patternVariableInfos, err := common.CompilePattern(pattern)
+			if err != nil {
+				return nil, err
+			}
 			scope := common.NewScope()
-			for _, mi := range mis {
-				patternVariable := &common.PatternVariable{nil, mi.Nesting}
-				bindings = append(bindings, patternVariableBinding{mi.Id, patternVariable})
-				err := scope.Set(mi.Id, patternVariable)
+			patternVariables := []*common.PatternVariable{}
+			for _, patternVariableInfo := range patternVariableInfos {
+				patternVariables = append(patternVariables, patternVariableInfo.PatternVariable)
+				err := scope.Set(patternVariableInfo.Id, patternVariableInfo.PatternVariable)
 				if err != nil {
 					return nil, err
 				}
@@ -180,12 +182,12 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			if err != nil {
 				return nil, err
 			}
-			patterns = append(patterns, pattern)
-			patternVariableBindings = append(patternVariableBindings, bindings)
+			patterns = append(patterns, compiled)
+			patternVariabless = append(patternVariabless, patternVariables)
 			fenderExpressions = append(fenderExpressions, fenderExpression)
 			outputExpressions = append(outputExpressions, outputExpression)
 		}
-		return SyntaxCase{inputExpression, literals, patterns, patternVariableBindings, fenderExpressions, outputExpressions}, nil
+		return SyntaxCase{inputExpression, patterns, patternVariabless, fenderExpressions, outputExpressions}, nil
 	case common.WrappedSyntax:
 		switch datum := form.Datum().(type) {
 		case common.Boolean, common.Number, common.Character, common.String:

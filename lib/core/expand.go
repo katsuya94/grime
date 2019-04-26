@@ -35,7 +35,7 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 	if form, ok, err := expandMacroMatching(syntax, PatternMacroUseSingletonIdentifier); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok := PatternApplication.Match(common.NewSyntax(syntax)); ok {
+	if result, ok := PatternApplication.Match(syntax); ok {
 		procedure := result[common.Symbol("procedure")].(common.Syntax).Datum()
 		var arguments []common.Datum
 		for _, syntax := range result[common.Symbol("arguments")].([]interface{}) {
@@ -43,7 +43,7 @@ func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
 		}
 		return ApplicationForm{procedure, arguments}, true, nil
 	}
-	id, ok := common.NewSyntax(form).Identifier()
+	id, ok := syntax.Identifier()
 	if ok {
 		return ReferenceForm{id}, true, nil
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/katsuya94/grime/lib"
 	"github.com/katsuya94/grime/lib/core"
+	"github.com/katsuya94/grime/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +32,10 @@ func repl() error {
 	if err != nil {
 		return err
 	}
-	bindings := lib.Runtime.BindingsFor(lib.StandardLibraryName)
-	lib.Runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
+	bindings, err := lib.Runtime.BindingsFor(lib.StandardLibraryName)
+	if err != nil {
+		return err
+	}
+	runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
 	return nil
 }
