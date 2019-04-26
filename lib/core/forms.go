@@ -10,81 +10,81 @@ func markIds(in []common.Identifier, m *common.M) []common.Identifier {
 	return out
 }
 
-func markData(in []common.Datum, m *common.M) []common.Datum {
-	out := make([]common.Datum, len(in))
+func markMany(in []common.Syntax, m *common.M) []common.Syntax {
+	out := make([]common.Syntax, len(in))
 	for i := range in {
-		out[i] = common.Mark(in[i], m)
+		out[i] = in[i].Mark(m)
 	}
 	return out
 }
 
 type DefineSyntaxForm struct {
 	Identifier common.Identifier
-	Form       common.Datum
+	Form       common.Syntax
 }
 
 func (f DefineSyntaxForm) Mark(m *common.M) common.Marker {
 	return DefineSyntaxForm{
 		f.Identifier.Mark(m),
-		common.Mark(f.Form, m),
+		f.Form.Mark(m),
 	}
 }
 
 type SyntaxCaseForm struct {
-	Input    common.Datum
+	Input    common.Syntax
 	Literals []common.Identifier
-	Patterns []common.Datum
-	Fenders  []common.Datum
-	Outputs  []common.Datum
+	Patterns []common.Syntax
+	Fenders  []common.Syntax
+	Outputs  []common.Syntax
 }
 
 func (f SyntaxCaseForm) Mark(m *common.M) common.Marker {
 	return SyntaxCaseForm{
-		common.Mark(f.Input, m),
+		f.Input.Mark(m),
 		markIds(f.Literals, m),
-		markData(f.Patterns, m),
-		markData(f.Fenders, m),
-		markData(f.Outputs, m),
+		markMany(f.Patterns, m),
+		markMany(f.Fenders, m),
+		markMany(f.Outputs, m),
 	}
 }
 
 type DefineForm struct {
 	Identifier common.Identifier
-	Form       common.Datum
+	Form       common.Syntax
 }
 
 func (f DefineForm) Mark(m *common.M) common.Marker {
 	return DefineForm{
 		f.Identifier.Mark(m),
-		common.Mark(f.Form, m),
+		f.Form.Mark(m),
 	}
 }
 
 type IfForm struct {
-	Condition common.Datum
-	Then      common.Datum
-	Else      common.Datum
+	Condition common.Syntax
+	Then      common.Syntax
+	Else      common.Syntax
 }
 
 func (f IfForm) Mark(m *common.M) common.Marker {
 	return IfForm{
-		common.Mark(f.Condition, m),
-		common.Mark(f.Then, m),
-		common.Mark(f.Else, m),
+		f.Condition.Mark(m),
+		f.Then.Mark(m),
+		f.Else.Mark(m),
 	}
 }
 
 type LetForm struct {
 	Identifier common.Identifier
-	Init       common.Datum
-	Body       []common.Datum
+	Init       common.Syntax
+	Body       []common.Syntax
 }
 
 func (f LetForm) Mark(m *common.M) common.Marker {
 	return LetForm{
 		f.Identifier.Mark(m),
-		common.Mark(f.Init, m),
-		markData(f.Body, m),
+		f.Init.Mark(m),
+		markMany(f.Body, m),
 	}
 }
 
@@ -95,48 +95,48 @@ func (f LetSyntaxForm) Mark(m *common.M) common.Marker {
 }
 
 type BeginForm struct {
-	Forms []common.Datum
+	Forms []common.Syntax
 }
 
 func (f BeginForm) Mark(m *common.M) common.Marker {
 	return BeginForm{
-		markData(f.Forms, m),
+		markMany(f.Forms, m),
 	}
 }
 
 type ApplicationForm struct {
-	Procedure common.Datum
-	Arguments []common.Datum
+	Procedure common.Syntax
+	Arguments []common.Syntax
 }
 
 func (f ApplicationForm) Mark(m *common.M) common.Marker {
 	return ApplicationForm{
-		common.Mark(f.Procedure, m),
-		markData(f.Arguments, m),
+		f.Procedure.Mark(m),
+		markMany(f.Arguments, m),
 	}
 }
 
 type LambdaForm struct {
 	Formals []common.Identifier
-	Body    []common.Datum
+	Body    []common.Syntax
 }
 
 func (f LambdaForm) Mark(m *common.M) common.Marker {
 	return LambdaForm{
 		markIds(f.Formals, m),
-		markData(f.Body, m),
+		markMany(f.Body, m),
 	}
 }
 
 type SetForm struct {
 	Identifier common.Identifier
-	Form       common.Datum
+	Form       common.Syntax
 }
 
 func (f SetForm) Mark(m *common.M) common.Marker {
 	return SetForm{
 		f.Identifier.Mark(m),
-		common.Mark(f.Form, m),
+		f.Form.Mark(m),
 	}
 }
 
@@ -159,11 +159,11 @@ func (f QuoteForm) Mark(m *common.M) common.Marker {
 }
 
 type SyntaxForm struct {
-	Datum common.Datum
+	Template common.Syntax
 }
 
 func (f SyntaxForm) Mark(m *common.M) common.Marker {
 	return SyntaxForm{
-		common.Mark(f.Datum, m),
+		f.Template.Mark(m),
 	}
 }

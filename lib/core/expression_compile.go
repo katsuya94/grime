@@ -6,32 +6,32 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression, error) {
+func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression, error) {
 	form, err := compiler.ExpandCompletely(form)
 	if err != nil {
 		return nil, err
 	}
-	switch form := form.(type) {
+	switch form := form.Datum().(type) {
 	case QuoteForm:
 		return Literal{form.Datum}, nil
 	case SyntaxForm:
-		template, patternVariablesUnexpanded, err := compileTemplate(common.NewSyntax(form.Datum))
+		template, patternVariablesUnexpanded, err := compileTemplate(form.Template)
 		if err != nil {
 			return nil, err
 		}
 		var patternVariables []*common.PatternVariable
 		for patternVariable, n := range patternVariablesUnexpanded {
 			if n > 0 {
-				return nil, fmt.Errorf("compile: in syntax template at %v: encountered unexpanded pattern variable", common.NewSyntax(form.Datum).SourceLocation())
+				return nil, fmt.Errorf("compile: in syntax template at %v: encountered unexpanded pattern variable", form.Template.SourceLocation())
 			}
 			patternVariables = append(patternVariables, patternVariable)
 		}
 		return SyntaxTemplate{template, patternVariables}, nil
 	case BeginForm:
 		scope := common.NewScope()
-		forms := make([]common.Datum, len(form.Forms))
+		forms := make([]common.Syntax, len(form.Forms))
 		for i := range form.Forms {
-			forms[i] = common.NewSyntax(form.Forms[i]).Push(scope, common.LEXICAL).Datum()
+			forms[i] = form.Forms[i].Push(scope, common.LEXICAL)
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -63,9 +63,9 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 		if err != nil {
 			return nil, err
 		}
-		forms := make([]common.Datum, len(form.Body))
+		forms := make([]common.Syntax, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.NewSyntax(form.Body[i]).Push(scope, common.LEXICAL).Datum()
+			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
 		}
 		bodyExpression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -97,9 +97,9 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			}
 			variables = append(variables, variable)
 		}
-		forms := make([]common.Datum, len(form.Body))
+		forms := make([]common.Syntax, len(form.Body))
 		for i := range form.Body {
-			forms[i] = common.NewSyntax(form.Body[i]).Push(scope, common.LEXICAL).Datum()
+			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
 		}
 		expression, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
@@ -158,7 +158,7 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 			outputExpressions []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern := common.NewSyntax(form.Patterns[i]).Push(literalScope, common.LEXICAL)
+			pattern := form.Patterns[i].Push(literalScope, common.LEXICAL)
 			compiled, patternVariableInfos, err := common.CompilePattern(pattern)
 			if err != nil {
 				return nil, err
@@ -172,8 +172,8 @@ func ExpressionCompile(compiler Compiler, form common.Datum) (common.Expression,
 					return nil, err
 				}
 			}
-			fender := common.NewSyntax(form.Fenders[i]).Push(scope, common.LEXICAL).Datum()
-			output := common.NewSyntax(form.Outputs[i]).Push(scope, common.LEXICAL).Datum()
+			fender := form.Fenders[i].Push(scope, common.LEXICAL)
+			output := form.Outputs[i].Push(scope, common.LEXICAL)
 			fenderExpression, err := compiler.ExpressionCompile(fender)
 			if err != nil {
 				return nil, err

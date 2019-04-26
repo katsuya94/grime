@@ -6,12 +6,12 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func BodyCompile(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error) {
+func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
 	var (
 		i                         int
 		sourceLocations           []common.SourceLocation
 		definitionVariables       []*common.Variable
-		definitionForms           []common.Datum
+		definitionForms           []common.Syntax
 		definitionSourceLocations []common.SourceLocation
 	)
 	for _, form := range forms {
@@ -23,7 +23,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, scope common.Scope) (c
 		expression := false
 		for !processed {
 			form := forms[i]
-			switch v := form.(type) {
+			switch v := form.Datum().(type) {
 			case DefineSyntaxForm:
 				keyword := &common.Keyword{}
 				err := scope.Set(v.Identifier, keyword)
@@ -35,7 +35,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, scope common.Scope) (c
 				if err != nil {
 					return nil, err
 				}
-				form := common.NewSyntax(v.Form).Push(rhsScope, common.LEXICAL).Next().Datum()
+				form := common.NewSyntax(v.Form).Push(rhsScope, common.LEXICAL).Next()
 				expression, err := compiler.ExpressionCompile(form)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
@@ -87,7 +87,7 @@ func BodyCompile(compiler Compiler, forms []common.Datum, scope common.Scope) (c
 			case LetSyntaxForm:
 				return nil, fmt.Errorf("compile: let-syntax not implemented")
 			default:
-				expanded, ok, err := compiler.Expand(v)
+				expanded, ok, err := compiler.Expand(common.NewSyntax(v))
 				if err != nil {
 					return nil, err
 				} else if !ok {

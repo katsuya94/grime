@@ -19,9 +19,9 @@ func (err ExpressionCompileError) Error() string {
 	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
 }
 
-type BodyCompiler func(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error)
-type ExpressionCompiler func(compiler Compiler, form common.Datum) (common.Expression, error)
-type Expander func(compiler Compiler, form common.Datum) (common.Datum, bool, error)
+type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error)
+type ExpressionCompiler func(compiler Compiler, form common.Syntax) (common.Expression, error)
+type Expander func(compiler Compiler, form common.Syntax) (common.Syntax, bool, error)
 
 type Compiler struct {
 	BodyCompiler       BodyCompiler
@@ -37,23 +37,23 @@ func NewCompiler() Compiler {
 	}
 }
 
-func (compiler Compiler) BodyCompile(forms []common.Datum, scope common.Scope) (common.Expression, error) {
+func (compiler Compiler) BodyCompile(forms []common.Syntax, scope common.Scope) (common.Expression, error) {
 	return compiler.BodyCompiler(compiler, forms, scope)
 }
 
-func (compiler Compiler) ExpressionCompile(form common.Datum) (common.Expression, error) {
+func (compiler Compiler) ExpressionCompile(form common.Syntax) (common.Expression, error) {
 	return compiler.ExpressionCompiler(compiler, form)
 }
 
-func (compiler Compiler) Expand(form common.Datum) (common.Datum, bool, error) {
+func (compiler Compiler) Expand(form common.Syntax) (common.Syntax, bool, error) {
 	return compiler.Expander(compiler, form)
 }
 
-func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, error) {
+func (compiler Compiler) ExpandCompletely(form common.Syntax) (common.Syntax, error) {
 	for {
 		expanded, ok, err := compiler.Expand(form)
 		if err != nil {
-			return nil, err
+			return common.Syntax{}, err
 		} else if !ok {
 			return form, nil
 		}
@@ -64,7 +64,7 @@ func (compiler Compiler) ExpandCompletely(form common.Datum) (common.Datum, erro
 func Compile(body common.Syntax, scope common.Scope) (common.Expression, error) {
 	scope = common.NewProxyScope(scope)
 	body = body.Push(scope, common.LEXICAL)
-	var forms []common.Datum
+	var forms []common.Syntax
 	for {
 		pair, ok := body.Pair()
 		if !ok {
@@ -72,7 +72,7 @@ func Compile(body common.Syntax, scope common.Scope) (common.Expression, error) 
 		}
 		first := common.NewSyntax(pair.First)
 		rest := common.NewSyntax(pair.Rest)
-		forms = append(forms, first.Datum())
+		forms = append(forms, first)
 		body = rest
 	}
 	return NewCompiler().BodyCompile(forms, scope)

@@ -18,63 +18,62 @@ var (
 	PatternApplication                 = common.MustCompileSimplePattern(read.MustReadDatum("(procedure arguments ...)"))
 )
 
-func Expand(compiler Compiler, form common.Datum) (common.Datum, bool, error) {
+func Expand(compiler Compiler, form common.Syntax) (common.Syntax, bool, error) {
 	// TODO: what happens if we limit this to WrappedSyntax only?
 	// r6rs-lib 12.3 seems to imply that transformers should only take wrapped syntax objects,
 	// however macro uses would then often be unable to expand into macro uses
-	syntax := common.NewSyntax(form)
-	if form, ok, err := expandMacroMatching(syntax, PatternMacroUseSet); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(syntax, PatternMacroUseList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseList); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(syntax, PatternMacroUseImproperList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseImproperList); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(syntax, PatternMacroUseSingletonIdentifier); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier); ok || err != nil {
 		return form, ok, err
 	}
-	if result, ok := PatternApplication.Match(syntax); ok {
-		procedure := result[common.Symbol("procedure")].(common.Syntax).Datum()
-		var arguments []common.Datum
+	if result, ok := PatternApplication.Match(form); ok {
+		procedure := result[common.Symbol("procedure")].(common.Syntax)
+		var arguments []common.Syntax
 		for _, syntax := range result[common.Symbol("arguments")].([]interface{}) {
-			arguments = append(arguments, syntax.(common.Syntax).Datum())
+			arguments = append(arguments, syntax.(common.Syntax))
 		}
-		return ApplicationForm{procedure, arguments}, true, nil
+		return common.NewSyntax(ApplicationForm{procedure, arguments}), true, nil
 	}
-	id, ok := syntax.Identifier()
+	id, ok := form.Identifier()
 	if ok {
-		return ReferenceForm{id}, true, nil
+		return common.NewSyntax(ReferenceForm{id}), true, nil
 	}
-	return nil, false, nil
+	return common.Syntax{}, false, nil
 }
 
-func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (common.Datum, bool, error) {
+func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (common.Syntax, bool, error) {
 	result, ok := pattern.Match(syntax)
 	if !ok {
-		return nil, false, nil
+		return common.Syntax{}, false, nil
 	}
 	id, ok := result[common.Symbol("keyword")].(common.Syntax).Identifier()
 	if !ok {
-		return nil, false, nil
+		return common.Syntax{}, false, nil
 	}
 	location := id.Location()
 	if location == nil {
-		return nil, false, nil
+		return common.Syntax{}, false, nil
 	}
 	keyword, ok := location.(*common.Keyword)
 	if !ok {
-		return nil, false, nil
+		return common.Syntax{}, false, nil
 	}
 	if keyword.Transformer == nil {
-		return nil, false, fmt.Errorf("expand: cannot use keyword before definition")
+		return common.Syntax{}, false, fmt.Errorf("expand: cannot use keyword before definition")
 	}
 	mark := common.NewMark()
-	input := common.Mark(syntax.Datum(), mark)
-	output, err := util.Invoke(keyword.Transformer, input)
+	input := syntax.Mark(mark)
+	output, err := util.Invoke(keyword.Transformer, input.Datum())
 	if err != nil {
-		return nil, false, err
+		return common.Syntax{}, false, err
 	}
-	return common.Mark(output, mark), true, nil
+	return common.NewSyntax(output).Mark(mark), true, nil
 }

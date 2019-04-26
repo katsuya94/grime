@@ -118,8 +118,8 @@ func formatRest(d Datum) string {
 
 func (d Pair) Mark(m *M) Marker {
 	return Pair{
-		Mark(d.First, m),
-		Mark(d.Rest, m),
+		NewSyntax(d.First).Mark(m).Datum(),
+		NewSyntax(d.Rest).Mark(m).Datum(),
 	}
 }
 

@@ -18,7 +18,7 @@ func (id Identifier) Location() Location {
 }
 
 func (id Identifier) Mark(m *M) Identifier {
-	return Identifier{id.WrappedSyntax.Mark(m).(WrappedSyntax)}
+	return Identifier{NewSyntax(id.WrappedSyntax).Mark(m).Datum().(WrappedSyntax)}
 }
 
 func (id Identifier) Equal(other Identifier) bool {
@@ -113,6 +113,10 @@ func (s Syntax) Unwrap() Datum {
 		datum = wrapped.Datum()
 	}
 	return datum
+}
+
+func (s Syntax) Mark(m *M) Syntax {
+	return Syntax{s.datum.(Marker).Mark(m)}
 }
 
 func (s Syntax) Datum() Datum {
