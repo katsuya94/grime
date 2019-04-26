@@ -10,7 +10,7 @@ func Locations(n uintptr) []common.Variable {
 }
 
 func Syntax(s string) common.Syntax {
-	return read.MustReadSyntax(s)
+	return common.NewSyntax(common.NewWrappedSyntax(read.MustReadDatum(s), nil))
 }
 
 func Identifier(s string) common.Identifier {
@@ -19,15 +19,6 @@ func Identifier(s string) common.Identifier {
 		panic("not an identifier")
 	}
 	return id
-}
-
-func FindPatternVariable(patternVariableInfos []common.PatternVariableInfo, id common.Identifier) *common.PatternVariable {
-	for _, patternVariableInfo := range patternVariableInfos {
-		if patternVariableInfo.Id.Equal(id) {
-			return patternVariableInfo.PatternVariable
-		}
-	}
-	panic("pattern variable not found")
 }
 
 func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {

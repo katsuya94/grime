@@ -96,6 +96,7 @@ func TestPatternVariable_MatchAnything(t *testing.T) {
 	require.Len(t, patternVariableInfos, 1)
 	patternVariableInfo := patternVariableInfos[0]
 	require.True(t, patternVariableInfo.Id.Equal(test.Identifier("pattern-variable")))
+	require.True(t, patternVariableInfo.PatternVariable.Nesting == 0)
 
 	input := test.Syntax("anything")
 
@@ -119,9 +120,162 @@ func TestPatternEllipsis_MatchEmpty(t *testing.T) {
 	require.Empty(t, result)
 }
 
-func TestPatternEllipsis_MatchEmptyWithRestPatternVariable(t *testing.T) {}
-func TestPatternEllipsis_MatchNonEmpty(t *testing.T)                     {}
-func TestPatternEllipsis_MatchNonEmptyWithPatternVariable(t *testing.T)  {}
-func TestPatternEllipsis_MatchNonEmptyEarlyRest(t *testing.T)            {}
-func TestPatternEllipsis_NoMatchBadRest(t *testing.T)                    {}
-func TestPatternEllipsis_NoMatchBadSubPattern(t *testing.T)              {}
+func TestPatternEllipsis_MatchEmptyWithRestPatternVariable(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ... . pattern-variable)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Len(t, patternVariableInfos, 1)
+	patternVariableInfo := patternVariableInfos[0]
+	require.True(t, patternVariableInfo.Id.Equal(test.Identifier("pattern-variable")))
+	require.True(t, patternVariableInfo.PatternVariable.Nesting == 0)
+
+	input := test.Syntax("anything")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Len(t, result, 1)
+	require.Equal(t, test.Syntax("anything"), result[patternVariableInfo.PatternVariable])
+}
+
+func TestPatternEllipsis_MatchNonEmpty(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#t #t)")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Empty(t, result)
+}
+
+func TestPatternEllipsis_MatchNonEmptyWithPatternVariable(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(pattern-variable ...)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Len(t, patternVariableInfos, 1)
+	patternVariableInfo := patternVariableInfos[0]
+	require.True(t, patternVariableInfo.Id.Equal(test.Identifier("pattern-variable")))
+	require.True(t, patternVariableInfo.PatternVariable.Nesting == 1)
+
+	input := test.Syntax("(anything everything)")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Len(t, result, 1)
+	matches := result[patternVariableInfo.PatternVariable].([]interface{})
+	require.Len(t, matches, 2)
+	require.Equal(t, test.Syntax("anything"), matches[0])
+	require.Equal(t, test.Syntax("everything"), matches[1])
+}
+
+func TestPatternEllipsis_MatchNonEmptyEarlyRest(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ... #t)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#t #t)")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Empty(t, result)
+}
+
+func TestPatternEllipsis_NoMatchBadRest(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("#t")
+
+	_, ok := compiled.Match(input)
+	require.False(t, ok)
+}
+
+func TestPatternEllipsis_NoMatchBadSubPattern(t *testing.T) {
+	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#f)")
+
+	_, ok := compiled.Match(input)
+	require.False(t, ok)
+}
+
+func TestPatternPair_Match(t *testing.T) {
+	pattern := test.Syntax("(#t . #t)")
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#t . #t)")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Empty(t, result)
+}
+
+func TestPatternPair_NoMatchBadFirst(t *testing.T) {
+	pattern := test.Syntax("(#t . #t)")
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#f . #t)")
+
+	_, ok := compiled.Match(input)
+	require.False(t, ok)
+}
+
+func TestPatternPair_NoMatchBadRest(t *testing.T) {
+	pattern := test.Syntax("(#t . #t)")
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("(#t . #f)")
+
+	_, ok := compiled.Match(input)
+	require.False(t, ok)
+}
+
+func TestPatternDatum_Match(t *testing.T) {
+	pattern := test.Syntax("#t")
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("#t")
+
+	result, ok := compiled.Match(input)
+	require.True(t, ok)
+	require.Empty(t, result)
+}
+
+func TestPatternDatum_NoMatch(t *testing.T) {
+	pattern := test.Syntax("#t")
+
+	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	require.NoError(t, err)
+	require.Empty(t, patternVariableInfos)
+
+	input := test.Syntax("#f")
+
+	_, ok := compiled.Match(input)
+	require.False(t, ok)
+}

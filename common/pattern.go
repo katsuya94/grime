@@ -87,7 +87,7 @@ func (p patternEllipsis) Match(syntax Syntax) (map[*PatternVariable]interface{},
 			}
 		}
 		// If the syntax is not a pair or its first doesn't match subPattern...
-		if restResult, ok := p.restPattern.Match(syntax); !ok {
+		if restResult, ok := p.restPattern.Match(syntax); ok {
 			// And the syntax matches restPattern, we are done.
 			result = restResult
 			break
@@ -139,7 +139,7 @@ type patternDatum struct {
 }
 
 func (p patternDatum) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
-	if syntax.Datum() != p.datum {
+	if syntax.Unwrap() != p.datum {
 		return nil, false
 	}
 	return map[*PatternVariable]interface{}{}, true
@@ -205,7 +205,7 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 		}
 		return patternPair{firstPattern, restPattern}, patternVariableInfos, nil
 	}
-	return patternDatum{syntax.Datum()}, nil, nil
+	return patternDatum{syntax.Unwrap()}, nil, nil
 }
 
 func mergePatternVariableInfos(leftPatternVariableInfos, rightPatternVariableInfos []PatternVariableInfo) ([]PatternVariableInfo, error) {
