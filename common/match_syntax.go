@@ -4,15 +4,6 @@ import (
 	"fmt"
 )
 
-var (
-	UnderscoreKeyword = Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
-		return nil, fmt.Errorf("cannot expand underscore")
-	})}
-	EllipsisKeyword = Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
-		return nil, fmt.Errorf("cannot expand ellipsis")
-	})}
-)
-
 var patternScope BaseScope
 
 func init() {

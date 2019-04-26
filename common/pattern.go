@@ -2,6 +2,15 @@ package common
 
 import "fmt"
 
+var (
+	UnderscoreKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand underscore")
+	})}
+	EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (EvaluationResult, error) {
+		return nil, fmt.Errorf("cannot expand ellipsis")
+	})}
+)
+
 type Pattern interface {
 	Match(Syntax) (map[*PatternVariable]interface{}, bool)
 }
@@ -147,10 +156,10 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 		if location, ok := location.(*Literal); ok {
 			return patternLiteral{location.Id}, nil, nil
 		}
-		if location == &UnderscoreKeyword {
+		if location == UnderscoreKeyword {
 			return patternUnderscore{}, nil, nil
 		}
-		if location == &EllipsisKeyword {
+		if location == EllipsisKeyword {
 			return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
 		}
 		variable := &PatternVariable{}
