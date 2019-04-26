@@ -13,15 +13,23 @@ type SimplePattern struct {
 	patternVariableInfos []PatternVariableInfo
 }
 
-func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
+func CompileSimplePattern(datum Datum, literals ...Symbol) (SimplePattern, error) {
 	ids := []Identifier{}
 	for _, literal := range literals {
 		ids = append(ids, NewIdentifier(literal))
 	}
-	return MustCompileSimplePatternWithIdentifierLiterals(datum, ids...)
+	return CompileSimplePatternWithIdentifierLiterals(datum, ids...)
 }
 
-func MustCompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) SimplePattern {
+func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
+	simplePattern, err := CompileSimplePattern(datum, literals...)
+	if err != nil {
+		panic(err)
+	}
+	return simplePattern
+}
+
+func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) (SimplePattern, error) {
 	syntax := NewSyntax(NewWrappedSyntax(datum, nil))
 	syntax = syntax.Push(simplePatternScope, LEXICAL)
 	if len(literals) > 0 {
@@ -35,9 +43,17 @@ func MustCompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Ide
 	}
 	pattern, patternVariableInfos, err := CompilePattern(syntax)
 	if err != nil {
+		return SimplePattern{}, err
+	}
+	return SimplePattern{pattern, patternVariableInfos}, nil
+}
+
+func MustCompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) SimplePattern {
+	simplePattern, err := CompileSimplePatternWithIdentifierLiterals(datum, literals...)
+	if err != nil {
 		panic(err)
 	}
-	return SimplePattern{pattern, patternVariableInfos}
+	return simplePattern
 }
 
 func (sp SimplePattern) Match(syntax Syntax) (map[Symbol]interface{}, bool) {
