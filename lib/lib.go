@@ -1,4 +1,4 @@
-package cmd
+package lib
 
 import (
 	"github.com/katsuya94/grime/common"
@@ -23,19 +23,23 @@ var libraryBindings = []libraryBinding{
 	{fmt.Library, fmt.Bindings},
 }
 
-func newRuntime() (*runtime.Runtime, error) {
-	rt := runtime.NewRuntime(core.Compile)
+var StandardLibraryName = []common.Symbol{common.Symbol("grime")}
+
+var Runtime *runtime.Runtime
+
+func init() {
+	Runtime = runtime.NewRuntime(core.Compile)
 	for _, libraryBinding := range libraryBindings {
-		err := rt.Provide(libraryBinding.library)
+		LibraryNames = append(LibraryNames, libraryBinding.library.Name())
+		err := Runtime.Provide(libraryBinding.library)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		if libraryBinding.bindings != nil {
-			err := rt.Bind(libraryBinding.library.Name(), libraryBinding.bindings)
+			err := Runtime.Bind(libraryBinding.library.Name(), libraryBinding.bindings)
 			if err != nil {
-				return nil, err
+				panic(err)
 			}
 		}
 	}
-	return rt, nil
 }

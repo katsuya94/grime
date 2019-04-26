@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/katsuya94/grime/lib"
 	"github.com/katsuya94/grime/read"
 	"github.com/spf13/cobra"
 )
@@ -26,10 +27,6 @@ var runCmd = &cobra.Command{
 }
 
 func run(path string) error {
-	rt, err := newRuntime()
-	if err != nil {
-		return err
-	}
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -38,5 +35,5 @@ func run(path string) error {
 	if err != nil {
 		return err
 	}
-	return rt.Execute(topLevelProgram, nullSourceLocationTree)
+	return lib.Runtime.Execute(topLevelProgram, nullSourceLocationTree)
 }

@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	PatternLibrary      = common.Pattern(read.MustReadDatum("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)"))
-	PatternVersion      = common.Pattern(read.MustReadDatum("(sub-version ...)"))
-	PatternExportRename = common.Pattern(read.MustReadDatum("(rename (internal external) ...)"))
+	PatternLibrary      = common.MustCompileSimplePattern(read.MustReadDatum("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)"), common.Symbol("library"), common.Symbol("export"), common.Symbol("import"))
+	PatternVersion      = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version ...)"))
+	PatternExportRename = common.MustCompileSimplePattern(read.MustReadDatum("(rename (internal external) ...)"), common.Symbol("rename"))
 )
 
 type Library struct {
@@ -30,13 +30,11 @@ type Library struct {
 
 func NewLibrary(source common.Syntax) (*Library, error) {
 	library := &Library{}
-	result, ok, err := common.MatchSyntaxSimple(source, PatternLibrary, "library", "export", "import")
-	if err != nil {
-		return nil, err
-	} else if !ok {
+	result, ok := PatternLibrary.Match(source)
+	if !ok {
 		return nil, fmt.Errorf("runtime: malformed library")
 	}
-	libraryName := result.Get("library-name").([]interface{})
+	libraryName := result[common.Symbol("library-name")].([]interface{})
 	if len(libraryName) == 0 {
 		return nil, fmt.Errorf("runtime: malformed library")
 	}
@@ -49,13 +47,11 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok, err := common.MatchSyntaxSimple(libraryName[i].(common.Syntax), PatternVersion)
-		if err != nil {
-			return nil, err
-		} else if !ok {
+		result, ok := PatternVersion.Match(libraryName[i].(common.Syntax))
+		if !ok {
 			return nil, fmt.Errorf("runtime: malformed library name")
 		}
-		for _, d := range result.Get("sub-version").([]interface{}) {
+		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
 			subV, err := newSubVersion(d.(common.Syntax))
 			if err != nil {
 				return nil, err
@@ -65,21 +61,21 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 	} else if i < len(libraryName)-1 {
 		return nil, fmt.Errorf("runtime: malformed library name")
 	}
-	for _, d := range result.Get("export-spec").([]interface{}) {
+	for _, d := range result[common.Symbol("export-spec")].([]interface{}) {
 		exportSpecs, err := newExportSpecs(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.exportSpecs = append(library.exportSpecs, exportSpecs...)
 	}
-	for _, d := range result.Get("import-spec").([]interface{}) {
+	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
 		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
-	for _, d := range result.Get("body").([]interface{}) {
+	for _, d := range result[common.Symbol("body")].([]interface{}) {
 		library.body = append(library.body, d.(common.Syntax))
 	}
 	null := source
@@ -157,11 +153,9 @@ func (l *Library) AddScope(scope common.Scope) {
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
-	if result, ok, err := common.MatchSyntaxSimple(d, PatternExportRename, "rename"); err != nil {
-		return nil, err
-	} else if ok {
+	if result, ok := PatternExportRename.Match(d); ok {
 		var internalIdentifiers []common.Symbol
-		for _, d := range result.Get("internal").([]interface{}) {
+		for _, d := range result[common.Symbol("internal")].([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				internalIdentifiers = append(internalIdentifiers, id)
 			} else {
@@ -169,7 +163,7 @@ func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
 			}
 		}
 		var externalIdentifiers []common.Symbol
-		for _, d := range result.Get("external").([]interface{}) {
+		for _, d := range result[common.Symbol("external")].([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {
 				externalIdentifiers = append(externalIdentifiers, id)
 			} else {

@@ -4,19 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/lib"
 	"github.com/katsuya94/grime/lib/core"
-	"github.com/katsuya94/grime/runtime"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	rootCmd.AddCommand(replCmd)
-}
-
-var libraryNames = [][]common.Symbol{
-	{common.Symbol("grime")},
-	{common.Symbol("fmt")},
 }
 
 var replCmd = &cobra.Command{
@@ -33,22 +27,11 @@ var replCmd = &cobra.Command{
 }
 
 func repl() error {
-	rt, err := newRuntime()
+	err := lib.Runtime.Instantiate(lib.StandardLibraryName)
 	if err != nil {
 		return err
 	}
-	err = rt.Instantiate([]common.Symbol{common.Symbol("grime")})
-	if err != nil {
-		return err
-	}
-	bindings := common.NewBindingSet()
-	for _, name := range libraryNames {
-		b, err := rt.BindingsFor(name)
-		if err != nil {
-			return err
-		}
-		bindings.Merge(b)
-	}
-	runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
+	bindings := lib.Runtime.BindingsFor(lib.StandardLibraryName)
+	lib.Runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
 	return nil
 }
