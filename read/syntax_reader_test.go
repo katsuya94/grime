@@ -3,6 +3,7 @@ package read
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/katsuya94/grime/common"
@@ -152,7 +153,7 @@ func TestRead(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			syntaxes, nullSourceLocationTree, err := ReadString(test.source)
+			syntaxes, nullSourceLocationTree, err := Read("string", strings.NewReader(test.source))
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

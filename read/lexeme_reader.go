@@ -109,7 +109,7 @@ func (l *LexemeReader) readInterlexemeSpace() error {
 				if err != nil {
 					return err
 				}
-				_, _, err = (&DatumReader{l}).expectDatum()
+				_, _, err = (&SyntaxReader{l}).expectDatum()
 				if err != nil {
 					return err
 				}
