@@ -14,13 +14,22 @@ type SimplePattern struct {
 }
 
 func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
+	ids := []Identifier{}
+	for _, literal := range literals {
+		ids = append(ids, NewIdentifier(literal))
+	}
+	return MustCompileSimplePatternWithIdentifierLiterals(datum, ids...)
+}
+
+func MustCompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) SimplePattern {
 	syntax := NewSyntax(NewWrappedSyntax(datum, nil))
 	syntax = syntax.Push(simplePatternScope, LEXICAL)
 	if len(literals) > 0 {
 		literalScope := NewScope()
 		for _, literal := range literals {
-			id := NewIdentifier(literal)
-			literalScope.Set(id, &Literal{id})
+			// when compiling, treat an identifier with the same name as a literal for the provided identifier
+			id := NewIdentifier(literal.Name())
+			literalScope.Set(id, &Literal{literal})
 		}
 		syntax = syntax.Push(literalScope, LEXICAL)
 	}

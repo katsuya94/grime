@@ -11,7 +11,7 @@ import (
 	"github.com/katsuya94/grime/util"
 )
 
-var PatternTopLevelProgramImportForm = common.Pattern(read.MustReadDatum("(import import-spec ...)"))
+var PatternTopLevelProgramImportForm = common.MustCompileSimplePattern(read.MustReadDatum("(import import-spec ...)"), common.Symbol("import"))
 
 type Runtime struct {
 	compiler   common.Compiler
@@ -56,14 +56,12 @@ func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
 }
 
 func (r *Runtime) Execute(topLevelProgram []common.Syntax, nullSourceLocationTree common.SourceLocationTree) error {
-	result, ok, err := common.MatchSyntaxSimple(topLevelProgram[0], PatternTopLevelProgramImportForm, "import")
-	if err != nil {
-		return err
-	} else if !ok {
+	result, ok := PatternTopLevelProgramImportForm.Match(topLevelProgram[0])
+	if !ok {
 		return fmt.Errorf("runtime: malformed top-level program import form")
 	}
 	var library Library
-	for _, d := range result.Get("import-spec").([]interface{}) {
+	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
 		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
 			return nil
@@ -72,7 +70,7 @@ func (r *Runtime) Execute(topLevelProgram []common.Syntax, nullSourceLocationTre
 	}
 	library.body = topLevelProgram[1:]
 	library.nullSourceLocationTree = nullSourceLocationTree
-	err = r.Provide(&library)
+	err := r.Provide(&library)
 	if err != nil {
 		return err
 	}

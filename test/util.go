@@ -1,6 +1,9 @@
 package test
 
 import (
+	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/katsuya94/grime/common"
@@ -31,7 +34,12 @@ func WithBinding(id common.Identifier, location common.Location, syntax common.S
 }
 
 func Grime(t *testing.T, source string) {
-	topLevelProgram, nullSourceLocationTree, err := read.Read(path, f)
+	_, file, line, ok := runtime.Caller(1)
+	if !ok {
+		panic("can't determine caller")
+	}
+	filename := fmt.Sprintf("%v:%v:github.com/katsuya94/grime/test.Grime", file, line)
+	topLevelProgram, nullSourceLocationTree, err := read.Read(filename, strings.NewReader(source))
 	require.NoError(t, err)
 	err = lib.Runtime.Execute(topLevelProgram, nullSourceLocationTree)
 	require.NoError(t, err)

@@ -70,7 +70,7 @@ func readREPLSyntaxes(r io.Reader) ([]common.Syntax, common.SourceLocationTree, 
 	for {
 		if scanner.Scan() {
 			source = append(source, scanner.Bytes()...)
-			if syntaxes, nullSourceLocationTree, err := read.ReadBytes(source); err == nil {
+			if syntaxes, nullSourceLocationTree, err := readBytes(source); err == nil {
 				return syntaxes, nullSourceLocationTree, nil
 			} else if _, ok := err.(read.UnexpectedEOFError); !ok {
 				return nil, common.SourceLocationTree{}, err
@@ -79,7 +79,7 @@ func readREPLSyntaxes(r io.Reader) ([]common.Syntax, common.SourceLocationTree, 
 			return nil, common.SourceLocationTree{}, err
 		} else {
 			source = append(source, scanner.Bytes()...)
-			if syntaxes, nullSourceLocationTree, err := read.ReadBytes(source); syntaxes == nil && err == nil {
+			if syntaxes, nullSourceLocationTree, err := readBytes(source); syntaxes == nil && err == nil {
 				return nil, nullSourceLocationTree, io.EOF
 			} else {
 				return syntaxes, common.SourceLocationTree{}, err
@@ -100,4 +100,8 @@ func splitReplLines(data []byte, atEOF bool) (int, []byte, error) {
 
 	}
 	return 0, nil, nil
+}
+
+func readBytes(source []byte) ([]common.Syntax, common.SourceLocationTree, error) {
+	return read.Read("REPL", bytes.NewReader(source))
 }

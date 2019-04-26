@@ -30,7 +30,6 @@ var Runtime *runtime.Runtime
 func init() {
 	Runtime = runtime.NewRuntime(core.Compile)
 	for _, libraryBinding := range libraryBindings {
-		LibraryNames = append(LibraryNames, libraryBinding.library.Name())
 		err := Runtime.Provide(libraryBinding.library)
 		if err != nil {
 			panic(err)

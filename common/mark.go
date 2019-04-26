@@ -9,6 +9,7 @@ type Marker interface {
 	Mark(m *M) Marker
 }
 
+// TODO: refactor this to a method on Syntax
 func Mark(d Datum, m *M) Marker {
 	return d.(Marker).Mark(m)
 }
