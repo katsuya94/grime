@@ -34,6 +34,21 @@ func WithBinding(id common.Identifier, location common.Location, syntax common.S
 	return syntax.Push(scope, common.LEXICAL)
 }
 
+// voidExpression must be of non-zero size for equality comparison
+type voidExpression struct {
+	self *voidExpression
+}
+
+func (*voidExpression) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+	return common.CallC(c, common.Void)
+}
+
+func NewVoidExpression() common.Expression {
+	e := &voidExpression{}
+	e.self = e
+	return e
+}
+
 // func Grime(t *testing.T, source string) {
 // 	_, file, line, ok := runtime.Caller(1)
 // 	if !ok {

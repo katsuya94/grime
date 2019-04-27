@@ -107,6 +107,14 @@ func (s Syntax) Identifier() (Identifier, bool) {
 	return wrapped.Identifier()
 }
 
+func (s Syntax) IdentifierOrDie() Identifier {
+	id, ok := s.Identifier()
+	if !ok {
+		panic("not an identifier")
+	}
+	return id
+}
+
 func (s Syntax) Unwrap() Datum {
 	datum := s.datum
 	if wrapped, ok := datum.(WrappedSyntax); ok {
@@ -148,7 +156,20 @@ func (s Syntax) Pair() (Pair, bool) {
 	}
 }
 
+func (s Syntax) PairOrDie() Pair {
+	pair, ok := s.Pair()
+	if !ok {
+		panic("not a pair")
+	}
+	return pair
+}
+
 func (s Syntax) SourceLocationTree() *SourceLocationTree {
+	// wrapped, ok := s.datum.(WrappedSyntax)
+	// if !ok {
+	// 	return nil
+	// }
+	// return wrapped.SourceLocationTree()
 	switch d := s.datum.(type) {
 	case WrappedSyntax:
 		return d.SourceLocationTree()

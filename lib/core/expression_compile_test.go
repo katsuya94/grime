@@ -3,6 +3,9 @@ package core_test
 import (
 	"testing"
 
+	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/test"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/katsuya94/grime/common"
@@ -11,384 +14,397 @@ import (
 
 func TestExpressionCompile_Quote(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, QuoteForm{datum("id")})
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(QuoteForm{read.MustReadDatum("id")}))
 	require.NoError(t, err)
-	require.Exactly(t, Literal{datum("id")}, expression)
+	require.Equal(t, Literal{read.MustReadDatum("id")}, expression)
 }
 
 func TestExpressionCompile_SyntaxBoolean(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("#f"))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("#f")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNumber(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("123"))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("123")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxCharacter(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum(`#\x`))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax(`#\x`)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxString(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum(`"thing"`))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax(`"thing"`)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNull(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("()"))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("()")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPatternVariableReference(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 0}
-	template := wrap(datum("id"))
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("id")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
-	require.Exactly(t, PatternVariableReference{patternVariable}, syntaxTemplate.Template)
-	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
-	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
+	require.Equal(t, PatternVariableReference{patternVariable}, syntaxTemplate.Template)
+	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
+	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
 
 func TestExpressionCompile_SyntaxPatternVariableUnexpected(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 1}
-	template := wrap(datum("id"))
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("id")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): encountered unexpanded pattern variable")
 }
 
 func TestExpressionCompile_SyntaxImproperEllipsis(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("id"))
-	template = set(template, common.Symbol("id"), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("...")
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): improper use of ellipsis")
 }
 
 func TestExpressionCompile_SyntaxIdentifier(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("id"))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("id")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPair(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("(id . thing)"))
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id . thing)")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Exactly(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 0}
-	template := wrap(datum("(id . thing)"))
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id . thing)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
-	require.Exactly(t, PatternVariableReference{patternVariable}, pair.First)
-	require.Exactly(t, template.PushOnto(template.Datum().(common.Pair).Rest, nil), pair.Rest)
-	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
-	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
+	require.Equal(t, PatternVariableReference{patternVariable}, pair.First)
+	require.Equal(t, template.PairOrDie().Rest, pair.Rest)
+	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
+	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
 
 func TestExpressionCompile_SyntaxPairRestPatternVariableReference(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 0}
-	template := wrap(datum("(id . thing)"))
-	template = set(template, common.Symbol("thing"), patternVariable).(common.WrappedSyntax)
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id . thing)")
+	template = test.WithBinding(common.NewIdentifier("thing"), patternVariable, template)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
-	require.Exactly(t, template.PushOnto(template.Datum().(common.Pair).First, nil), pair.First)
-	require.Exactly(t, PatternVariableReference{patternVariable}, pair.Rest)
-	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
-	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
+	require.Equal(t, template.PairOrDie().First, pair.First)
+	require.Equal(t, PatternVariableReference{patternVariable}, pair.Rest)
+	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
+	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
 
 func TestExpressionCompile_SyntaxEllipsis(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 1}
-	template := wrap(datum("(id ...)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id ...)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	subtemplate := pair.First.(Subtemplate)
-	require.Exactly(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
-	require.Exactly(t, 1, len(subtemplate.Subtemplate.PatternVariables))
-	require.Exactly(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
-	require.Exactly(t, 1, subtemplate.Nesting)
-	require.Exactly(t, 1, len(subtemplate.PatternVariables))
-	require.Exactly(t, patternVariable, subtemplate.PatternVariables[0])
-	require.Exactly(t, template.PushOnto(template.Datum().(common.Pair).Rest.(common.Pair).Rest, nil), pair.Rest)
-	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
-	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
+	require.Equal(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
+	require.Equal(t, 1, len(subtemplate.Subtemplate.PatternVariables))
+	require.Equal(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
+	require.Equal(t, 1, subtemplate.Nesting)
+	require.Equal(t, 1, len(subtemplate.PatternVariables))
+	require.Equal(t, patternVariable, subtemplate.PatternVariables[0])
+	require.Equal(t, common.NewSyntax(template.PairOrDie().Rest).PairOrDie().Rest, pair.Rest)
+	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
+	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
 
 func TestExpressionCompile_SyntaxEllipsisNoPatterVariable(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	template := wrap(datum("(id ...)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id ...)")
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable")
 }
 
 func TestExpressionCompile_SyntaxEllipsisMultiple(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 2}
-	template := wrap(datum("(id ... ...)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	expression, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id ... ...)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	subtemplate := pair.First.(Subtemplate)
-	require.Exactly(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
-	require.Exactly(t, 1, len(subtemplate.Subtemplate.PatternVariables))
-	require.Exactly(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
-	require.Exactly(t, 2, subtemplate.Nesting)
-	require.Exactly(t, 1, len(subtemplate.PatternVariables))
-	require.Exactly(t, patternVariable, subtemplate.PatternVariables[0])
-	require.Exactly(t, template.PushOnto(template.Datum().(common.Pair).Rest.(common.Pair).Rest.(common.Pair).Rest, nil), pair.Rest)
-	require.Exactly(t, 1, len(syntaxTemplate.PatternVariables))
-	require.Exactly(t, patternVariable, syntaxTemplate.PatternVariables[0])
+	require.Equal(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
+	require.Equal(t, 1, len(subtemplate.Subtemplate.PatternVariables))
+	require.Equal(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
+	require.Equal(t, 2, subtemplate.Nesting)
+	require.Equal(t, 1, len(subtemplate.PatternVariables))
+	require.Equal(t, patternVariable, subtemplate.PatternVariables[0])
+	require.Equal(t, common.NewSyntax(common.NewSyntax(template.PairOrDie().Rest).PairOrDie().Rest).PairOrDie().Rest, pair.Rest)
+	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
+	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 }
 
 func TestExpressionCompile_SyntaxEllipsisInexact(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 1}
-	template := wrap(datum("((id ...) ...)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("((id ...) ...)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable determining expansion count")
 }
 
 func TestExpressionCompile_SyntaxEllipsisInexactMultiple(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 1}
-	template := wrap(datum("(id ... ...)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("(id ... ...)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): syntax subtemplate must contain a pattern variable determining expansion count")
 }
 
 func TestExpressionCompile_SyntaxEllipsisIncompatible(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	patternVariable := &common.PatternVariable{Nesting: 1}
-	template := wrap(datum("((id ...) . id)"))
-	template = set(template, common.Symbol("..."), Bindings[0][common.Symbol("...")]).(common.WrappedSyntax)
-	template = set(template, common.Symbol("id"), patternVariable).(common.WrappedSyntax)
-	_, err := ExpressionCompile(compiler, SyntaxForm{template})
+	template := test.Syntax("((id ...) . id)")
+	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
+	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
+	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): incompatible expansion counts in first and rest of pair")
 }
 
 func TestExpressionCompile_Begin(t *testing.T) {
-	form := BeginForm{[]common.Datum{}}
-	expected := comparable()
-	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error) {
+	form := common.NewSyntax(BeginForm{[]common.Syntax{}})
+	expected := test.NewVoidExpression()
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
 		return expected, nil
 	}}
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, expected, expression)
+	require.Equal(t, expected, expression)
 }
 
 func TestExpressionCompile_If(t *testing.T) {
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
-	conditionExpression := comparable()
-	thenExpression := comparable()
-	elseExpression := comparable()
-	expression, err := ExpressionCompile(compiler, IfForm{conditionExpression, thenExpression, elseExpression})
+	conditionExpression := test.NewVoidExpression()
+	thenExpression := test.NewVoidExpression()
+	elseExpression := test.NewVoidExpression()
+	form := common.NewSyntax(IfForm{common.NewSyntax(conditionExpression), common.NewSyntax(thenExpression), common.NewSyntax(elseExpression)})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	ifExpression := expression.(If)
-	require.Exactly(t, conditionExpression, ifExpression.Condition)
-	require.Exactly(t, thenExpression, ifExpression.Then)
-	require.Exactly(t, elseExpression, ifExpression.Else)
+	require.Equal(t, conditionExpression, ifExpression.Condition)
+	require.Equal(t, thenExpression, ifExpression.Then)
+	require.Equal(t, elseExpression, ifExpression.Else)
 }
 
 func TestExpressionCompile_Let(t *testing.T) {
-	id, _ := wrap(datum("id")).Identifier()
-	initExpression := comparable()
-	bodyExpression := comparable()
+	id := test.Identifier("id")
+	initExpression := test.NewVoidExpression()
+	bodyExpression := test.NewVoidExpression()
 	var location common.Location
-	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error) {
-		id, _ := forms[0].(common.WrappedSyntax).Identifier()
-		location = id.Location()
+	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
+		location = forms[0].IdentifierOrDie().Location()
 		return bodyExpression, nil
 	}}
-	expression, err := ExpressionCompile(compiler, LetForm{id, initExpression, []common.Datum{wrap(datum("id"))}})
+	form := common.NewSyntax(LetForm{id, common.NewSyntax(initExpression), []common.Syntax{test.Syntax("id")}})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	letExpression := expression.(Let)
-	require.Exactly(t, location, letExpression.Variable)
-	require.Exactly(t, initExpression, letExpression.Init)
-	require.Exactly(t, bodyExpression, letExpression.Body)
+	require.Equal(t, location, letExpression.Variable)
+	require.Equal(t, initExpression, letExpression.Init)
+	require.Equal(t, bodyExpression, letExpression.Body)
 }
 
 func TestExpressionCompile_Application(t *testing.T) {
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
-	procedureExpression := comparable()
-	argument0Expression := comparable()
-	argument1Expression := comparable()
-	expression, err := ExpressionCompile(compiler, ApplicationForm{procedureExpression, []common.Datum{argument0Expression, argument1Expression}})
+	procedureExpression := test.NewVoidExpression()
+	argument0Expression := test.NewVoidExpression()
+	argument1Expression := test.NewVoidExpression()
+	form := common.NewSyntax(ApplicationForm{common.NewSyntax(procedureExpression), []common.Syntax{common.NewSyntax(argument0Expression), common.NewSyntax(argument1Expression)}})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	applicationExpression := expression.(Application)
-	require.Exactly(t, procedureExpression, applicationExpression.Procedure, procedureExpression)
-	require.Exactly(t, 2, len(applicationExpression.Arguments))
-	require.Exactly(t, argument0Expression, applicationExpression.Arguments[0])
-	require.Exactly(t, argument1Expression, applicationExpression.Arguments[1])
+	require.Equal(t, procedureExpression, applicationExpression.Procedure)
+	require.Equal(t, 2, len(applicationExpression.Arguments))
+	require.Equal(t, argument0Expression, applicationExpression.Arguments[0])
+	require.Equal(t, argument1Expression, applicationExpression.Arguments[1])
 }
 
 func TestExpressionCompile_Lambda(t *testing.T) {
-	id0, _ := wrap(datum("arg0")).Identifier()
-	id1, _ := wrap(datum("arg1")).Identifier()
-	bodyExpression := comparable()
+	id0 := test.Identifier("arg0")
+	id1 := test.Identifier("arg1")
+	bodyExpression := test.NewVoidExpression()
 	var location0 common.Location
 	var location1 common.Location
-	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Datum, scope common.Scope) (common.Expression, error) {
-		id0, _ := forms[0].(common.Pair).First.(common.WrappedSyntax).Identifier()
-		id1, _ := forms[0].(common.Pair).Rest.(common.WrappedSyntax).Identifier()
-		location0 = id0.Location()
-		location1 = id1.Location()
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
+		location0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Location()
+		location1 = common.NewSyntax(forms[0].PairOrDie().Rest).IdentifierOrDie().Location()
 		return bodyExpression, nil
 	}}
-	expression, err := ExpressionCompile(compiler, LambdaForm{[]common.Identifier{id0, id1}, []common.Datum{common.Pair{id0.WrappedSyntax, id1.WrappedSyntax}}})
+	form := common.NewSyntax(LambdaForm{[]common.Identifier{id0, id1}, []common.Syntax{common.NewSyntax(common.Pair{id0.WrappedSyntax, id1.WrappedSyntax})}})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	literalExpression := expression.(Literal)
 	lambda := literalExpression.Datum.(common.Lambda)
-	require.Exactly(t, 2, len(lambda.Variables))
-	require.Exactly(t, location0, lambda.Variables[0])
-	require.Exactly(t, location1, lambda.Variables[1])
-	require.Exactly(t, bodyExpression, lambda.Body)
+	require.Equal(t, 2, len(lambda.Variables))
+	require.Equal(t, location0, lambda.Variables[0])
+	require.Equal(t, location1, lambda.Variables[1])
+	require.Equal(t, bodyExpression, lambda.Body)
 }
 
 func TestExpressionCompile_Reference(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	variable := &common.Variable{}
-	id, _ := set(wrap(datum("id")), common.Symbol("id"), variable).(common.WrappedSyntax).Identifier()
-	expression, err := ExpressionCompile(compiler, ReferenceForm{id})
+	id := test.WithBinding(test.Identifier("id"), variable, test.Syntax("id")).IdentifierOrDie()
+	form := common.NewSyntax(ReferenceForm{id})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	reference := expression.(Reference)
-	require.Exactly(t, variable, reference.Variable)
+	require.Equal(t, variable, reference.Variable)
 }
 
 func TestExpressionCompile_ReferenceUnbound(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	id, _ := wrap(datum("id")).Identifier()
-	_, err := ExpressionCompile(compiler, ReferenceForm{id})
+	id := test.Identifier("id")
+	form := common.NewSyntax(ReferenceForm{id})
+	_, err := ExpressionCompile(compiler, form)
 	require.EqualError(t, err, "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_ReferenceNonVariable(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
 	location := &common.Keyword{}
-	id, _ := set(wrap(datum("id")), common.Symbol("id"), location).(common.WrappedSyntax).Identifier()
-	_, err := ExpressionCompile(compiler, ReferenceForm{id})
+	id := test.WithBinding(test.Identifier("id"), location, test.Syntax("id")).IdentifierOrDie()
+	form := common.NewSyntax(ReferenceForm{id})
+	_, err := ExpressionCompile(compiler, form)
 	require.EqualError(t, err, "compile: non-variable identifier id in expression context")
 }
 
 func TestExpressionCompile_Set(t *testing.T) {
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
 	variable := &common.Variable{}
-	id, _ := set(wrap(datum("id")), common.Symbol("id"), variable).(common.WrappedSyntax).Identifier()
-	valueExpression := comparable()
-	expression, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
+	id := test.WithBinding(test.Identifier("id"), variable, test.Syntax("id")).IdentifierOrDie()
+	valueExpression := test.NewVoidExpression()
+	form := common.NewSyntax(SetForm{id, common.NewSyntax(valueExpression)})
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	reference := expression.(Set)
-	require.Exactly(t, variable, reference.Variable)
-	require.Exactly(t, valueExpression, reference.Expression)
+	require.Equal(t, variable, reference.Variable)
+	require.Equal(t, valueExpression, reference.Expression)
 }
 
 func TestExpressionCompile_SetUnbound(t *testing.T) {
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
-	id, _ := wrap(datum("id")).Identifier()
-	valueExpression := comparable()
-	_, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
+	id := test.Identifier("id")
+	valueExpression := test.NewVoidExpression()
+	form := common.NewSyntax(SetForm{id, common.NewSyntax(valueExpression)})
+	_, err := ExpressionCompile(compiler, form)
 	require.EqualError(t, err, "compile: unbound identifier id at (unknown)")
 }
 
 func TestExpressionCompile_SetNonVariable(t *testing.T) {
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
 	location := &common.Keyword{}
-	id, _ := set(wrap(datum("id")), common.Symbol("id"), location).(common.WrappedSyntax).Identifier()
-	valueExpression := comparable()
-	_, err := ExpressionCompile(compiler, SetForm{id, valueExpression})
+	id := test.WithBinding(test.Identifier("id"), location, test.Syntax("id")).IdentifierOrDie()
+	valueExpression := test.NewVoidExpression()
+	form := common.NewSyntax(SetForm{id, common.NewSyntax(valueExpression)})
+	_, err := ExpressionCompile(compiler, form)
 	require.EqualError(t, err, "compile: non-variable identifier id in assignment")
 }
 
 func TestExpressionCompile_SyntaxCase(t *testing.T) {
-	t.SkipNow() //TODO
+	t.SkipNow() // TODO:
 }
 
 func TestExpressionCompile_LiteralBoolean(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(datum("#f")))
+	form := test.Syntax("#f")
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, datum("#f"), expression.(Literal).Datum)
+	require.Equal(t, common.Boolean(false), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNumber(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(datum("123")))
+	form := test.Syntax("#f")
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, datum("123"), expression.(Literal).Datum)
+	require.Equal(t, common.Number("123"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralCharacter(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(datum(`#\x`)))
+	form := test.Syntax(`\#x`)
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, datum(`#\x`), expression.(Literal).Datum)
+	require.Equal(t, common.Character('x'), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralString(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(datum(`"thing"`)))
+	form := test.Syntax(`"thing"`)
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, datum(`"thing"`), expression.(Literal).Datum)
+	require.Equal(t, common.String("thing"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNull(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(datum("()")))
+	form := test.Syntax("()")
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, datum("()"), expression.(Literal).Datum)
+	require.Equal(t, common.Null, expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralVoid(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	expression, err := ExpressionCompile(compiler, wrap(common.Void))
+	form := common.NewSyntax(common.Void)
+	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Exactly(t, common.Void, expression.(Literal).Datum)
+	require.Equal(t, common.Void, expression.(Literal).Datum)
 }
