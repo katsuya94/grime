@@ -17,6 +17,36 @@
   (syntax-rules ()
     [(_) 'foo]))
 
+(define-syntax with-marked-id
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ e) #'(let [(id #f)] e])))
+
+(define-syntax marked-id
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_) #'#'id])))
+
+(define-syntax syntax-case-test-hygienic-literals
+  (lambda (stx)
+    (with-syntax
+      [(unmarked #'id)
+       (marked (marked-id))]
+      ; in the patterns, unmarked is unambiguous because it is not captured by marked
+      ; however, marked is ambiguous because it is captured by both marked and unmarked
+      ; it fails with an "already defined" when we put them in the same scope
+      ; typically a marked identifier does not share its scope with unmarked identifiers
+      ; notably, reversing the order changes the issue
+      ; questions:
+      ; can this situation arise without literals? intuition: yes
+      ; is this desirable behavior? intuition: no
+      ; what does racket do?
+      ; does it make sense for the order of literals to matter?
+      #'(syntax-case #'(unmarked . marked) (unmarked marked)
+          [(marked . unmarked) #f]
+          [(unmarked . marked) #t]))))
+
+
 (define x #f)
 
 ; when
@@ -80,3 +110,9 @@
 ; syntax-rules
 
 (assert-equal (syntax-rules-test-simple) 'foo)
+
+; syntax-case
+
+(assert-true (let [(id #t)] (with-marked-id id)))
+
+(assert-true (syntax-case-test-hygienic-literals))

@@ -38,7 +38,7 @@ func (s markSet) xor(m *M) markSet {
 			copy(new[i+1:], s[i:])
 			return new
 		}
-		k := (j - i) / 2
+		k := i + (j-i)/2
 		if uintptr(unsafe.Pointer(m)) <= uintptr(unsafe.Pointer(s[k])) {
 			j = k
 		} else if uintptr(unsafe.Pointer(m)) > uintptr(unsafe.Pointer(s[k])) {
@@ -59,7 +59,7 @@ func (s markSet) equal(other markSet) bool {
 	return true
 }
 
-func (s markSet) subset(other markSet) bool {
+func (s markSet) contains(other markSet) bool {
 	if len(other) > len(s) {
 		return false
 	}

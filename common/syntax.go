@@ -28,7 +28,7 @@ func (id Identifier) Equal(other Identifier) bool {
 }
 
 func (id Identifier) CapturedBy(other Identifier) bool {
-	return id.Name() == other.Name() && id.marks.subset(other.marks)
+	return id.Name() == other.Name() && id.marks.contains(other.marks)
 }
 
 func (id Identifier) Bind(location Location) Identifier {

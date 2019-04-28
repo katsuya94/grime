@@ -94,50 +94,50 @@ func TestMarkSet_EqualLastDifferent(t *testing.T) {
 }
 
 func TestMarkSet_SubsetEmptyEmpty(t *testing.T) {
-	require.True(t, markSet{}.subset(markSet{}))
+	require.True(t, markSet{}.contains(markSet{}))
 }
 
 func TestMarkSet_SubsetNonEmptyEmpty(t *testing.T) {
 	marks := make([]M, 1)
-	require.True(t, markSet{&marks[0]}.subset(markSet{}))
+	require.True(t, markSet{&marks[0]}.contains(markSet{}))
 }
 
 func TestMarkSet_SubsetIdentical(t *testing.T) {
 	marks := make([]M, 1)
-	require.True(t, markSet{&marks[0]}.subset(markSet{&marks[0]}))
+	require.True(t, markSet{&marks[0]}.contains(markSet{&marks[0]}))
 }
 
 func TestMarkSet_SubsetFirstMissing(t *testing.T) {
 	marks := make([]M, 2)
-	require.True(t, markSet{&marks[0], &marks[1]}.subset(markSet{&marks[1]}))
+	require.True(t, markSet{&marks[0], &marks[1]}.contains(markSet{&marks[1]}))
 }
 
 func TestMarkSet_SubsetLastMissing(t *testing.T) {
 	marks := make([]M, 2)
-	require.True(t, markSet{&marks[0], &marks[1]}.subset(markSet{&marks[0]}))
+	require.True(t, markSet{&marks[0], &marks[1]}.contains(markSet{&marks[0]}))
 }
 
 func TestMarkSet_SubsetMiddleMissing(t *testing.T) {
 	marks := make([]M, 3)
-	require.True(t, markSet{&marks[0], &marks[1], &marks[2]}.subset(markSet{&marks[0], &marks[2]}))
+	require.True(t, markSet{&marks[0], &marks[1], &marks[2]}.contains(markSet{&marks[0], &marks[2]}))
 }
 
 func TestMarkSet_SubsetEmptyNonEmpty(t *testing.T) {
 	marks := make([]M, 1)
-	require.False(t, markSet{}.subset(markSet{&marks[0]}))
+	require.False(t, markSet{}.contains(markSet{&marks[0]}))
 }
 
 func TestMarkSet_SubsetFirstExtra(t *testing.T) {
 	marks := make([]M, 2)
-	require.False(t, markSet{&marks[1]}.subset(markSet{&marks[0], &marks[1]}))
+	require.False(t, markSet{&marks[1]}.contains(markSet{&marks[0], &marks[1]}))
 }
 
 func TestMarkSet_SubsetLastExtra(t *testing.T) {
 	marks := make([]M, 2)
-	require.False(t, markSet{&marks[0]}.subset(markSet{&marks[0], &marks[1]}))
+	require.False(t, markSet{&marks[0]}.contains(markSet{&marks[0], &marks[1]}))
 }
 
 func TestMarkSet_SubsetMiddleExtra(t *testing.T) {
 	marks := make([]M, 3)
-	require.False(t, markSet{&marks[0], &marks[2]}.subset(markSet{&marks[0], &marks[1], &marks[2]}))
+	require.False(t, markSet{&marks[0], &marks[2]}.contains(markSet{&marks[0], &marks[1], &marks[2]}))
 }

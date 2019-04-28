@@ -24,7 +24,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 	}
 	var program []common.Syntax
 	for {
-		fmt.Fprintf(w, "grime:%v> ", len(program))
+		fmt.Fprintf(w, "grime:%v> ", len(program)+1)
 		eof := false
 		syntaxes, nullSourceLocationTree, err := readREPLSyntaxes(r)
 		if err == io.EOF {

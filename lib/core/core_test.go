@@ -272,3 +272,14 @@ func TestCore(t *testing.T) {
 		})
 	}
 }
+
+func TestHygiene(t *testing.T) {
+	source := `
+	(define-syntax with-marked-id
+		(lambda (stx)
+		(syntax-case stx ()
+			[(_ e) #'(~let (id #f) e)])))
+	(~let (id #t) (with-marked-id id))
+	`
+	testProgram(t, source, read.MustReadDatum("#t"))
+}

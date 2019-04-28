@@ -58,7 +58,7 @@ type BaseScope map[Symbol][]binding
 func (b BaseScope) Get(id Identifier) Location {
 	bindings, _ := b[id.Name()]
 	for _, binding := range bindings {
-		if id.marks.subset(binding.marks) {
+		if id.marks.contains(binding.marks) {
 			return binding.location
 		}
 	}
@@ -68,7 +68,8 @@ func (b BaseScope) Get(id Identifier) Location {
 func (b BaseScope) Set(id Identifier, location Location) error {
 	bindings, _ := b[id.Name()]
 	for _, binding := range bindings {
-		if id.marks.subset(binding.marks) {
+		if id.marks.contains(binding.marks) {
+			panic("HERE")
 			return fmt.Errorf("already defined: %v", id.Name())
 		}
 	}
@@ -83,7 +84,7 @@ func (b BaseScope) Bindings() map[Symbol]Location {
 	m := map[Symbol]Location{}
 	for name, bindings := range b {
 		for _, binding := range bindings {
-			if (markSet{}).subset(binding.marks) {
+			if (markSet{}).contains(binding.marks) {
 				m[name] = binding.location
 			}
 		}
