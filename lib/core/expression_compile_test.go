@@ -24,7 +24,7 @@ func TestExpressionCompile_SyntaxBoolean(t *testing.T) {
 	template := test.Syntax("#f")
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNumber(t *testing.T) {
@@ -32,7 +32,8 @@ func TestExpressionCompile_SyntaxNumber(t *testing.T) {
 	template := test.Syntax("123")
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{test.Syntax("123").Datum(), nil}, expression)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxCharacter(t *testing.T) {
@@ -40,7 +41,7 @@ func TestExpressionCompile_SyntaxCharacter(t *testing.T) {
 	template := test.Syntax(`#\x`)
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxString(t *testing.T) {
@@ -48,7 +49,7 @@ func TestExpressionCompile_SyntaxString(t *testing.T) {
 	template := test.Syntax(`"thing"`)
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxNull(t *testing.T) {
@@ -56,7 +57,23 @@ func TestExpressionCompile_SyntaxNull(t *testing.T) {
 	template := test.Syntax("()")
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
+}
+
+func TestExpressionCompile_SyntaxIdentifier(t *testing.T) {
+	compiler := Compiler{Expander: expandNever}
+	template := test.Syntax("id")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
+	require.NoError(t, err)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
+}
+
+func TestExpressionCompile_SyntaxPair(t *testing.T) {
+	compiler := Compiler{Expander: expandNever}
+	template := test.Syntax("(id . thing)")
+	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
+	require.NoError(t, err)
+	require.Equal(t, SyntaxTemplate{template.Datum(), nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPatternVariableReference(t *testing.T) {
@@ -87,22 +104,6 @@ func TestExpressionCompile_SyntaxImproperEllipsis(t *testing.T) {
 	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
 	_, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
 	require.EqualError(t, err, "compile: in syntax template at (unknown): improper use of ellipsis")
-}
-
-func TestExpressionCompile_SyntaxIdentifier(t *testing.T) {
-	compiler := Compiler{Expander: expandNever}
-	template := test.Syntax("id")
-	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
-	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
-}
-
-func TestExpressionCompile_SyntaxPair(t *testing.T) {
-	compiler := Compiler{Expander: expandNever}
-	template := test.Syntax("(id . thing)")
-	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}))
-	require.NoError(t, err)
-	require.Equal(t, SyntaxTemplate{template, nil}, expression)
 }
 
 func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T) {
@@ -366,23 +367,23 @@ func TestExpressionCompile_LiteralBoolean(t *testing.T) {
 	form := test.Syntax("#f")
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Equal(t, common.Boolean(false), expression.(Literal).Datum)
+	require.Equal(t, read.MustReadDatum("#f"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNumber(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	form := test.Syntax("#f")
+	form := test.Syntax("123")
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Equal(t, common.Number("123"), expression.(Literal).Datum)
+	require.Equal(t, read.MustReadDatum("123"), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralCharacter(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	form := test.Syntax(`\#x`)
+	form := test.Syntax(`#\x`)
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Equal(t, common.Character('x'), expression.(Literal).Datum)
+	require.Equal(t, read.MustReadDatum(`#\x`), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralString(t *testing.T) {
@@ -390,7 +391,7 @@ func TestExpressionCompile_LiteralString(t *testing.T) {
 	form := test.Syntax(`"thing"`)
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Equal(t, common.String("thing"), expression.(Literal).Datum)
+	require.Equal(t, read.MustReadDatum(`"thing"`), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralNull(t *testing.T) {
@@ -398,12 +399,12 @@ func TestExpressionCompile_LiteralNull(t *testing.T) {
 	form := test.Syntax("()")
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
-	require.Equal(t, common.Null, expression.(Literal).Datum)
+	require.Equal(t, read.MustReadDatum(`()`), expression.(Literal).Datum)
 }
 
 func TestExpressionCompile_LiteralVoid(t *testing.T) {
 	compiler := Compiler{Expander: expandNever}
-	form := common.NewSyntax(common.Void)
+	form := common.NewSyntax(common.NewWrappedSyntax(common.Void, nil))
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
 	require.Equal(t, common.Void, expression.(Literal).Datum)

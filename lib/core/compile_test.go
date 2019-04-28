@@ -3,9 +3,12 @@ package core_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/test"
 )
 
 func TestCompile(t *testing.T) {
@@ -95,9 +98,9 @@ func TestCompile(t *testing.T) {
 			"in body expression expanded from string:1:1: compile: in syntax template at string:1:38: syntax subtemplate must contain a pattern variable determining expansion count",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
+	for _, _test := range tests {
+		t.Run(_test.name, func(t *testing.T) {
+			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(_test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
 			scopes := make(map[int]common.Scope)
 			for phase, locations := range Bindings {
@@ -110,18 +113,16 @@ func TestCompile(t *testing.T) {
 			if _, ok := scopes[1]; !ok {
 				scopes[1] = common.NewScope()
 			}
-			scopes[1].Set(common.NewIdentifier(common.Symbol("lambda")), Bindings[0][common.Symbol("lambda")])
-			scopes[1].Set(common.NewIdentifier(common.Symbol("syntax")), Bindings[0][common.Symbol("syntax")])
+			scopes[1].Set(test.Identifier("lambda"), Bindings[0][common.Symbol("lambda")])
+			scopes[1].Set(test.Identifier("syntax"), Bindings[0][common.Symbol("syntax")])
 			for phase, scope := range scopes {
 				body = body.Push(scope, phase)
 			}
 			_, err := Compile(body, scopes[0])
-			if test.error != "" {
-				if err == nil || err.Error() != test.error {
-					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
-				}
-			} else if err != nil {
-				t.Fatal(err)
+			if _test.error == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, _test.error)
 			}
 		})
 	}

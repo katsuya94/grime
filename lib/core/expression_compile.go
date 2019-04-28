@@ -194,7 +194,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 			return Literal{datum}, nil
 		default:
 			switch form.Datum() {
-			case common.Null, common.Void:
+			case common.Null, common.Void: // TODO: is the Void case necessary?
 				return Literal{datum}, nil
 			default:
 				return nil, fmt.Errorf("compile: unhandled literal %v", common.Write(datum))

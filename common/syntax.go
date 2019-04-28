@@ -1,5 +1,7 @@
 package common
 
+import "fmt"
+
 // Identifier wraps a wrapped symbol (an identifier), providing access to its binding.
 type Identifier struct {
 	WrappedSyntax
@@ -76,7 +78,7 @@ func (s Syntax) Push(scope Scope, phase int) Syntax {
 		if d == Null {
 			return Syntax{Null}
 		}
-		panic("unhandled syntax")
+		panic(fmt.Sprintf("unhandled syntax: %v", Write(d)))
 	}
 }
 
@@ -95,7 +97,7 @@ func (s Syntax) Next() Syntax {
 		if d == Null {
 			return Syntax{Null}
 		}
-		panic("unhandled syntax")
+		panic(fmt.Sprintf("unhandled syntax: %v", Write(d)))
 	}
 }
 

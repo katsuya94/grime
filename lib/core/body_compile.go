@@ -35,7 +35,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 				if err != nil {
 					return nil, err
 				}
-				form := common.NewSyntax(v.Form).Push(rhsScope, common.LEXICAL).Next()
+				form := v.Form.Push(rhsScope, common.LEXICAL).Next()
 				expression, err := compiler.ExpressionCompile(form)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
@@ -131,8 +131,8 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 	return expression, nil
 }
 
-func sourceLocation(form common.Datum) common.SourceLocation {
-	if form, ok := form.(common.WrappedSyntax); ok {
+func sourceLocation(form common.Syntax) common.SourceLocation {
+	if form, ok := form.Datum().(common.WrappedSyntax); ok {
 		return form.SourceLocation()
 	}
 	return common.SourceLocation{}
