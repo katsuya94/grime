@@ -20,7 +20,7 @@
 (define-syntax with-marked-id
   (lambda (stx)
     (syntax-case stx ()
-      [(_ e) #'(let [(id #f)] e])))
+      [(_ e) #'(let [(id #f)] e)])))
 
 (define-syntax marked-id
   (lambda (stx)
