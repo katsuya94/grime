@@ -136,6 +136,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 			return nil, err
 		}
 		literals := []common.Identifier{}
+		// TODO: don't use this hack to compile literals in pattern
 		literalScope := common.NewScope()
 		for _, literal := range form.Literals {
 			location := literal.Location()
