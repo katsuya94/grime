@@ -20,14 +20,16 @@ func NewScopeList() *ScopeList {
 	return nil
 }
 
-func (l *ScopeList) Get(id Identifier) Location {
+func (l *ScopeList) Get(id Identifier) (Location, error) {
 	if l == nil {
-		return nil
+		return nil, nil
 	}
 	if l.phase == LEXICAL || l.phase == id.phase {
-		location := l.scope.Get(id)
-		if location != nil {
-			return location
+		location, err := l.scope.Get(id)
+		if err != nil {
+			return nil, err
+		} else if location != nil {
+			return location, nil
 		}
 	}
 	return l.next.Get(id)
@@ -39,7 +41,7 @@ func (l *ScopeList) Push(scope Scope, phase int) *ScopeList {
 
 // Scope is a set of mappings from Identifiers to Locations.
 type Scope interface {
-	Get(Identifier) Location
+	Get(Identifier) (Location, error)
 	Set(Identifier, Location) error
 }
 
@@ -58,17 +60,19 @@ type binding struct {
 // BaseScope is a simple implementation of Scope.
 type BaseScope map[Symbol][]binding
 
-func (b BaseScope) Get(id Identifier) Location {
+func (b BaseScope) Get(id Identifier) (Location, error) {
 	bindings, _ := b[id.Name()]
-	var location Location
-	superSetLen := -1
-	for _, binding := range bindings {
-		if len(binding.marks) > superSetLen && id.marks.contains(binding.marks) {
-			location = binding.location
-			superSetLen = len(binding.marks)
-		}
+	markSets := make([]markSet, len(bindings))
+	for i, binding := range bindings {
+		markSets[i] = binding.marks
 	}
-	return location
+	i, ok := indexSuperSetContainedBy(id.marks, markSets...)
+	if !ok {
+		return nil, fmt.Errorf("ambiguous: %v", id.Name())
+	} else if i == -1 {
+		return nil, nil
+	}
+	return bindings[i].location, nil
 }
 
 func (b BaseScope) Set(id Identifier, location Location) error {
@@ -111,7 +115,7 @@ func NewProxyScope(s Scope) ProxyScope {
 	return ProxyScope{NewScope(), s}
 }
 
-func (p ProxyScope) Get(id Identifier) Location {
+func (p ProxyScope) Get(id Identifier) (Location, error) {
 	return p.BaseScope.Get(id)
 }
 
@@ -133,17 +137,21 @@ func NewFlushScope(s Scope) FlushScope {
 	return FlushScope{NewScope(), s}
 }
 
-func (f FlushScope) Get(id Identifier) Location {
-	location := f.BaseScope.Get(id)
-	if location != nil {
-		return location
+func (f FlushScope) Get(id Identifier) (Location, error) {
+	location, err := f.BaseScope.Get(id)
+	if err != nil {
+		return nil, err
+	} else if location != nil {
+		return location, nil
 	}
 	return f.Scope.Get(id)
 }
 
 func (f FlushScope) Set(id Identifier, location Location) error {
-	l := f.Scope.Get(id)
-	if l != nil {
+	location, err := f.Scope.Get(id)
+	if err != nil {
+		return err
+	} else if location != nil {
 		return fmt.Errorf("already defined: %v", id.Name())
 	}
 	return f.BaseScope.Set(id, location)

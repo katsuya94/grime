@@ -134,7 +134,7 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 		formals = append(formals, id)
 	}
 	if common.DuplicateIdentifiers(formals...) {
-		return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
+		return LambdaForm{}, fmt.Errorf("lambda: duplicate formals")
 	}
 	var forms []common.Syntax
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
@@ -182,6 +182,9 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 			return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
 		}
 		literals = append(literals, id)
+	}
+	if common.DuplicateIdentifiers(literals...) {
+		return common.ErrorC(fmt.Errorf("syntax-case: duplicate literals"))
 	}
 	var (
 		patterns []common.Syntax
