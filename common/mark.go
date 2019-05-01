@@ -81,7 +81,7 @@ func (s markSet) contains(other markSet) bool {
 
 // TODO: improve this algorithm
 func duplicateMarkSets(markSets ...markSet) bool {
-	// create graph of markSets to markSets that contain them
+	// create graph of markSets to markSets that contain them, excluding self
 	graph := make([][]int, len(markSets))
 	for i, markSet := range markSets {
 		graph[i] = make([]int, 0, len(markSets))
@@ -94,36 +94,10 @@ func duplicateMarkSets(markSets ...markSet) bool {
 			}
 		}
 	}
-	// check that each node has one leaf
+	// if there is a a cycle or more than one leaf, there are duplicates
 	for i := range markSets {
-		frontier := make([]bool, len(markSets))
-		frontier[i] = true
-		for {
-			next := make([]bool, len(markSets))
-			for j, in := range frontier {
-				if !in {
-					continue
-				}
-				for _, k := range graph[j] {
-					next[k] = true
-				}
-			}
-			for i := range frontier {
-				if frontier[i] != next[i] {
-					continue
-				}
-			}
-			break
-		}
-		count := 0
-		for _, in := range frontier {
-			if in {
-				count++
-			}
-		}
-		if count > 1 {
-			return true
-		}
+		visited := make([]int, len(markSets))
+		dfs()
 	}
 	return false
 }
