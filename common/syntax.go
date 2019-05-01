@@ -23,13 +23,28 @@ func (id Identifier) Mark(m *M) Identifier {
 	return Identifier{NewSyntax(id.WrappedSyntax).Mark(m).Datum().(WrappedSyntax)}
 }
 
-// TODO: define FreeEqual and BoundEqual
+func (id Identifier) CapturedBy(other Identifier) bool {
+	return id.Name() == other.Name() && id.marks.contains(other.marks)
+}
+
+func (id Identifier) BoundEqual(other Identifier) bool {
+	return id.Name() == other.Name() && (id.marks.contains(other.marks) || other.marks.contains(id.marks))
+}
+
 func (id Identifier) Equal(other Identifier) bool {
 	return id.Name() == other.Name() && id.marks.equal(other.marks)
 }
 
-func (id Identifier) CapturedBy(other Identifier) bool {
-	return id.Name() == other.Name() && id.marks.contains(other.marks)
+func (id Identifier) FreeEqual(other Identifier) bool {
+	idLocation := id.Location()
+	otherLocation := other.Location()
+	if idLocation == nil && otherLocation == nil {
+		return id.Name() == other.Name()
+	} else if idLocation != nil && otherLocation != nil {
+		return idLocation == otherLocation
+	} else {
+		return false
+	}
 }
 
 func (id Identifier) Bind(location Location) Identifier {
@@ -40,6 +55,22 @@ func (id Identifier) Bind(location Location) Identifier {
 		panic("expected identifier")
 	}
 	return id
+}
+
+func DuplicateIdentifiers(ids ...Identifier) bool {
+	markSetsByName := map[Symbol][]markSet{}
+	for _, id := range ids {
+		if _, ok := markSetsByName[id.Name()]; !ok {
+			markSetsByName[id.Name()] = []markSet{}
+		}
+		markSetsByName[id.Name()] = append(markSetsByName[id.Name()], id.marks)
+	}
+	for _, markSets := range markSetsByName {
+		if duplicateMarkSets(markSets...) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsSyntax determines whether a Datum is a Syntax object.

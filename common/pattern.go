@@ -24,17 +24,7 @@ func (p patternLiteral) Match(syntax Syntax) (map[*PatternVariable]interface{}, 
 	if !ok {
 		return nil, false
 	}
-	syntaxLocation := id.Location()
-	patternLocation := p.id.Location()
-	if syntaxLocation == nil && patternLocation == nil {
-		if !id.Equal(p.id) {
-			return nil, false
-		}
-	} else if syntaxLocation != nil && patternLocation != nil {
-		if syntaxLocation != patternLocation {
-			return nil, false
-		}
-	} else {
+	if !id.FreeEqual(p.id) {
 		return nil, false
 	}
 	return map[*PatternVariable]interface{}{}, true
@@ -183,10 +173,7 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 					if err != nil {
 						return nil, nil, err
 					}
-					patternVariableInfos, err := mergePatternVariableInfos(subPatternVariableInfos, restPatternVariableInfos)
-					if err != nil {
-						return nil, nil, err
-					}
+					patternVariableInfos := append(subPatternVariableInfos, restPatternVariableInfos...)
 					return patternEllipsis{subPattern, subPatternVariables, restPattern}, patternVariableInfos, nil
 				}
 			}
@@ -199,22 +186,8 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		patternVariableInfos, err := mergePatternVariableInfos(firstPatternVariableInfos, restPatternVariableInfos)
-		if err != nil {
-			return nil, nil, err
-		}
+		patternVariableInfos := append(firstPatternVariableInfos, restPatternVariableInfos...)
 		return patternPair{firstPattern, restPattern}, patternVariableInfos, nil
 	}
 	return patternDatum{syntax.Unwrap()}, nil, nil
-}
-
-func mergePatternVariableInfos(leftPatternVariableInfos, rightPatternVariableInfos []PatternVariableInfo) ([]PatternVariableInfo, error) {
-	for _, leftPatternVariableInfo := range leftPatternVariableInfos {
-		for _, rightPatternVariableInfo := range rightPatternVariableInfos {
-			if leftPatternVariableInfo.Id.Equal(rightPatternVariableInfo.Id) {
-				return nil, fmt.Errorf("pattern: duplicate pattern variable %v", leftPatternVariableInfo.Id.Name())
-			}
-		}
-	}
-	return append(leftPatternVariableInfos, rightPatternVariableInfos...), nil
 }

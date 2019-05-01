@@ -40,7 +40,6 @@ var Bindings = common.BindingSet{
 		common.Symbol("identifier?"):          &common.Variable{common.Function(identifier)},
 		common.Symbol("generate-temporaries"): &common.Variable{common.Function(generateTemporaries)},
 		common.Symbol("list"):                 &common.Variable{common.Function(list)},
-		common.Symbol("debug"):                &common.Variable{common.Function(debug)},
 		common.Symbol("bound-identifier=?"):   &common.Variable{common.Function(boundIdentifier)},
 		common.Symbol("free-identifier=?"):    &common.Variable{common.Function(freeIdentifier)},
 	},
@@ -132,12 +131,10 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 		if !ok {
 			return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 		}
-		for _, formal := range formals {
-			if id.Equal(formal) {
-				return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
-			}
-		}
 		formals = append(formals, id)
+	}
+	if common.DuplicateIdentifiers(formals...) {
+		return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
 	}
 	var forms []common.Syntax
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
@@ -429,14 +426,6 @@ func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	return common.CallC(c, list)
 }
 
-func debug(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
-	if len(args) != 1 {
-		return common.ErrorC(fmt.Errorf("debug: wrong arity"))
-	}
-	fmt.Println(fmt.Sprintf("%#v\n", args[0]))
-	return common.CallC(c, common.Void)
-}
-
 func boundIdentifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("bound-identifier=?: wrong arity"))
@@ -449,7 +438,7 @@ func boundIdentifier(c common.Continuation, args ...common.Datum) (common.Evalua
 	if !ok {
 		return common.ErrorC(fmt.Errorf("bound-identifier=?: expected identifier"))
 	}
-	return common.CallC(c, common.Boolean(left.Equal(right)))
+	return common.CallC(c, common.Boolean(left.BoundEqual(right)))
 }
 
 func freeIdentifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
@@ -464,5 +453,5 @@ func freeIdentifier(c common.Continuation, args ...common.Datum) (common.Evaluat
 	if !ok {
 		return common.ErrorC(fmt.Errorf("free-identifier=?: expected identifier"))
 	}
-	return common.CallC(c, common.Boolean(left.Location() == right.Location()))
+	return common.CallC(c, common.Boolean(left.FreeEqual(right)))
 }

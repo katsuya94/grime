@@ -78,3 +78,52 @@ func (s markSet) contains(other markSet) bool {
 	}
 	return true
 }
+
+// TODO: improve this algorithm
+func duplicateMarkSets(markSets ...markSet) bool {
+	// create graph of markSets to markSets that contain them
+	graph := make([][]int, len(markSets))
+	for i, markSet := range markSets {
+		graph[i] = make([]int, 0, len(markSets))
+		for j, maybeContainsMarkSet := range markSets {
+			if i == j {
+				continue
+			}
+			if maybeContainsMarkSet.contains(markSet) {
+				graph[i] = append(graph[i], j)
+			}
+		}
+	}
+	// check that each node has one leaf
+	for i := range markSets {
+		frontier := make([]bool, len(markSets))
+		frontier[i] = true
+		for {
+			next := make([]bool, len(markSets))
+			for j, in := range frontier {
+				if !in {
+					continue
+				}
+				for _, k := range graph[j] {
+					next[k] = true
+				}
+			}
+			for i := range frontier {
+				if frontier[i] != next[i] {
+					continue
+				}
+			}
+			break
+		}
+		count := 0
+		for _, in := range frontier {
+			if in {
+				count++
+			}
+		}
+		if count > 1 {
+			return true
+		}
+	}
+	return false
+}

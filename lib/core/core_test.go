@@ -273,7 +273,7 @@ func TestCore(t *testing.T) {
 	}
 }
 
-func TestHygiene(t *testing.T) {
+func TestSyntaxCaseHygiene(t *testing.T) {
 	source := `
 	(define-syntax with-marked-id
 		(lambda (stx)
@@ -282,4 +282,21 @@ func TestHygiene(t *testing.T) {
 	(~let (id #t) (with-marked-id id))
 	`
 	testProgram(t, source, read.MustReadDatum("#t"))
+}
+
+func TestSyntaxCaseLambdaHygiene(t *testing.T) {
+	source := `
+  (define-syntax marked-id
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_) #'#'id])))
+  (define-syntax syntax-case-with-unmarked-and-marked-lambda-ids
+    (lambda (stx)
+      (syntax-case (cons #'id (marked-id)) ()
+        [(unmarked . marked)
+			   #'(lambda (unmarked marked)
+			       (cons unmarked marked))])))
+  ((syntax-case-with-unmarked-and-marked-lambda-ids) 'foo 'bar)
+	`
+	testProgram(t, source, read.MustReadDatum("(foo . bar)"))
 }

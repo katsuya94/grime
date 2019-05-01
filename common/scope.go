@@ -43,6 +43,9 @@ type Scope interface {
 	Set(Identifier, Location) error
 }
 
+// https://docs.racket-lang.org/reference/syntax-model.html
+// For a given identifier, multiple bindings may have scope sets that are subsets of the identifier’s; in that case, the identifier refers to the binding whose set is a superset of all others; if no such binding exists, the reference is ambiguous (and triggers a syntax error if it is parsed as an expression).
+
 func NewScope() BaseScope {
 	return BaseScope{}
 }
@@ -57,21 +60,27 @@ type BaseScope map[Symbol][]binding
 
 func (b BaseScope) Get(id Identifier) Location {
 	bindings, _ := b[id.Name()]
+	var location Location
+	superSetLen := -1
 	for _, binding := range bindings {
-		if id.marks.contains(binding.marks) {
-			return binding.location
+		if len(binding.marks) > superSetLen && id.marks.contains(binding.marks) {
+			location = binding.location
+			superSetLen = len(binding.marks)
 		}
 	}
-	return nil
+	return location
 }
 
 func (b BaseScope) Set(id Identifier, location Location) error {
 	bindings, _ := b[id.Name()]
-	for _, binding := range bindings {
-		if id.marks.contains(binding.marks) {
-			panic("HERE")
-			return fmt.Errorf("already defined: %v", id.Name())
-		}
+	markSets := make([]markSet, len(bindings)+1)
+	for i, binding := range bindings {
+		markSets[i] = binding.marks
+	}
+	markSets[len(bindings)] = id.marks
+	// TODO: consider precomputing the graph
+	if duplicateMarkSets(markSets...) {
+		return fmt.Errorf("already defined: %v", id.Name())
 	}
 	b[id.Name()] = append(bindings, binding{
 		marks:    id.marks,
