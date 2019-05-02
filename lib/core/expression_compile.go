@@ -163,13 +163,14 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 			if err != nil {
 				return nil, err
 			}
-			patternVariableIds := []common.Identifier			scope := common.NewScope()
+			patternVariableIds := []common.Identifier{}
 			for _, patternVariableInfo := range patternVariableInfos {
 				patternVariableIds = append(patternVariableIds, patternVariableInfo.Id)
 			}
 			if common.DuplicateIdentifiers(patternVariableIds...) {
 				return nil, fmt.Errorf("compile: duplicate pattern variables in pattern")
 			}
+			scope := common.NewScope()
 			patternVariables := []*common.PatternVariable{}
 			for _, patternVariableInfo := range patternVariableInfos {
 				patternVariables = append(patternVariables, patternVariableInfo.PatternVariable)
