@@ -39,7 +39,7 @@ type voidExpression struct {
 	self *voidExpression
 }
 
-func (*voidExpression) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (*voidExpression) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.CallC(c, common.Void)
 }
 

@@ -12,7 +12,7 @@ type Application struct {
 	Arguments []common.Expression
 }
 
-func (e Application) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Application) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		applicationProcedureEvaluated{c, e.Arguments},
 		e.Procedure,
@@ -24,7 +24,7 @@ type applicationProcedureEvaluated struct {
 	arguments    []common.Expression
 }
 
-func (c applicationProcedureEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c applicationProcedureEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	return partialEvaluationResult(c.continuation, d, nil, c.arguments)
 }
 
@@ -35,7 +35,7 @@ type applicationArgumentEvaluated struct {
 	arguments    []common.Expression
 }
 
-func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c applicationArgumentEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	return partialEvaluationResult(
 		c.continuation,
 		c.procedureV,
@@ -44,7 +44,7 @@ func (c applicationArgumentEvaluated) Call(d common.Datum) (common.EvaluationRes
 	)
 }
 
-func partialEvaluationResult(c common.Continuation, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Expression) (common.EvaluationResult, error) {
+func partialEvaluationResult(c common.Continuation, procedureV common.Datum, argumentsV []common.Datum, arguments []common.Expression) (common.Evaluation, error) {
 	if len(arguments) == 0 {
 		return common.Apply(c, procedureV, argumentsV...)
 	}
@@ -66,7 +66,7 @@ type If struct {
 	Else      common.Expression
 }
 
-func (e If) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e If) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		ifConditionEvaluated{c, e.Then, e.Else},
 		e.Condition,
@@ -79,7 +79,7 @@ type ifConditionEvaluated struct {
 	otherwise    common.Expression
 }
 
-func (c ifConditionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c ifConditionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	if d == common.Boolean(false) {
 		return common.EvalC(c.continuation, c.otherwise)
 	} else {
@@ -94,7 +94,7 @@ type Let struct {
 	Body     common.Expression
 }
 
-func (e Let) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Let) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		letInitEvaluated{c, e.Variable, e.Body},
 		e.Init,
@@ -107,7 +107,7 @@ type letInitEvaluated struct {
 	body         common.Expression
 }
 
-func (c letInitEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c letInitEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	(*c.variable).Value = d
 	return common.EvalC(
 		letBodyEvaluated{c.continuation},
@@ -119,7 +119,7 @@ type letBodyEvaluated struct {
 	continuation common.Continuation
 }
 
-func (c letBodyEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c letBodyEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	return common.CallC(c.continuation, d)
 }
 
@@ -128,7 +128,7 @@ type Begin struct {
 	Expressions []common.Expression
 }
 
-func (e Begin) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Begin) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		beginFirstEvaluated{c, e.Expressions[1:]},
 		e.Expressions[0],
@@ -140,7 +140,7 @@ type beginFirstEvaluated struct {
 	expressions  []common.Expression
 }
 
-func (c beginFirstEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c beginFirstEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	if len(c.expressions) == 0 {
 		return common.CallC(c.continuation, d)
 	}
@@ -156,7 +156,7 @@ type Define struct {
 	Expression common.Expression
 }
 
-func (e Define) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Define) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		defineExpressionEvaluated{c, e.Variable},
 		e.Expression,
@@ -168,7 +168,7 @@ type defineExpressionEvaluated struct {
 	variable     *common.Variable
 }
 
-func (c defineExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c defineExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	(*c.variable).Value = d
 	return common.CallC(c.continuation, common.Void)
 }
@@ -180,7 +180,7 @@ type Set struct {
 	Expression common.Expression
 }
 
-func (e Set) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Set) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		setExpressionEvaluated{c, e.Identifier, e.Variable},
 		e.Expression,
@@ -193,7 +193,7 @@ type setExpressionEvaluated struct {
 	variable     *common.Variable
 }
 
-func (c setExpressionEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c setExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	if c.variable.Value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot set identifier before its definition", c.identifier.Name(), c.identifier.SourceLocation()))
 	}
@@ -207,7 +207,7 @@ type Reference struct {
 	Variable   *common.Variable
 }
 
-func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Reference) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	if e.Variable.Value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot reference identifier before its definition", e.Identifier.Name(), e.Identifier.SourceLocation()))
 	}
@@ -223,7 +223,7 @@ type SyntaxCase struct {
 	Outputs           []common.Expression
 }
 
-func (e SyntaxCase) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e SyntaxCase) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		syntaxCaseInputEvaluated{c, e.Patterns, e.PatternVariabless, e.Fenders, e.Outputs},
 		e.Input,
@@ -238,7 +238,7 @@ type syntaxCaseInputEvaluated struct {
 	outputs           []common.Expression
 }
 
-func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	return syntaxCaseMatch(c.continuation, d, c.patterns, c.patternVariabless, c.fenders, c.outputs)
 }
 
@@ -252,14 +252,14 @@ type syntaxCaseFenderEvaluated struct {
 	outputs           []common.Expression
 }
 
-func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
+func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	if d == common.Boolean(false) {
 		return syntaxCaseMatch(c.continuation, c.input, c.patterns, c.patternVariabless, c.fenders, c.outputs)
 	}
 	return common.EvalC(c.continuation, c.output)
 }
 
-func syntaxCaseMatch(continuation common.Continuation, input common.Datum, patterns []common.Pattern, patternVariabless [][]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.EvaluationResult, error) {
+func syntaxCaseMatch(continuation common.Continuation, input common.Datum, patterns []common.Pattern, patternVariabless [][]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.Evaluation, error) {
 	syntax := common.NewSyntax(input)
 	for i := range patterns {
 		result, ok := patterns[i].Match(syntax)
@@ -290,7 +290,7 @@ type SyntaxTemplate struct {
 	PatternVariables []*common.PatternVariable
 }
 
-func (e SyntaxTemplate) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e SyntaxTemplate) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	bindings := make(map[*common.PatternVariable]interface{}, len(e.PatternVariables))
 	for _, patternVariable := range e.PatternVariables {
 		bindings[patternVariable] = patternVariable.Match
@@ -388,6 +388,6 @@ type Literal struct {
 	Datum common.Datum
 }
 
-func (e Literal) Evaluate(c common.Continuation) (common.EvaluationResult, error) {
+func (e Literal) Evaluate(c common.Continuation) (common.Evaluation, error) {
 	return common.CallC(c, e.Datum)
 }

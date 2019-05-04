@@ -11,11 +11,11 @@ type Datum interface{}
 // Procedure represents a callable value.
 type Procedure interface {
 	Datum
-	Call(Continuation, ...Datum) (EvaluationResult, error)
+	Call(Continuation, ...Datum) (Evaluation, error)
 }
 
 // Apply attempts to call the given procedure if it is callable.
-func Apply(c Continuation, procedureV Datum, argumentsV ...Datum) (EvaluationResult, error) {
+func Apply(c Continuation, procedureV Datum, argumentsV ...Datum) (Evaluation, error) {
 	p, ok := procedureV.(Procedure)
 	if !ok {
 		return nil, fmt.Errorf("application: non-procedure in procedure position")
@@ -188,7 +188,7 @@ func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationT
 }
 
 // Function represents a Go function.
-type Function func(Continuation, ...Datum) (EvaluationResult, error)
+type Function func(Continuation, ...Datum) (Evaluation, error)
 
 func (f Function) Write() string {
 	var i interface{} = f
@@ -196,7 +196,7 @@ func (f Function) Write() string {
 	return fmt.Sprintf("#<function: %v>", name)
 }
 
-func (f Function) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
+func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	return f(c, args...)
 }
 
@@ -210,7 +210,7 @@ func (Lambda) Write() string {
 	return "#<lambda>"
 }
 
-func (d Lambda) Call(c Continuation, args ...Datum) (EvaluationResult, error) {
+func (d Lambda) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	if len(args) != len(d.Variables) {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for lambda expecting %v arguments", len(args), len(d.Variables)))
 	}
@@ -229,7 +229,7 @@ func (ContinuationProcedure) Write() string {
 	return "#<continuation>"
 }
 
-func (d ContinuationProcedure) Call(_ Continuation, args ...Datum) (EvaluationResult, error) {
+func (d ContinuationProcedure) Call(_ Continuation, args ...Datum) (Evaluation, error) {
 	if len(args) != 1 {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for continuation", len(args)))
 	}

@@ -62,7 +62,7 @@ var (
 	PatternSet                        = common.MustCompileSimplePattern(read.MustReadDatum("(set! name expression)"))
 )
 
-func transformQuote(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformQuote(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternQuote.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("quote: bad syntax"))
@@ -70,7 +70,7 @@ func transformQuote(c common.Continuation, args ...common.Datum) (common.Evaluat
 	return common.CallC(c, QuoteForm{result[common.Symbol("datum")].(common.Syntax).Unwrap()})
 }
 
-func transformSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternSyntax.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("syntax: bad syntax"))
@@ -78,7 +78,7 @@ func transformSyntax(c common.Continuation, args ...common.Datum) (common.Evalua
 	return common.CallC(c, SyntaxForm{result[common.Symbol("datum")].(common.Syntax)})
 }
 
-func transformIf(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformIf(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternIf.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("if: bad syntax"))
@@ -91,7 +91,7 @@ func transformIf(c common.Continuation, args ...common.Datum) (common.Evaluation
 	return common.CallC(c, form)
 }
 
-func transformLet(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternLet.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("~let: bad syntax"))
@@ -108,7 +108,7 @@ func transformLet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	return common.CallC(c, LetForm{id, init, forms})
 }
 
-func transformBegin(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternBegin.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("begin: bad syntax"))
@@ -120,7 +120,7 @@ func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluat
 	return common.CallC(c, BeginForm{forms})
 }
 
-func transformLambda(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformLambda(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternLambda.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
@@ -129,12 +129,12 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	for _, syntax := range result[common.Symbol("formals")].([]interface{}) {
 		id, ok := syntax.(common.Syntax).Identifier()
 		if !ok {
-			return LambdaForm{}, fmt.Errorf("lambda: bad syntax")
+			return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 		}
 		formals = append(formals, id)
 	}
 	if common.DuplicateIdentifiers(formals...) {
-		return LambdaForm{}, fmt.Errorf("lambda: duplicate formals")
+		return common.ErrorC(fmt.Errorf("lambda: duplicate formals"))
 	}
 	var forms []common.Syntax
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
@@ -143,7 +143,7 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	return common.CallC(c, LambdaForm{formals, forms})
 }
 
-func transformDefine(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformDefine(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternDefine.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("~define: bad syntax"))
@@ -156,7 +156,7 @@ func transformDefine(c common.Continuation, args ...common.Datum) (common.Evalua
 	return common.CallC(c, DefineForm{id, form})
 }
 
-func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternDefineSyntax.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("define-syntax: bad syntax"))
@@ -169,7 +169,7 @@ func transformDefineSyntax(c common.Continuation, args ...common.Datum) (common.
 	return common.CallC(c, DefineSyntaxForm{id, form})
 }
 
-func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternSyntaxCase.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("syntax-case: bad syntax"))
@@ -215,7 +215,7 @@ func transformSyntaxCase(c common.Continuation, args ...common.Datum) (common.Ev
 	return common.CallC(c, SyntaxCaseForm{input, literals, patterns, fenders, outputs})
 }
 
-func transformSet(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	result, ok := PatternSet.Match(common.NewSyntax(args[0]))
 	if !ok {
 		return common.ErrorC(fmt.Errorf("set!: bad syntax"))
@@ -228,7 +228,7 @@ func transformSet(c common.Continuation, args ...common.Datum) (common.Evaluatio
 	return common.CallC(c, SetForm{id, form})
 }
 
-func not(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func not(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("not: wrong arity"))
 	}
@@ -239,14 +239,14 @@ func not(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 	return common.CallC(c, common.Boolean(!boolean))
 }
 
-func cons(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func cons(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("cons: wrong arity"))
 	}
 	return common.CallC(c, common.Pair{args[0], args[1]})
 }
 
-func car(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func car(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("car: wrong arity"))
 	}
@@ -257,7 +257,7 @@ func car(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 	return common.CallC(c, pair.First)
 }
 
-func cdr(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func cdr(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("cdr: wrong arity"))
 	}
@@ -268,14 +268,14 @@ func cdr(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 	return common.CallC(c, pair.Rest)
 }
 
-func null(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func null(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("null?: wrong arity"))
 	}
 	return common.CallC(c, common.Boolean(common.NewSyntax(args[0]).Unwrap() == common.Null))
 }
 
-func pair(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func pair(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("pair?: wrong arity"))
 	}
@@ -283,7 +283,7 @@ func pair(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	return common.CallC(c, common.Boolean(ok))
 }
 
-func proc(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func proc(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("proc?: wrong arity"))
 	}
@@ -291,7 +291,7 @@ func proc(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	return common.CallC(c, common.Boolean(ok))
 }
 
-func write(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func write(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("write: wrong arity"))
 	}
@@ -299,7 +299,7 @@ func write(c common.Continuation, args ...common.Datum) (common.EvaluationResult
 	return common.CallC(c, common.Void)
 }
 
-func callWithCurrentContinuation(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func callWithCurrentContinuation(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("call/cc: wrong arity"))
 	}
@@ -312,7 +312,7 @@ func (s stringError) Error() string {
 	return string(s)
 }
 
-func err(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func err(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("error: wrong arity"))
 	}
@@ -323,14 +323,14 @@ func err(c common.Continuation, args ...common.Datum) (common.EvaluationResult, 
 	return common.ErrorC(stringError(message))
 }
 
-func eqv(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func eqv(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("eqv?: wrong arity"))
 	}
 	return common.CallC(c, common.Boolean(args[0] == args[1]))
 }
 
-func syntaxDatum(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func syntaxDatum(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("syntax->datum: wrong arity"))
 	}
@@ -363,7 +363,7 @@ func syntaxDatumRecursive(syntax common.Datum) (common.Datum, error) {
 	}
 }
 
-func datumSyntax(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func datumSyntax(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("datum->syntax: wrong arity"))
 	}
@@ -374,7 +374,7 @@ func datumSyntax(c common.Continuation, args ...common.Datum) (common.Evaluation
 	return common.CallC(c, id.PushOnto(args[1], nil))
 }
 
-func identifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func identifier(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("identifier?: wrong arity"))
 	}
@@ -390,7 +390,7 @@ func generateTemporary() common.WrappedSyntax {
 	return common.NewWrappedSyntax(symbol, nil)
 }
 
-func generateTemporaries(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 1 {
 		return common.ErrorC(fmt.Errorf("generate-temporaries: wrong arity"))
 	}
@@ -421,7 +421,7 @@ func generateTemporaries(c common.Continuation, args ...common.Datum) (common.Ev
 	return common.CallC(c, temporaries)
 }
 
-func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func list(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	var list common.Datum = common.Null
 	for i := len(args) - 1; i >= 0; i-- {
 		list = common.Pair{args[i], list}
@@ -429,7 +429,7 @@ func list(c common.Continuation, args ...common.Datum) (common.EvaluationResult,
 	return common.CallC(c, list)
 }
 
-func boundIdentifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func boundIdentifier(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("bound-identifier=?: wrong arity"))
 	}
@@ -444,7 +444,7 @@ func boundIdentifier(c common.Continuation, args ...common.Datum) (common.Evalua
 	return common.CallC(c, common.Boolean(left.BoundEqual(right)))
 }
 
-func freeIdentifier(c common.Continuation, args ...common.Datum) (common.EvaluationResult, error) {
+func freeIdentifier(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
 	if len(args) != 2 {
 		return common.ErrorC(fmt.Errorf("free-identifier=?: wrong arity"))
 	}
