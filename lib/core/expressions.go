@@ -214,11 +214,6 @@ func (e Reference) Evaluate(c common.Continuation) (common.EvaluationResult, err
 	return common.CallC(c, e.Variable.Value)
 }
 
-type patternVariableBinding struct {
-	id              common.Identifier
-	patternVariable **common.PatternVariable
-}
-
 // SyntaxCase evaluates its input and evaluates to an output according to pattern matching and fender expressions.
 type SyntaxCase struct {
 	Input             common.Expression
@@ -244,9 +239,6 @@ type syntaxCaseInputEvaluated struct {
 }
 
 func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.EvaluationResult, error) {
-	if !common.IsSyntax(d) {
-		return nil, fmt.Errorf("syntax-case: expected syntax")
-	}
 	return syntaxCaseMatch(c.continuation, d, c.patterns, c.patternVariabless, c.fenders, c.outputs)
 }
 

@@ -199,17 +199,11 @@ func (s Syntax) PairOrDie() Pair {
 }
 
 func (s Syntax) SourceLocationTree() *SourceLocationTree {
-	// wrapped, ok := s.datum.(WrappedSyntax)
-	// if !ok {
-	// 	return nil
-	// }
-	// return wrapped.SourceLocationTree()
-	switch d := s.datum.(type) {
-	case WrappedSyntax:
-		return d.SourceLocationTree()
-	default:
+	wrapped, ok := s.datum.(WrappedSyntax)
+	if !ok {
 		return nil
 	}
+	return wrapped.SourceLocationTree()
 }
 
 func (s Syntax) SourceLocation() SourceLocation {

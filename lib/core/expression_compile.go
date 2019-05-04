@@ -246,7 +246,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 		if err != nil {
 			return nil, nil, err
 		}
-		firstStatic := common.IsSyntax(firstCompiled)
+		firstStatic := len(firstPatternVariables) == 0
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: in syntax template at %v: syntax subtemplate must contain a pattern variable", first.SourceLocation())
 		}
@@ -254,7 +254,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 		if err != nil {
 			return nil, nil, err
 		}
-		restStatic := common.IsSyntax(restCompiled)
+		restStatic := len(restPatternVariables) == 0
 		if firstStatic && restStatic {
 			return syntax.Datum(), map[*common.PatternVariable]int{}, nil
 		}
