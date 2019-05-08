@@ -7,7 +7,7 @@ import (
 var ErrUnexpectedFinalForm = fmt.Errorf("unexpected final form")
 
 type Expression interface {
-	Evaluate(Continuation) (Evaluation, error)
+	Evaluate(Continuation, Stack) (Evaluation, error)
 }
 
 type Continuation interface {
@@ -21,6 +21,7 @@ type Evaluation interface {
 
 type EvaluateExpression struct {
 	continuation Continuation
+	stack        Stack
 	expression   Expression
 }
 
@@ -29,7 +30,7 @@ func (e EvaluateExpression) Escape(EscapeEvaluated) (Datum, bool) {
 }
 
 func (e EvaluateExpression) Do() (Evaluation, error) {
-	return e.expression.Evaluate(e.continuation)
+	return e.expression.Evaluate(e.continuation, e.stack)
 }
 
 type CallContinuation struct {
@@ -49,8 +50,8 @@ func (e CallContinuation) Do() (Evaluation, error) {
 	return e.continuation.Call(e.value)
 }
 
-func EvalC(c Continuation, expression Expression) (Evaluation, error) {
-	return EvaluateExpression{c, expression}, nil
+func EvalC(c Continuation, s Stack, expression Expression) (Evaluation, error) {
+	return EvaluateExpression{c, s, expression}, nil
 }
 
 func CallC(c Continuation, value Datum) (Evaluation, error) {
@@ -62,9 +63,9 @@ func ErrorC(err error) (Evaluation, error) {
 }
 
 // Evaluate evaluates an expression with a continuation that will escape. If the continuation is called outside the escaping context, it will error.
-func Evaluate(expression Expression) (Datum, error) {
+func Evaluate(s Stack, expression Expression) (Datum, error) {
 	return WithEscape(func(escape Continuation) (Evaluation, error) {
-		return expression.Evaluate(escape)
+		return expression.Evaluate(escape, s)
 	})
 }
 
