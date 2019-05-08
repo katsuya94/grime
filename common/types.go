@@ -11,16 +11,16 @@ type Datum interface{}
 // Procedure represents a callable value.
 type Procedure interface {
 	Datum
-	Call(Continuation, Stack, ...Datum) (Evaluation, error)
+	Call(Continuation, ...Datum) (Evaluation, error)
 }
 
 // Apply attempts to call the given procedure if it is callable.
-func Apply(c Continuation, s Stack, procedureV Datum, argumentsV ...Datum) (Evaluation, error) {
+func Apply(c Continuation, procedureV Datum, argumentsV ...Datum) (Evaluation, error) {
 	p, ok := procedureV.(Procedure)
 	if !ok {
 		return nil, fmt.Errorf("application: non-procedure in procedure position")
 	}
-	return p.Call(c, s, argumentsV...)
+	return p.Call(c, argumentsV...)
 }
 
 // Void is returned as the result of side-effects with no useful result.
@@ -188,7 +188,7 @@ func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationT
 }
 
 // Function represents a Go function.
-type Function func(Continuation, Stack, ...Datum) (Evaluation, error)
+type Function func(Continuation, ...Datum) (Evaluation, error)
 
 func (f Function) Write() string {
 	var i interface{} = f
@@ -196,12 +196,14 @@ func (f Function) Write() string {
 	return fmt.Sprintf("#<function: %v>", name)
 }
 
-func (f Function) Call(c Continuation, s Stack, args ...Datum) (Evaluation, error) {
-	return f(c, s, args...)
+func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
+	return f(c, args...)
 }
 
 // Lambda represents a Grime function.
+// TODO: rename to Closure
 type Lambda struct {
+	Stack     Stack
 	Variables []*Variable
 	Body      Expression
 }
@@ -210,14 +212,14 @@ func (Lambda) Write() string {
 	return "#<lambda>"
 }
 
-func (d Lambda) Call(c Continuation, s Stack, args ...Datum) (Evaluation, error) {
+func (d Lambda) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	if len(args) != len(d.Variables) {
 		return ErrorC(fmt.Errorf("wrong number of arguments %v for lambda expecting %v arguments", len(args), len(d.Variables)))
 	}
 	for i := range d.Variables {
 		(*d.Variables[i]).Value = args[i]
 	}
-	return EvalC(c, s, d.Body)
+	return EvalC(c, d.Stack, d.Body)
 }
 
 // ContinuationProcedure represents a callable continuation.

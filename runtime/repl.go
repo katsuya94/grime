@@ -54,7 +54,8 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		result, err := common.Evaluate(expression)
+		stack := common.NewStack()
+		result, err := common.Evaluate(stack, expression)
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue

@@ -3,10 +3,10 @@ package common
 import "fmt"
 
 var (
-	UnderscoreKeyword = &Keyword{Function(func(Continuation, Stack, ...Datum) (Evaluation, error) {
+	UnderscoreKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
 		return nil, fmt.Errorf("cannot expand underscore")
 	})}
-	EllipsisKeyword = &Keyword{Function(func(Continuation, Stack, ...Datum) (Evaluation, error) {
+	EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
 		return nil, fmt.Errorf("cannot expand ellipsis")
 	})}
 )

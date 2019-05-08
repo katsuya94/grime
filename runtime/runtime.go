@@ -226,7 +226,8 @@ func (r *Runtime) instantiate(prov *provision) error {
 			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}
 		}
 	}
-	_, err = common.Evaluate(expression)
+	stack := common.NewStack()
+	_, err = common.Evaluate(stack, expression)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
