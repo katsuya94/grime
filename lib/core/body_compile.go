@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
+func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
 	var (
 		i                         int
 		sourceLocations           []common.SourceLocation
@@ -28,25 +28,25 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 				keyword := &common.Keyword{}
 				err := scope.Set(v.Identifier, keyword)
 				if err != nil {
-					return nil, err
+					return nil, common.FrameTemplate{}, err
 				}
 				rhsScope := common.NewScope()
 				err = rhsScope.Set(v.Identifier, keyword)
 				if err != nil {
-					return nil, err
+					return nil, common.FrameTemplate{}, err
 				}
 				form := v.Form.Push(rhsScope, common.LEXICAL).Next()
 				expression, err := compiler.ExpressionCompile(form)
 				if err != nil {
-					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
+					return nil, common.FrameTemplate{}, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}
-				value, err := common.Evaluate(common.NewStack(), expression)
+				value, err := common.Evaluate(common.NewStack(common.Frame{}), expression)
 				if err != nil {
-					return nil, err
+					return nil, common.FrameTemplate{}, err
 				}
 				procedure, ok := value.(common.Procedure)
 				if !ok {
-					return nil, fmt.Errorf("compile: define-syntax: expected procedure")
+					return nil, common.FrameTemplate{}, fmt.Errorf("compile: define-syntax: expected procedure")
 				}
 				keyword.Transformer = procedure
 				processed = true
@@ -55,7 +55,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 				variable := &common.Variable{}
 				err := scope.Set(v.Identifier, variable)
 				if err != nil {
-					return nil, err
+					return nil, common.FrameTemplate{}, err
 				}
 				definitionVariables = append(definitionVariables, variable)
 				definitionForms = append(definitionForms, form)
@@ -85,11 +85,11 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 				i--
 				processed = true
 			case LetSyntaxForm:
-				return nil, fmt.Errorf("compile: let-syntax not implemented")
+				return nil, common.FrameTemplate{}, fmt.Errorf("compile: let-syntax not implemented")
 			default:
 				expanded, ok, err := compiler.Expand(common.NewSyntax(v))
 				if err != nil {
-					return nil, err
+					return nil, common.FrameTemplate{}, err
 				} else if !ok {
 					processed = true
 					expression = true
@@ -107,18 +107,18 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 	for i := range definitionVariables {
 		expression, err := compiler.ExpressionCompile(definitionForms[i])
 		if err != nil {
-			return nil, ExpressionCompileError{err, "right-hand side of definition", definitionSourceLocations[i]}
+			return nil, common.FrameTemplate{}, ExpressionCompileError{err, "right-hand side of definition", definitionSourceLocations[i]}
 		}
 		expressions = append(expressions, Define{definitionVariables[i], expression})
 	}
 	// Compile the remaining expressions.
 	if len(forms[i:]) == 0 {
-		return nil, common.ErrUnexpectedFinalForm
+		return nil, common.FrameTemplate{}, common.ErrUnexpectedFinalForm
 	}
 	for j := i; j < len(forms); j++ {
 		expression, err := compiler.ExpressionCompile(forms[j])
 		if err != nil {
-			return nil, ExpressionCompileError{err, "body expression", sourceLocations[j]}
+			return nil, common.FrameTemplate{}, ExpressionCompileError{err, "body expression", sourceLocations[j]}
 		}
 		expressions = append(expressions, expression)
 	}
@@ -128,7 +128,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 	} else {
 		expression = expressions[0]
 	}
-	return expression, nil
+	return expression, common.FrameTemplate{}, nil
 }
 
 func sourceLocation(form common.Syntax) common.SourceLocation {

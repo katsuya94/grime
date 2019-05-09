@@ -11,6 +11,10 @@ type comparableLocation struct {
 	*comparableLocation
 }
 
+func (comparableLocation) Export() (*interface{}, bool) {
+	return nil, false
+}
+
 func location() Location {
 	c := &comparableLocation{}
 	c.comparableLocation = c

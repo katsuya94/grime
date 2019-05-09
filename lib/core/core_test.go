@@ -255,11 +255,11 @@ func TestCore(t *testing.T) {
 			for phase, scope := range scopes {
 				body = body.Push(scope, phase)
 			}
-			expression, err := Compile(body, scopes[0])
+			expression, _, err := Compile(body, scopes[0])
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := common.Evaluate(common.NewStack(), expression)
+			actual, err := common.Evaluate(common.NewStack(common.Frame{}), expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

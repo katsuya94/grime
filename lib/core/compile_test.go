@@ -118,7 +118,7 @@ func TestCompile(t *testing.T) {
 			for phase, scope := range scopes {
 				body = body.Push(scope, phase)
 			}
-			_, err := Compile(body, scopes[0])
+			_, _, err := Compile(body, scopes[0])
 			if _test.error == "" {
 				require.NoError(t, err)
 			} else {

@@ -1,3 +1,3 @@
 package common
 
-type Compiler func(Syntax, Scope) (Expression, error)
+type Compiler func(Syntax, Scope) (Expression, FrameTemplate, error)

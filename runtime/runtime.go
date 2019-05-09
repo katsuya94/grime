@@ -206,10 +206,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for phase, scope := range scopes {
 		body = body.Push(scope, phase)
 	}
-	expression, err := r.compiler(body, scopes[0])
+	expression, frameTemplate, err := r.compiler(body, scopes[0])
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
+	frame := frameTemplate.Instantiate()
+	// TODO: compute location allocated in the frame for each exported binding
 	prov.bindings = common.NewBindingSet()
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false
@@ -226,7 +228,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}
 		}
 	}
-	stack := common.NewStack()
+	stack := common.NewStack(frame)
 	_, err = common.Evaluate(stack, expression)
 	if err != nil {
 		return instantiationError{prov.library.name, err}

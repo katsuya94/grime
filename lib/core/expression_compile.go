@@ -33,7 +33,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 		for i := range form.Forms {
 			forms[i] = form.Forms[i].Push(scope, common.LEXICAL)
 		}
-		expression, err := compiler.BodyCompile(forms, scope)
+		expression, _, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +67,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 		for i := range form.Body {
 			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
 		}
-		bodyExpression, err := compiler.BodyCompile(forms, scope)
+		bodyExpression, _, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
@@ -101,11 +101,11 @@ func ExpressionCompile(compiler Compiler, form common.Syntax) (common.Expression
 		for i := range form.Body {
 			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
 		}
-		expression, err := compiler.BodyCompile(forms, scope)
+		expression, _, err := compiler.BodyCompile(forms, scope)
 		if err != nil {
 			return nil, err
 		}
-		return Literal{common.Lambda{common.NewStack(), variables, expression}}, nil
+		return Literal{common.Lambda{common.NewStack(common.Frame{}), variables, expression}}, nil
 	case ReferenceForm:
 		location := form.Identifier.Location()
 		if location == nil {

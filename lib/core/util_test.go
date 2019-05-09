@@ -26,9 +26,10 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 		scope.Set(common.NewIdentifier(name), location)
 	}
 	body = body.Push(scope, common.LEXICAL)
-	expression, err := Compile(body, scope)
+	expression, frameTemplate, err := Compile(body, scope)
 	require.NoError(t, err)
-	actual, err := common.Evaluate(common.NewStack(), expression)
+	frame := frameTemplate.Instantiate()
+	actual, err := common.Evaluate(common.NewStack(frame), expression)
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 }

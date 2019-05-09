@@ -44,7 +44,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			body = body.Push(scope, phase)
 		}
 		scope := common.NewFlushScope(scopes[0])
-		expression, err := compiler(body, scope)
+		expression, frameTemplate, err := compiler(body, scope)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}
@@ -54,7 +54,9 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		stack := common.NewStack()
+		// TODO: should this be shared across REP loops?
+		frame := frameTemplate.Instantiate()
+		stack := common.NewStack(frame)
 		result, err := common.Evaluate(stack, expression)
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)

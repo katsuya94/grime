@@ -221,8 +221,8 @@ func TestExpressionCompile_SyntaxEllipsisIncompatible(t *testing.T) {
 func TestExpressionCompile_Begin(t *testing.T) {
 	form := common.NewSyntax(BeginForm{[]common.Syntax{}})
 	expected := test.NewVoidExpression()
-	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
-		return expected, nil
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
+		return expected, common.FrameTemplate{}, nil
 	}}
 	expression, err := ExpressionCompile(compiler, form)
 	require.NoError(t, err)
@@ -248,9 +248,9 @@ func TestExpressionCompile_Let(t *testing.T) {
 	initExpression := test.NewVoidExpression()
 	bodyExpression := test.NewVoidExpression()
 	var location common.Location
-	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
+	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
 		location = forms[0].IdentifierOrDie().Location()
-		return bodyExpression, nil
+		return bodyExpression, common.FrameTemplate{}, nil
 	}}
 	form := common.NewSyntax(LetForm{id, common.NewSyntax(initExpression), []common.Syntax{test.Syntax("id")}})
 	expression, err := ExpressionCompile(compiler, form)
@@ -282,10 +282,10 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	bodyExpression := test.NewVoidExpression()
 	var location0 common.Location
 	var location1 common.Location
-	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, error) {
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
 		location0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Location()
 		location1 = common.NewSyntax(forms[0].PairOrDie().Rest).IdentifierOrDie().Location()
-		return bodyExpression, nil
+		return bodyExpression, common.FrameTemplate{}, nil
 	}}
 	form := common.NewSyntax(LambdaForm{[]common.Identifier{id0, id1}, []common.Syntax{common.NewSyntax(common.Pair{id0.WrappedSyntax, id1.WrappedSyntax})}})
 	expression, err := ExpressionCompile(compiler, form)

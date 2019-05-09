@@ -1,5 +1,6 @@
 package common
 
+// TODO: rename to LocationSet, also rename file.
 type BindingSet map[int]map[Symbol]Location
 
 func NewBindingSet() BindingSet {

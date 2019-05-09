@@ -5,7 +5,6 @@ import (
 	"github.com/katsuya94/grime/lib/base"
 	"github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/lib/derived"
-	"github.com/katsuya94/grime/lib/fmt"
 	"github.com/katsuya94/grime/lib/grime"
 	"github.com/katsuya94/grime/runtime"
 )
@@ -20,7 +19,6 @@ var libraryBindings = []libraryBinding{
 	{derived.Library, nil},
 	{base.Library, nil},
 	{grime.Library, nil},
-	{fmt.Library, fmt.Bindings},
 }
 
 var StandardLibraryName = []common.Symbol{common.Symbol("grime")}
