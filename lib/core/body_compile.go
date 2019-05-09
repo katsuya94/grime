@@ -40,7 +40,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope) (
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}
-				value, err := common.Evaluate(expression)
+				value, err := common.Evaluate(common.NewStack(), expression)
 				if err != nil {
 					return nil, err
 				}

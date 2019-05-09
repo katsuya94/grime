@@ -28,7 +28,7 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 	body = body.Push(scope, common.LEXICAL)
 	expression, err := Compile(body, scope)
 	require.NoError(t, err)
-	actual, err := common.Evaluate(expression)
+	actual, err := common.Evaluate(common.NewStack(), expression)
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 }
