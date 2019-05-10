@@ -295,7 +295,7 @@ func TestExpressionCompile_Let(t *testing.T) {
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
 	letExpression := expression.(Let)
-	require.Equal(t, location, letExpression.Variable)
+	require.True(t, location.(*common.Variable) == letExpression.Variable)
 	require.Equal(t, initExpression, letExpression.Init)
 	require.Equal(t, bodyExpression, letExpression.Body)
 	require.Equal(t, 1, frameTemplate.Size())
@@ -352,7 +352,7 @@ func TestExpressionCompile_Reference(t *testing.T) {
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
 	reference := expression.(Reference)
-	require.Equal(t, variable, reference.Variable)
+	require.True(t, variable == reference.Variable)
 	require.Equal(t, 0, frameTemplate.Size())
 }
 
@@ -385,7 +385,7 @@ func TestExpressionCompile_Set(t *testing.T) {
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
 	reference := expression.(Set)
-	require.Equal(t, variable, reference.Variable)
+	require.True(t, variable == reference.Variable)
 	require.Equal(t, valueExpression, reference.Expression)
 	require.Equal(t, 0, frameTemplate.Size())
 }
