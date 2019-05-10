@@ -26,6 +26,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 			switch v := form.Datum().(type) {
 			case DefineSyntaxForm:
 				keyword := &common.Keyword{}
+				frameTemplate.Add()
 				err := scope.Set(v.Identifier, keyword)
 				if err != nil {
 					return nil, err
@@ -53,6 +54,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 			case DefineForm:
 				form := v.Form
 				variable := &common.Variable{}
+				frameTemplate.Add()
 				err := scope.Set(v.Identifier, variable)
 				if err != nil {
 					return nil, err

@@ -298,7 +298,7 @@ func TestExpressionCompile_Let(t *testing.T) {
 	require.Equal(t, location, letExpression.Variable)
 	require.Equal(t, initExpression, letExpression.Init)
 	require.Equal(t, bodyExpression, letExpression.Body)
-	require.Equal(t, 0, frameTemplate.Size())
+	require.Equal(t, 1, frameTemplate.Size())
 }
 
 func TestExpressionCompile_Application(t *testing.T) {
@@ -340,7 +340,7 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	require.Equal(t, location0, lambda.Variables[0])
 	require.Equal(t, location1, lambda.Variables[1])
 	require.Equal(t, bodyExpression, lambda.Body)
-	require.Equal(t, 0, frameTemplate.Size())
+	require.Equal(t, 2, frameTemplate.Size())
 }
 
 func TestExpressionCompile_Reference(t *testing.T) {

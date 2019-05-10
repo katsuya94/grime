@@ -140,7 +140,7 @@ type PatternVariableInfo struct {
 	PatternVariable *PatternVariable
 }
 
-func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
+func CompilePattern(syntax Syntax, frameTemplate *FrameTemplate) (Pattern, []PatternVariableInfo, error) {
 	if syntax, ok := syntax.Identifier(); ok {
 		location := syntax.Location()
 		if location, ok := location.(*Literal); ok {
@@ -153,13 +153,14 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 			return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
 		}
 		variable := &PatternVariable{}
+		frameTemplate.Add()
 		return patternVariable{variable}, []PatternVariableInfo{{syntax, variable}}, nil
 	}
 	if syntax, ok := syntax.Pair(); ok {
 		if cdr, ok := NewSyntax(syntax.Rest).Pair(); ok {
 			if cadr, ok := NewSyntax(cdr.First).Identifier(); ok {
 				if cadr.Location() == EllipsisKeyword {
-					subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First))
+					subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), frameTemplate)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -169,7 +170,7 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 						subPatternVariables = append(subPatternVariables, subPatternVariableInfo.PatternVariable)
 					}
 					cddr := NewSyntax(cdr.Rest)
-					restPattern, restPatternVariableInfos, err := CompilePattern(cddr)
+					restPattern, restPatternVariableInfos, err := CompilePattern(cddr, frameTemplate)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -178,11 +179,11 @@ func CompilePattern(syntax Syntax) (Pattern, []PatternVariableInfo, error) {
 				}
 			}
 		}
-		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First))
+		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), frameTemplate)
 		if err != nil {
 			return nil, nil, err
 		}
-		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest))
+		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest), frameTemplate)
 		if err != nil {
 			return nil, nil, err
 		}

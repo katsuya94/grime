@@ -10,8 +10,9 @@ import (
 
 func TestPatternLiteral_MatchUnbound(t *testing.T) {
 	pattern := test.WithLiteral(test.Identifier("literal"), test.Syntax("literal"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -29,8 +30,9 @@ func TestPatternLiteral_MatchBound(t *testing.T) {
 	require.True(t, ok)
 
 	pattern := test.WithLiteral(literal, test.Syntax("literal"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -44,8 +46,9 @@ func TestPatternLiteral_MatchBound(t *testing.T) {
 
 func TestPatternLiteral_NoMatchUnbound(t *testing.T) {
 	pattern := test.WithLiteral(test.Identifier("literal"), test.Syntax("literal"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -62,8 +65,9 @@ func TestPatternLiteral_NoMatchBound(t *testing.T) {
 	require.True(t, ok)
 
 	pattern := test.WithLiteral(literal, test.Syntax("id"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -76,8 +80,9 @@ func TestPatternLiteral_NoMatchBound(t *testing.T) {
 
 func TestPatternUnderscore_MatchAnything(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("_"), UnderscoreKeyword, test.Syntax("_"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -90,8 +95,9 @@ func TestPatternUnderscore_MatchAnything(t *testing.T) {
 
 func TestPatternVariable_MatchAnything(t *testing.T) {
 	pattern := test.Syntax("pattern-variable")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Len(t, patternVariableInfos, 1)
 	patternVariableInfo := patternVariableInfos[0]
@@ -108,8 +114,9 @@ func TestPatternVariable_MatchAnything(t *testing.T) {
 
 func TestPatternEllipsis_MatchEmpty(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -122,8 +129,9 @@ func TestPatternEllipsis_MatchEmpty(t *testing.T) {
 
 func TestPatternEllipsis_MatchEmptyWithRestPatternVariable(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ... . pattern-variable)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Len(t, patternVariableInfos, 1)
 	patternVariableInfo := patternVariableInfos[0]
@@ -140,8 +148,9 @@ func TestPatternEllipsis_MatchEmptyWithRestPatternVariable(t *testing.T) {
 
 func TestPatternEllipsis_MatchNonEmpty(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -154,8 +163,9 @@ func TestPatternEllipsis_MatchNonEmpty(t *testing.T) {
 
 func TestPatternEllipsis_MatchNonEmptyWithPatternVariable(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(pattern-variable ...)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Len(t, patternVariableInfos, 1)
 	patternVariableInfo := patternVariableInfos[0]
@@ -175,8 +185,9 @@ func TestPatternEllipsis_MatchNonEmptyWithPatternVariable(t *testing.T) {
 
 func TestPatternEllipsis_MatchNonEmptyEarlyRest(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ... #t)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -189,8 +200,9 @@ func TestPatternEllipsis_MatchNonEmptyEarlyRest(t *testing.T) {
 
 func TestPatternEllipsis_NoMatchBadRest(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -202,8 +214,9 @@ func TestPatternEllipsis_NoMatchBadRest(t *testing.T) {
 
 func TestPatternEllipsis_NoMatchBadSubPattern(t *testing.T) {
 	pattern := test.WithBinding(test.Identifier("..."), EllipsisKeyword, test.Syntax("(#t ...)"))
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -215,8 +228,9 @@ func TestPatternEllipsis_NoMatchBadSubPattern(t *testing.T) {
 
 func TestPatternPair_Match(t *testing.T) {
 	pattern := test.Syntax("(#t . #t)")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -229,8 +243,9 @@ func TestPatternPair_Match(t *testing.T) {
 
 func TestPatternPair_NoMatchBadFirst(t *testing.T) {
 	pattern := test.Syntax("(#t . #t)")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -242,8 +257,9 @@ func TestPatternPair_NoMatchBadFirst(t *testing.T) {
 
 func TestPatternPair_NoMatchBadRest(t *testing.T) {
 	pattern := test.Syntax("(#t . #t)")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -255,8 +271,9 @@ func TestPatternPair_NoMatchBadRest(t *testing.T) {
 
 func TestPatternDatum_Match(t *testing.T) {
 	pattern := test.Syntax("#t")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 
@@ -269,8 +286,9 @@ func TestPatternDatum_Match(t *testing.T) {
 
 func TestPatternDatum_NoMatch(t *testing.T) {
 	pattern := test.Syntax("#t")
+	frameTemplate := NewFrameTemplate()
 
-	compiled, patternVariableInfos, err := CompilePattern(pattern)
+	compiled, patternVariableInfos, err := CompilePattern(pattern, &frameTemplate)
 	require.NoError(t, err)
 	require.Empty(t, patternVariableInfos)
 

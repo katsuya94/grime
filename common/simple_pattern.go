@@ -41,7 +41,8 @@ func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identif
 		}
 		syntax = syntax.Push(literalScope, LEXICAL)
 	}
-	pattern, patternVariableInfos, err := CompilePattern(syntax)
+	frameTemplate := NewFrameTemplate()
+	pattern, patternVariableInfos, err := CompilePattern(syntax, &frameTemplate)
 	if err != nil {
 		return SimplePattern{}, err
 	}

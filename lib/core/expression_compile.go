@@ -58,6 +58,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			return nil, err
 		}
 		variable := &common.Variable{}
+		frameTemplate.Add()
 		scope := common.NewScope()
 		err = scope.Set(form.Identifier, variable)
 		if err != nil {
@@ -91,6 +92,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		scope := common.NewScope()
 		for _, formal := range form.Formals {
 			variable := &common.Variable{}
+			frameTemplate.Add()
 			err := scope.Set(formal, variable)
 			if err != nil {
 				return nil, err
@@ -159,7 +161,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		)
 		for i := range form.Patterns {
 			pattern := form.Patterns[i].Push(literalScope, common.LEXICAL)
-			compiled, patternVariableInfos, err := common.CompilePattern(pattern)
+			compiled, patternVariableInfos, err := common.CompilePattern(pattern, frameTemplate)
 			if err != nil {
 				return nil, err
 			}
@@ -174,6 +176,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			patternVariables := []*common.PatternVariable{}
 			for _, patternVariableInfo := range patternVariableInfos {
 				patternVariables = append(patternVariables, patternVariableInfo.PatternVariable)
+				frameTemplate.Add()
 				err := scope.Set(patternVariableInfo.Id, patternVariableInfo.PatternVariable)
 				if err != nil {
 					return nil, err
