@@ -107,7 +107,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		if err != nil {
 			return nil, err
 		}
-		return Literal{common.Lambda{common.NewStack(common.Frame{}), variables, expression}}, nil
+		return Literal{common.Closure{common.NewStack(common.Frame{}), variables, expression}}, nil
 	case ReferenceForm:
 		location := form.Identifier.Location()
 		if location == nil {

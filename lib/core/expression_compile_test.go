@@ -335,11 +335,11 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
 	literalExpression := expression.(Literal)
-	lambda := literalExpression.Datum.(common.Lambda)
-	require.Equal(t, 2, len(lambda.Variables))
-	require.Equal(t, location0, lambda.Variables[0])
-	require.Equal(t, location1, lambda.Variables[1])
-	require.Equal(t, bodyExpression, lambda.Body)
+	closure := literalExpression.Datum.(common.Closure)
+	require.Equal(t, 2, len(closure.Variables))
+	require.Equal(t, location0, closure.Variables[0])
+	require.Equal(t, location1, closure.Variables[1])
+	require.Equal(t, bodyExpression, closure.Body)
 	require.Equal(t, 2, frameTemplate.Size())
 }
 

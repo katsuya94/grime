@@ -200,21 +200,20 @@ func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	return f(c, args...)
 }
 
-// Lambda represents a Grime function.
-// TODO: rename to Closure
-type Lambda struct {
+// Closure represents a Grime closure.
+type Closure struct {
 	Stack     Stack
 	Variables []*Variable
 	Body      Expression
 }
 
-func (Lambda) Write() string {
-	return "#<lambda>"
+func (Closure) Write() string {
+	return "#<closure>"
 }
 
-func (d Lambda) Call(c Continuation, args ...Datum) (Evaluation, error) {
+func (d Closure) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	if len(args) != len(d.Variables) {
-		return ErrorC(fmt.Errorf("wrong number of arguments %v for lambda expecting %v arguments", len(args), len(d.Variables)))
+		return ErrorC(fmt.Errorf("wrong number of arguments %v for closure expecting %v arguments", len(args), len(d.Variables)))
 	}
 	for i := range d.Variables {
 		(*d.Variables[i]).Value = args[i]
