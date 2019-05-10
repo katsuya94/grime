@@ -326,7 +326,7 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	var location0 common.Location
 	var location1 common.Location
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
-		require.True(t, ft == &frameTemplate)
+		require.Equal(t, 2, ft.Size())
 		location0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Location()
 		location1 = common.NewSyntax(forms[0].PairOrDie().Rest).IdentifierOrDie().Location()
 		return bodyExpression, nil
@@ -334,13 +334,13 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	form := common.NewSyntax(LambdaForm{[]common.Identifier{id0, id1}, []common.Syntax{common.NewSyntax(common.Pair{id0.WrappedSyntax, id1.WrappedSyntax})}})
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
-	literalExpression := expression.(Literal)
-	closure := literalExpression.Datum.(common.Closure)
-	require.Equal(t, 2, len(closure.Variables))
-	require.Equal(t, location0, closure.Variables[0])
-	require.Equal(t, location1, closure.Variables[1])
-	require.Equal(t, bodyExpression, closure.Body)
-	require.Equal(t, 2, frameTemplate.Size())
+	lambdaExpression := expression.(Lambda)
+	require.Equal(t, 2, lambdaExpression.FrameTemplate.Size())
+	require.Equal(t, 2, len(lambdaExpression.Variables))
+	require.True(t, location0.(*common.Variable) == lambdaExpression.Variables[0])
+	require.True(t, location1.(*common.Variable) == lambdaExpression.Variables[1])
+	require.Equal(t, bodyExpression, lambdaExpression.Body)
+	require.Equal(t, 0, frameTemplate.Size())
 }
 
 func TestExpressionCompile_Reference(t *testing.T) {

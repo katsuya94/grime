@@ -41,7 +41,8 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}
-				value, err := common.Evaluate(common.NewStack(common.Frame{}), expression)
+				// TODO: where does the stack come from?
+				value, err := common.Evaluate(common.NewStack(nil), expression)
 				if err != nil {
 					return nil, err
 				}

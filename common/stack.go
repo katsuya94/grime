@@ -1,7 +1,7 @@
 package common
 
 type Stack struct {
-	frames []Frame
+	frames []*Frame
 }
 
 func (s Stack) Get(ref StackFrameReference) interface{} {
@@ -12,8 +12,15 @@ func (s Stack) Set(ref StackFrameReference, i interface{}) {
 	*s.frames[len(s.frames)-1-ref.Stack].locations[ref.Frame] = i
 }
 
-func NewStack(frame Frame) Stack {
-	return Stack{[]Frame{frame}}
+func (s Stack) Push(frame *Frame) Stack {
+	new := Stack{make([]*Frame, len(s.frames)+1)}
+	copy(new.frames, s.frames)
+	new.frames[len(new.frames)-1] = frame
+	return new
+}
+
+func NewStack(frame *Frame) Stack {
+	return Stack{[]*Frame{frame}}
 }
 
 type Frame struct {
@@ -39,8 +46,8 @@ func (ft *FrameTemplate) Add() int {
 	return i
 }
 
-func (ft FrameTemplate) Instantiate() Frame {
-	frame := Frame{make([]*interface{}, ft.size)}
+func (ft FrameTemplate) Instantiate() *Frame {
+	frame := &Frame{make([]*interface{}, ft.size)}
 	for i := 0; i < ft.size; i++ {
 		location := interface{}(nil)
 		frame.locations[i] = &location

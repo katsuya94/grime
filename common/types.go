@@ -202,9 +202,10 @@ func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
 
 // Closure represents a Grime closure.
 type Closure struct {
-	Stack     Stack
-	Variables []*Variable
-	Body      Expression
+	Stack         Stack
+	FrameTemplate FrameTemplate
+	Variables     []*Variable
+	Body          Expression
 }
 
 func (Closure) Write() string {
@@ -218,7 +219,7 @@ func (d Closure) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	for i := range d.Variables {
 		(*d.Variables[i]).Value = args[i]
 	}
-	return EvalC(c, d.Stack, d.Body)
+	return EvalC(c, d.Stack.Push(d.FrameTemplate.Instantiate()), d.Body)
 }
 
 // ContinuationProcedure represents a callable continuation.

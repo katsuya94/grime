@@ -88,6 +88,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		}
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
+		frameTemplate := common.NewFrameTemplate()
 		var variables []*common.Variable
 		scope := common.NewScope()
 		for _, formal := range form.Formals {
@@ -103,11 +104,11 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		for i := range form.Body {
 			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
 		}
-		expression, err := compiler.BodyCompile(forms, scope, frameTemplate)
+		expression, err := compiler.BodyCompile(forms, scope, &frameTemplate)
 		if err != nil {
 			return nil, err
 		}
-		return Literal{common.Closure{common.NewStack(common.Frame{}), variables, expression}}, nil
+		return Lambda{frameTemplate, variables, expression}, nil
 	case ReferenceForm:
 		location := form.Identifier.Location()
 		if location == nil {

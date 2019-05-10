@@ -233,6 +233,17 @@ func (e Reference) Evaluate(c common.Continuation, s common.Stack) (common.Evalu
 	return common.CallC(c, e.Variable.Value)
 }
 
+// Lambda evaluates to a closure.
+type Lambda struct {
+	FrameTemplate common.FrameTemplate
+	Variables     []*common.Variable
+	Body          common.Expression
+}
+
+func (e Lambda) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
+	return common.CallC(c, common.Closure{s, e.FrameTemplate, e.Variables, e.Body})
+}
+
 // SyntaxCase evaluates its input and evaluates to an output according to pattern matching and fender expressions.
 type SyntaxCase struct {
 	Input             common.Expression

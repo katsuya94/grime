@@ -259,7 +259,7 @@ func TestCore(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := common.Evaluate(common.NewStack(common.Frame{}), expression)
+			actual, err := common.Evaluate(common.NewStack(nil), expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
