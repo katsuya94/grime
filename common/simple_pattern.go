@@ -31,7 +31,7 @@ func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
 
 func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) (SimplePattern, error) {
 	syntax := NewSyntax(NewWrappedSyntax(datum, nil))
-	syntax = syntax.Push(simplePatternScope, LEXICAL)
+	syntax = syntax.Push(simplePatternScope, LEXICAL, false)
 	if len(literals) > 0 {
 		literalScope := NewScope()
 		for _, literal := range literals {
@@ -39,7 +39,7 @@ func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identif
 			id := NewIdentifier(literal.Name())
 			literalScope.Set(id, &Literal{literal})
 		}
-		syntax = syntax.Push(literalScope, LEXICAL)
+		syntax = syntax.Push(literalScope, LEXICAL, false)
 	}
 	frameTemplate := NewFrameTemplate()
 	pattern, patternVariableInfos, err := CompilePattern(syntax, &frameTemplate)

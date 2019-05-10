@@ -4,15 +4,11 @@ import "fmt"
 
 const LEXICAL = -1
 
-type scopeListElement struct {
-	Scope
-	phase int
-}
-
 // ScopeList is a stack of Scopes, giving the top (innermost) scope precendence when resolving bindings. Implemented as a linked list, ensuring that syntaxes referencing outer scopes are not affected.
 type ScopeList struct {
 	scope Scope
 	phase int
+	frame bool
 	next  *ScopeList
 }
 
@@ -20,21 +16,28 @@ func NewScopeList() *ScopeList {
 	return nil
 }
 
-func (l *ScopeList) Get(id Identifier) Location {
+func (l *ScopeList) Get(id Identifier) (BindingStackContext, bool) {
+	return l.get(id, CurrentStackContext)
+}
+
+func (l *ScopeList) get(id Identifier, stackContext StackContext) (BindingStackContext, bool) {
 	if l == nil {
-		return nil
+		return BindingStackContext{}, false
 	}
 	if l.phase == LEXICAL || l.phase == id.phase {
 		location := l.scope.Get(id)
 		if location != nil {
-			return location
+			return BindingStackContext{location, stackContext}, true
 		}
 	}
-	return l.next.Get(id)
+	if l.frame {
+		stackContext++
+	}
+	return l.next.get(id, stackContext)
 }
 
-func (l *ScopeList) Push(scope Scope, phase int) *ScopeList {
-	return &ScopeList{scope, phase, l}
+func (l *ScopeList) Push(scope Scope, phase int, frame bool) *ScopeList {
+	return &ScopeList{scope, phase, frame, l}
 }
 
 // Scope is a set of mappings from Identifiers to Locations.

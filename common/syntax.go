@@ -15,8 +15,17 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-func (id Identifier) Location() Location {
+// TODO: rename Location -> BindingStackContext
+func (id Identifier) Location() (BindingStackContext, bool) {
 	return id.scopeList.Get(id)
+}
+
+func (id Identifier) Binding() Location {
+	bindingStackContext, ok := id.Location()
+	if !ok {
+		return nil
+	}
+	return bindingStackContext.Binding
 }
 
 func (id Identifier) Mark(m *M) Identifier {
@@ -36,12 +45,12 @@ func (id Identifier) Equal(other Identifier) bool {
 }
 
 func (id Identifier) FreeEqual(other Identifier) bool {
-	idLocation := id.Location()
-	otherLocation := other.Location()
-	if idLocation == nil && otherLocation == nil {
+	idBinding := id.Binding()
+	otherBinding := other.Binding()
+	if idBinding == nil && otherBinding == nil {
 		return id.Name() == other.Name()
-	} else if idLocation != nil && otherLocation != nil {
-		return idLocation == otherLocation
+	} else if idBinding != nil && otherBinding != nil {
+		return idBinding == otherBinding
 	} else {
 		return false
 	}
@@ -50,7 +59,7 @@ func (id Identifier) FreeEqual(other Identifier) bool {
 func (id Identifier) Bind(location Location) Identifier {
 	scope := NewScope()
 	scope.Set(id, location)
-	id, ok := id.Push(scope, LEXICAL).Identifier()
+	id, ok := id.Push(scope, LEXICAL, false).Identifier()
 	if !ok {
 		panic("expected identifier")
 	}
@@ -94,15 +103,15 @@ func NewSyntax(datum Datum) Syntax {
 	return Syntax{datum}
 }
 
-func (s Syntax) Push(scope Scope, phase int) Syntax {
+func (s Syntax) Push(scope Scope, phase int, frame bool) Syntax {
 	switch d := s.datum.(type) {
 	case WrappedSyntax:
-		return Syntax{d.Push(scope, phase)}
+		return Syntax{d.Push(scope, phase, frame)}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope, phase).datum,
-				Syntax{d.Rest}.Push(scope, phase).datum,
+				Syntax{d.First}.Push(scope, phase, frame).datum,
+				Syntax{d.Rest}.Push(scope, phase, frame).datum,
 			},
 		}
 	default:

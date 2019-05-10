@@ -116,7 +116,7 @@ func TestCompile(t *testing.T) {
 			scopes[1].Set(test.Identifier("lambda"), Bindings[0][common.Symbol("lambda")])
 			scopes[1].Set(test.Identifier("syntax"), Bindings[0][common.Symbol("syntax")])
 			for phase, scope := range scopes {
-				body = body.Push(scope, phase)
+				body = body.Push(scope, phase, false)
 			}
 			_, _, err := Compile(body, scopes[0])
 			if _test.error == "" {

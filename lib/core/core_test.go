@@ -253,7 +253,7 @@ func TestCore(t *testing.T) {
 			scopes[1].Set(common.NewIdentifier(common.Symbol("lambda")), Bindings[0][common.Symbol("lambda")])
 			scopes[1].Set(common.NewIdentifier(common.Symbol("syntax")), Bindings[0][common.Symbol("syntax")])
 			for phase, scope := range scopes {
-				body = body.Push(scope, phase)
+				body = body.Push(scope, phase, false)
 			}
 			expression, _, err := Compile(body, scopes[0])
 			if err != nil {
@@ -321,7 +321,7 @@ func TestLambdaClosure(t *testing.T) {
 		(cons f r))))
 (~define add-foo (make-add 'foo))
 (~define add-bar (make-add 'bar))
-(add-foo (add-bar 'baz))
+(add-foo (add-bar '(baz)))
 `
 	testProgram(t, source, read.MustReadDatum("(foo bar baz)"))
 }

@@ -148,8 +148,8 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) Push(scope Scope, phase int) WrappedSyntax {
-	d.scopeList = d.scopeList.Push(scope, phase)
+func (d WrappedSyntax) Push(scope Scope, phase int, frame bool) WrappedSyntax {
+	d.scopeList = d.scopeList.Push(scope, phase, frame)
 	return d
 }
 

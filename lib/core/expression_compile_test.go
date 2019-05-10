@@ -95,13 +95,13 @@ func TestExpressionCompile_SyntaxPair(t *testing.T) {
 func TestExpressionCompile_SyntaxPatternVariableReference(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	patternVariable := &common.PatternVariable{Nesting: 0}
+	patternVariable := &common.PatternVariable{Nesting: 0, MatchFrameIndex: 0}
 	template := test.Syntax("id")
 	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}), &frameTemplate)
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
-	require.Equal(t, PatternVariableReference{patternVariable}, syntaxTemplate.Template)
+	require.Equal(t, PatternVariableReference{patternVariable, common.StackFrameReference{0, 0}}, syntaxTemplate.Template)
 	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 	require.Equal(t, 0, frameTemplate.Size())
@@ -129,14 +129,14 @@ func TestExpressionCompile_SyntaxImproperEllipsis(t *testing.T) {
 func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	patternVariable := &common.PatternVariable{Nesting: 0}
+	patternVariable := &common.PatternVariable{Nesting: 0, MatchFrameIndex: 0}
 	template := test.Syntax("(id . thing)")
 	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}), &frameTemplate)
 	require.NoError(t, err)
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
-	require.Equal(t, PatternVariableReference{patternVariable}, pair.First)
+	require.Equal(t, PatternVariableReference{patternVariable, common.StackFrameReference{0, 0}}, pair.First)
 	require.Equal(t, template.PairOrDie().Rest, pair.Rest)
 	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
@@ -146,7 +146,7 @@ func TestExpressionCompile_SyntaxPairFirstPatternVariableReference(t *testing.T)
 func TestExpressionCompile_SyntaxPairRestPatternVariableReference(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	patternVariable := &common.PatternVariable{Nesting: 0}
+	patternVariable := &common.PatternVariable{Nesting: 0, MatchFrameIndex: 0}
 	template := test.Syntax("(id . thing)")
 	template = test.WithBinding(common.NewIdentifier("thing"), patternVariable, template)
 	expression, err := ExpressionCompile(compiler, common.NewSyntax(SyntaxForm{template}), &frameTemplate)
@@ -154,7 +154,7 @@ func TestExpressionCompile_SyntaxPairRestPatternVariableReference(t *testing.T) 
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	require.Equal(t, template.PairOrDie().First, pair.First)
-	require.Equal(t, PatternVariableReference{patternVariable}, pair.Rest)
+	require.Equal(t, PatternVariableReference{patternVariable, common.StackFrameReference{0, 0}}, pair.Rest)
 	require.Equal(t, 1, len(syntaxTemplate.PatternVariables))
 	require.Equal(t, patternVariable, syntaxTemplate.PatternVariables[0])
 	require.Equal(t, 0, frameTemplate.Size())
@@ -163,7 +163,7 @@ func TestExpressionCompile_SyntaxPairRestPatternVariableReference(t *testing.T) 
 func TestExpressionCompile_SyntaxEllipsis(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	patternVariable := &common.PatternVariable{Nesting: 1}
+	patternVariable := &common.PatternVariable{Nesting: 1, MatchFrameIndex: 0}
 	template := test.Syntax("(id ...)")
 	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
 	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
@@ -172,7 +172,7 @@ func TestExpressionCompile_SyntaxEllipsis(t *testing.T) {
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	subtemplate := pair.First.(Subtemplate)
-	require.Equal(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
+	require.Equal(t, PatternVariableReference{patternVariable, common.StackFrameReference{0, 0}}, subtemplate.Subtemplate.Template)
 	require.Equal(t, 1, len(subtemplate.Subtemplate.PatternVariables))
 	require.Equal(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
 	require.Equal(t, 1, subtemplate.Nesting)
@@ -196,7 +196,7 @@ func TestExpressionCompile_SyntaxEllipsisNoPatterVariable(t *testing.T) {
 func TestExpressionCompile_SyntaxEllipsisMultiple(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	patternVariable := &common.PatternVariable{Nesting: 2}
+	patternVariable := &common.PatternVariable{Nesting: 2, MatchFrameIndex: 0}
 	template := test.Syntax("(id ... ...)")
 	template = test.WithBinding(common.NewIdentifier("id"), patternVariable, template)
 	template = test.WithBinding(common.NewIdentifier("..."), common.EllipsisKeyword, template)
@@ -205,7 +205,7 @@ func TestExpressionCompile_SyntaxEllipsisMultiple(t *testing.T) {
 	syntaxTemplate := expression.(SyntaxTemplate)
 	pair := syntaxTemplate.Template.(common.Pair)
 	subtemplate := pair.First.(Subtemplate)
-	require.Equal(t, PatternVariableReference{patternVariable}, subtemplate.Subtemplate.Template)
+	require.Equal(t, PatternVariableReference{patternVariable, common.StackFrameReference{0, 0}}, subtemplate.Subtemplate.Template)
 	require.Equal(t, 1, len(subtemplate.Subtemplate.PatternVariables))
 	require.Equal(t, patternVariable, subtemplate.Subtemplate.PatternVariables[0])
 	require.Equal(t, 2, subtemplate.Nesting)
@@ -285,17 +285,17 @@ func TestExpressionCompile_Let(t *testing.T) {
 	id := test.Identifier("id")
 	initExpression := test.NewVoidExpression()
 	bodyExpression := test.NewVoidExpression()
-	var location common.Location
+	var binding common.Location
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.True(t, ft == &frameTemplate)
-		location = forms[0].IdentifierOrDie().Location()
+		binding = forms[0].IdentifierOrDie().Binding()
 		return bodyExpression, nil
 	}}
 	form := common.NewSyntax(LetForm{id, common.NewSyntax(initExpression), []common.Syntax{test.Syntax("id")}})
 	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.NoError(t, err)
 	letExpression := expression.(Let)
-	require.True(t, location.(*common.Variable) == letExpression.Variable)
+	require.True(t, binding.(*common.Variable) == letExpression.Variable)
 	require.Equal(t, initExpression, letExpression.Init)
 	require.Equal(t, bodyExpression, letExpression.Body)
 	require.Equal(t, 1, frameTemplate.Size())
@@ -323,12 +323,12 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	id0 := test.Identifier("arg0")
 	id1 := test.Identifier("arg1")
 	bodyExpression := test.NewVoidExpression()
-	var location0 common.Location
-	var location1 common.Location
+	var binding0 common.Location
+	var binding1 common.Location
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.Equal(t, 2, ft.Size())
-		location0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Location()
-		location1 = common.NewSyntax(forms[0].PairOrDie().Rest).IdentifierOrDie().Location()
+		binding0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Binding()
+		binding1 = common.NewSyntax(forms[0].PairOrDie().Rest).IdentifierOrDie().Binding()
 		return bodyExpression, nil
 	}}
 	form := common.NewSyntax(LambdaForm{[]common.Identifier{id0, id1}, []common.Syntax{common.NewSyntax(common.Pair{id0.WrappedSyntax, id1.WrappedSyntax})}})
@@ -337,8 +337,34 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	lambdaExpression := expression.(Lambda)
 	require.Equal(t, 2, lambdaExpression.FrameTemplate.Size())
 	require.Equal(t, 2, len(lambdaExpression.Variables))
-	require.True(t, location0.(*common.Variable) == lambdaExpression.Variables[0])
-	require.True(t, location1.(*common.Variable) == lambdaExpression.Variables[1])
+	require.True(t, binding0.(*common.Variable) == lambdaExpression.Variables[0])
+	require.True(t, binding1.(*common.Variable) == lambdaExpression.Variables[1])
+	require.Equal(t, 2, len(lambdaExpression.VariableReferences))
+	require.Equal(t, lambdaExpression.VariableReferences[0], common.StackFrameReference{0, 0})
+	require.Equal(t, lambdaExpression.VariableReferences[1], common.StackFrameReference{0, 1})
+	require.Equal(t, bodyExpression, lambdaExpression.Body)
+	require.Equal(t, 0, frameTemplate.Size())
+}
+
+func TestExpressionCompile_LambdaCapture(t *testing.T) {
+	frameTemplate := common.NewFrameTemplate()
+	variable := &common.Variable{}
+	bodyExpression := test.NewVoidExpression()
+	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
+		require.Equal(t, 0, ft.Size())
+		bindingStackContext, ok := forms[0].IdentifierOrDie().Location()
+		require.True(t, ok)
+		require.True(t, bindingStackContext.Binding.(*common.Variable) == variable)
+		require.Equal(t, common.StackContext(1), bindingStackContext.StackContext)
+		return bodyExpression, nil
+	}}
+	form := common.NewSyntax(LambdaForm{[]common.Identifier{}, []common.Syntax{test.WithBinding(test.Identifier("id"), variable, test.Syntax("id"))}})
+	expression, err := ExpressionCompile(compiler, form, &frameTemplate)
+	require.NoError(t, err)
+	lambdaExpression := expression.(Lambda)
+	require.Equal(t, 0, lambdaExpression.FrameTemplate.Size())
+	require.Equal(t, 0, len(lambdaExpression.Variables))
+	require.Equal(t, 0, len(lambdaExpression.VariableReferences))
 	require.Equal(t, bodyExpression, lambdaExpression.Body)
 	require.Equal(t, 0, frameTemplate.Size())
 }

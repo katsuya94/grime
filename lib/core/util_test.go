@@ -25,7 +25,7 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 	for name, location := range Bindings[0] {
 		scope.Set(common.NewIdentifier(name), location)
 	}
-	body = body.Push(scope, common.LEXICAL)
+	body = body.Push(scope, common.LEXICAL, false)
 	expression, frameTemplate, err := Compile(body, scope)
 	require.NoError(t, err)
 	frame := frameTemplate.Instantiate()

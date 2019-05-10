@@ -5,11 +5,11 @@ type Stack struct {
 }
 
 func (s Stack) Get(ref StackFrameReference) interface{} {
-	return *s.frames[len(s.frames)-1-ref.Stack].locations[ref.Frame]
+	return *s.frames[len(s.frames)-1-int(ref.StackContext)].locations[ref.FrameIndex]
 }
 
 func (s Stack) Set(ref StackFrameReference, i interface{}) {
-	*s.frames[len(s.frames)-1-ref.Stack].locations[ref.Frame] = i
+	*s.frames[len(s.frames)-1-int(ref.StackContext)].locations[ref.FrameIndex] = i
 }
 
 func (s Stack) Push(frame *Frame) Stack {
@@ -27,9 +27,18 @@ type Frame struct {
 	locations []*interface{}
 }
 
+type StackContext int
+
+var CurrentStackContext StackContext = 0
+
+type BindingStackContext struct {
+	Binding      Location
+	StackContext StackContext
+}
+
 type StackFrameReference struct {
-	Stack int
-	Frame int
+	StackContext StackContext
+	FrameIndex   int
 }
 
 type FrameTemplate struct {

@@ -5,10 +5,10 @@ import "fmt"
 var (
 	UnderscoreKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
 		return nil, fmt.Errorf("cannot expand underscore")
-	})}
+	}), -1}
 	EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
 		return nil, fmt.Errorf("cannot expand ellipsis")
-	})}
+	}), -1}
 )
 
 type Pattern interface {
@@ -36,11 +36,11 @@ func (p patternUnderscore) Match(syntax Syntax) (map[*PatternVariable]interface{
 	return map[*PatternVariable]interface{}{}, true
 }
 
-type patternVariable struct {
+type patternPatternVariable struct {
 	patternVariable *PatternVariable
 }
 
-func (p patternVariable) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+func (p patternPatternVariable) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
 	return map[*PatternVariable]interface{}{p.patternVariable: syntax}, true
 }
 
@@ -142,24 +142,23 @@ type PatternVariableInfo struct {
 
 func CompilePattern(syntax Syntax, frameTemplate *FrameTemplate) (Pattern, []PatternVariableInfo, error) {
 	if syntax, ok := syntax.Identifier(); ok {
-		location := syntax.Location()
-		if location, ok := location.(*Literal); ok {
-			return patternLiteral{location.Id}, nil, nil
+		binding := syntax.Binding()
+		if binding, ok := binding.(*Literal); ok {
+			return patternLiteral{binding.Id}, nil, nil
 		}
-		if location == UnderscoreKeyword {
+		if binding == UnderscoreKeyword {
 			return patternUnderscore{}, nil, nil
 		}
-		if location == EllipsisKeyword {
+		if binding == EllipsisKeyword {
 			return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
 		}
-		variable := &PatternVariable{}
-		frameTemplate.Add()
-		return patternVariable{variable}, []PatternVariableInfo{{syntax, variable}}, nil
+		patternVariable := NewPatternVariable(frameTemplate)
+		return patternPatternVariable{patternVariable}, []PatternVariableInfo{{syntax, patternVariable}}, nil
 	}
 	if syntax, ok := syntax.Pair(); ok {
 		if cdr, ok := NewSyntax(syntax.Rest).Pair(); ok {
 			if cadr, ok := NewSyntax(cdr.First).Identifier(); ok {
-				if cadr.Location() == EllipsisKeyword {
+				if cadr.Binding() == EllipsisKeyword {
 					subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), frameTemplate)
 					if err != nil {
 						return nil, nil, err

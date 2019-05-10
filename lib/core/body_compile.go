@@ -8,11 +8,12 @@ import (
 
 func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
 	var (
-		i                         int
-		sourceLocations           []common.SourceLocation
-		definitionVariables       []*common.Variable
-		definitionForms           []common.Syntax
-		definitionSourceLocations []common.SourceLocation
+		i                            int
+		sourceLocations              []common.SourceLocation
+		definitionVariables          []*common.Variable
+		definitionVariableReferences []common.StackFrameReference
+		definitionForms              []common.Syntax
+		definitionSourceLocations    []common.SourceLocation
 	)
 	for _, form := range forms {
 		sourceLocations = append(sourceLocations, sourceLocation(form))
@@ -25,8 +26,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 			form := forms[i]
 			switch v := form.Datum().(type) {
 			case DefineSyntaxForm:
-				keyword := &common.Keyword{}
-				frameTemplate.Add()
+				keyword := common.NewKeyword(frameTemplate)
 				err := scope.Set(v.Identifier, keyword)
 				if err != nil {
 					return nil, err
@@ -36,7 +36,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 				if err != nil {
 					return nil, err
 				}
-				form := v.Form.Push(rhsScope, common.LEXICAL).Next()
+				form := v.Form.Push(rhsScope, common.LEXICAL, false).Next()
 				expression, err := compiler.ExpressionCompile(form, frameTemplate)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
@@ -54,13 +54,14 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 				processed = true
 			case DefineForm:
 				form := v.Form
-				variable := &common.Variable{}
-				frameTemplate.Add()
+				variable := common.NewVariable(frameTemplate)
 				err := scope.Set(v.Identifier, variable)
 				if err != nil {
 					return nil, err
 				}
+				variableReference := variable.ValueReference(common.CurrentStackContext)
 				definitionVariables = append(definitionVariables, variable)
+				definitionVariableReferences = append(definitionVariableReferences, variableReference)
 				definitionForms = append(definitionForms, form)
 				definitionSourceLocations = append(definitionSourceLocations, sourceLocations[i])
 				processed = true
@@ -112,7 +113,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 		if err != nil {
 			return nil, ExpressionCompileError{err, "right-hand side of definition", definitionSourceLocations[i]}
 		}
-		expressions = append(expressions, Define{definitionVariables[i], expression})
+		expressions = append(expressions, Define{definitionVariables[i], definitionVariableReferences[i], expression})
 	}
 	// Compile the remaining expressions.
 	if len(forms[i:]) == 0 {

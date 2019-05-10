@@ -41,7 +41,7 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 		program = append(program, syntaxes...)
 		body := common.Body(nullSourceLocationTree, program...)
 		for phase, scope := range scopes {
-			body = body.Push(scope, phase)
+			body = body.Push(scope, phase, false)
 		}
 		scope := common.NewFlushScope(scopes[0])
 		expression, frameTemplate, err := compiler(body, scope)

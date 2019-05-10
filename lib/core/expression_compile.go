@@ -31,7 +31,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		scope := common.NewScope()
 		forms := make([]common.Syntax, len(form.Forms))
 		for i := range form.Forms {
-			forms[i] = form.Forms[i].Push(scope, common.LEXICAL)
+			forms[i] = form.Forms[i].Push(scope, common.LEXICAL, false)
 		}
 		expression, err := compiler.BodyCompile(forms, scope, frameTemplate)
 		if err != nil {
@@ -57,8 +57,8 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		if err != nil {
 			return nil, err
 		}
-		variable := &common.Variable{}
-		frameTemplate.Add()
+		variable := common.NewVariable(frameTemplate)
+		variableReference := variable.ValueReference(common.CurrentStackContext)
 		scope := common.NewScope()
 		err = scope.Set(form.Identifier, variable)
 		if err != nil {
@@ -66,13 +66,13 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		}
 		forms := make([]common.Syntax, len(form.Body))
 		for i := range form.Body {
-			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
+			forms[i] = form.Body[i].Push(scope, common.LEXICAL, false)
 		}
 		bodyExpression, err := compiler.BodyCompile(forms, scope, frameTemplate)
 		if err != nil {
 			return nil, err
 		}
-		return Let{variable, initExpression, bodyExpression}, nil
+		return Let{variable, variableReference, initExpression, bodyExpression}, nil
 	case ApplicationForm:
 		procedureExpression, err := compiler.ExpressionCompile(form.Procedure, frameTemplate)
 		if err != nil {
@@ -90,49 +90,53 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 	case LambdaForm:
 		frameTemplate := common.NewFrameTemplate()
 		var variables []*common.Variable
+		variableReferences := []common.StackFrameReference{}
 		scope := common.NewScope()
 		for _, formal := range form.Formals {
-			variable := &common.Variable{}
-			frameTemplate.Add()
+			variable := common.NewVariable(&frameTemplate)
+			variableReference := variable.ValueReference(common.CurrentStackContext)
 			err := scope.Set(formal, variable)
 			if err != nil {
 				return nil, err
 			}
 			variables = append(variables, variable)
+			variableReferences = append(variableReferences, variableReference)
 		}
 		forms := make([]common.Syntax, len(form.Body))
 		for i := range form.Body {
-			forms[i] = form.Body[i].Push(scope, common.LEXICAL)
+			forms[i] = form.Body[i].Push(scope, common.LEXICAL, true)
 		}
 		expression, err := compiler.BodyCompile(forms, scope, &frameTemplate)
 		if err != nil {
 			return nil, err
 		}
-		return Lambda{frameTemplate, variables, expression}, nil
+		return Lambda{frameTemplate, variables, variableReferences, expression}, nil
 	case ReferenceForm:
-		location := form.Identifier.Location()
-		if location == nil {
+		bindingStackContext, ok := form.Identifier.Location()
+		if !ok {
 			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
-		variable, ok := location.(*common.Variable)
+		variable, ok := bindingStackContext.Binding.(*common.Variable)
 		if !ok {
 			return nil, fmt.Errorf("compile: non-variable identifier %v in expression context", form.Identifier.Name())
 		}
-		return Reference{form.Identifier, variable}, nil
+		variableReference := variable.ValueReference(bindingStackContext.StackContext)
+		return Reference{form.Identifier, variable, variableReference}, nil
 	case SetForm:
-		location := form.Identifier.Location()
-		if location == nil {
+		bindingStackContext, ok := form.Identifier.Location()
+		if !ok {
 			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
-		variable, ok := location.(*common.Variable)
+		variable, ok := bindingStackContext.Binding.(*common.Variable)
 		if !ok {
 			return nil, fmt.Errorf("compile: non-variable identifier %v in assignment", form.Identifier.Name())
 		}
+		variableReference := variable.ValueReference(bindingStackContext.StackContext)
 		expression, err := compiler.ExpressionCompile(form.Form, frameTemplate)
 		if err != nil {
 			return nil, err
 		}
-		return Set{form.Identifier, variable, expression}, nil
+		return Set{form.Identifier, variable, variableReference, expression}, nil
 	case SyntaxCaseForm:
 		inputExpression, err := compiler.ExpressionCompile(form.Input, frameTemplate)
 		if err != nil {
@@ -141,11 +145,11 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		literals := []common.Identifier{}
 		literalScope := common.NewScope()
 		for _, literal := range form.Literals {
-			location := literal.Location()
-			if location == common.UnderscoreKeyword {
+			binding := literal.Binding()
+			if binding == common.UnderscoreKeyword {
 				return nil, fmt.Errorf("compile: underscore cannot appear in literals")
 			}
-			if location == common.EllipsisKeyword {
+			if binding == common.EllipsisKeyword {
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
 			literals = append(literals, literal)
@@ -155,13 +159,14 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			}
 		}
 		var (
-			patterns          []common.Pattern
-			patternVariabless [][]*common.PatternVariable
-			fenderExpressions []common.Expression
-			outputExpressions []common.Expression
+			patterns                   []common.Pattern
+			patternVariabless          [][]*common.PatternVariable
+			patternVariableReferencess [][]common.StackFrameReference
+			fenderExpressions          []common.Expression
+			outputExpressions          []common.Expression
 		)
 		for i := range form.Patterns {
-			pattern := form.Patterns[i].Push(literalScope, common.LEXICAL)
+			pattern := form.Patterns[i].Push(literalScope, common.LEXICAL, false)
 			compiled, patternVariableInfos, err := common.CompilePattern(pattern, frameTemplate)
 			if err != nil {
 				return nil, err
@@ -175,16 +180,17 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			}
 			scope := common.NewScope()
 			patternVariables := []*common.PatternVariable{}
+			patternVariableReferences := []common.StackFrameReference{}
 			for _, patternVariableInfo := range patternVariableInfos {
 				patternVariables = append(patternVariables, patternVariableInfo.PatternVariable)
-				frameTemplate.Add()
+				patternVariableReferences = append(patternVariableReferences, patternVariableInfo.PatternVariable.PatternVariableReference(common.CurrentStackContext))
 				err := scope.Set(patternVariableInfo.Id, patternVariableInfo.PatternVariable)
 				if err != nil {
 					return nil, err
 				}
 			}
-			fender := form.Fenders[i].Push(scope, common.LEXICAL)
-			output := form.Outputs[i].Push(scope, common.LEXICAL)
+			fender := form.Fenders[i].Push(scope, common.LEXICAL, false)
+			output := form.Outputs[i].Push(scope, common.LEXICAL, false)
 			fenderExpression, err := compiler.ExpressionCompile(fender, frameTemplate)
 			if err != nil {
 				return nil, err
@@ -195,10 +201,11 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			}
 			patterns = append(patterns, compiled)
 			patternVariabless = append(patternVariabless, patternVariables)
+			patternVariableReferencess = append(patternVariableReferencess, patternVariableReferences)
 			fenderExpressions = append(fenderExpressions, fenderExpression)
 			outputExpressions = append(outputExpressions, outputExpression)
 		}
-		return SyntaxCase{inputExpression, patterns, patternVariabless, fenderExpressions, outputExpressions}, nil
+		return SyntaxCase{inputExpression, patterns, patternVariabless, patternVariableReferencess, fenderExpressions, outputExpressions}, nil
 	case common.WrappedSyntax:
 		switch datum := form.Datum().(type) {
 		case common.Boolean, common.Number, common.Character, common.String:
@@ -218,12 +225,15 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 
 func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVariable]int, error) {
 	if id, ok := syntax.Identifier(); ok {
-		location := id.Location()
-		if patternVariable, ok := location.(*common.PatternVariable); ok {
-			return PatternVariableReference{patternVariable}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
-		}
-		if location == common.EllipsisKeyword {
-			return nil, nil, fmt.Errorf("compile: in syntax template at %v: improper use of ellipsis", id.SourceLocation())
+		bindingStackContext, ok := id.Location()
+		if ok {
+			if patternVariable, ok := bindingStackContext.Binding.(*common.PatternVariable); ok {
+				patternVariableReference := patternVariable.PatternVariableReference(bindingStackContext.StackContext)
+				return PatternVariableReference{patternVariable, patternVariableReference}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
+			}
+			if bindingStackContext.Binding == common.EllipsisKeyword {
+				return nil, nil, fmt.Errorf("compile: in syntax template at %v: improper use of ellipsis", id.SourceLocation())
+			}
 		}
 		return syntax.Datum(), map[*common.PatternVariable]int{}, nil
 	}
@@ -240,7 +250,7 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 			if !ok {
 				break
 			}
-			if id.Location() != common.EllipsisKeyword {
+			if id.Binding() != common.EllipsisKeyword {
 				break
 			}
 			ellipsis++

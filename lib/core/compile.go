@@ -63,7 +63,7 @@ func (compiler Compiler) ExpandCompletely(form common.Syntax) (common.Syntax, er
 
 func Compile(body common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
 	scope = common.NewProxyScope(scope)
-	body = body.Push(scope, common.LEXICAL)
+	body = body.Push(scope, common.LEXICAL, false)
 	var forms []common.Syntax
 	for {
 		pair, ok := body.Pair()

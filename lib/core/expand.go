@@ -58,11 +58,11 @@ func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (co
 	if !ok {
 		return common.Syntax{}, false, nil
 	}
-	location := id.Location()
-	if location == nil {
+	binding := id.Binding()
+	if binding == nil {
 		return common.Syntax{}, false, nil
 	}
-	keyword, ok := location.(*common.Keyword)
+	keyword, ok := binding.(*common.Keyword)
 	if !ok {
 		return common.Syntax{}, false, nil
 	}

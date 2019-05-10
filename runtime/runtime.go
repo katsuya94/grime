@@ -204,7 +204,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	}
 	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
 	for phase, scope := range scopes {
-		body = body.Push(scope, phase)
+		body = body.Push(scope, phase, false)
 	}
 	expression, frameTemplate, err := r.compiler(body, scopes[0])
 	if err != nil {

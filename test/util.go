@@ -5,8 +5,14 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func Locations(n uintptr) []common.Variable {
-	return make([]common.Variable, n)
+// TODO: rename to Bindings
+func Locations(n int) []common.Variable {
+	frameTemplate := common.NewFrameTemplate()
+	variables := make([]common.Variable, n)
+	for i := 0; i < n; i++ {
+		variables[i] = *common.NewVariable(&frameTemplate)
+	}
+	return variables
 }
 
 func Syntax(s string) common.Syntax {
@@ -31,7 +37,7 @@ func WithBinding(id common.Identifier, location common.Location, syntax common.S
 	if err != nil {
 		panic(err)
 	}
-	return syntax.Push(scope, common.LEXICAL)
+	return syntax.Push(scope, common.LEXICAL, false)
 }
 
 // voidExpression must be of non-zero size for equality comparison

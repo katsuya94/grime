@@ -128,6 +128,7 @@ func (f LambdaForm) Mark(m *common.M) common.Marker {
 	}
 }
 
+// TODO: Rename SetForm -> AssignmentForm
 type SetForm struct {
 	Identifier common.Identifier
 	Form       common.Syntax

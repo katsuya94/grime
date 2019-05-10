@@ -4,85 +4,111 @@ import (
 	"testing"
 
 	. "github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/test"
 	"github.com/stretchr/testify/require"
 )
-
-type comparableLocation struct {
-	*comparableLocation
-}
-
-func (comparableLocation) Export() (*interface{}, bool) {
-	return nil, false
-}
-
-func location() Location {
-	c := &comparableLocation{}
-	c.comparableLocation = c
-	return c
-}
 
 func TestScopeList_GetEmpty(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
 	scopeList := NewScopeList()
-	require.Nil(t, scopeList.Get(id))
+	_, ok := scopeList.Get(id)
+	require.False(t, ok)
 }
 
 func TestScopeList_GetOtherIdentifier(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	location := location()
+	locations := test.Locations(1)
 	scope := NewScope()
-	scope.Set(id, location)
-	scopeList := NewScopeList().Push(scope, 0)
+	scope.Set(id, &locations[0])
+	scopeList := NewScopeList().Push(scope, 0, false)
 	other := NewIdentifier(Symbol("other"))
-	require.Nil(t, scopeList.Get(other))
+	_, ok := scopeList.Get(other)
+	require.False(t, ok)
 }
 func TestScopeList_GetOtherPhase(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	location := location()
+	locations := test.Locations(1)
 	scope := NewScope()
-	scope.Set(id, location)
-	scopeList := NewScopeList().Push(scope, 0)
-	other, _ := id.Next().Identifier()
-	require.Nil(t, scopeList.Get(other))
+	scope.Set(id, &locations[0])
+	scopeList := NewScopeList().Push(scope, 0, false)
+	next, _ := id.Next().Identifier()
+	_, ok := scopeList.Get(next)
+	require.False(t, ok)
 }
 
 func TestScopeList_GetSamePhase(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	location := location()
+	locations := test.Locations(1)
 	scope := NewScope()
-	scope.Set(id, location)
-	scopeList := NewScopeList().Push(scope, 0)
-	require.Exactly(t, location, scopeList.Get(id))
+	scope.Set(id, &locations[0])
+	scopeList := NewScopeList().Push(scope, 0, false)
+	bindingStackContext, ok := scopeList.Get(id)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[0])
+	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
 
 func TestScopeList_GetLexical(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	location := location()
+	locations := test.Locations(1)
 	scope := NewScope()
-	scope.Set(id, location)
-	scopeList := NewScopeList().Push(scope, LEXICAL)
+	scope.Set(id, &locations[0])
+	scopeList := NewScopeList().Push(scope, LEXICAL, false)
 	next, _ := id.Next().Identifier()
-	require.Exactly(t, location, scopeList.Get(next))
+	bindingStackContext, ok := scopeList.Get(next)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[0])
+	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
 
 func TestScopeList_GetMany(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	location := location()
+	locations := test.Locations(1)
 	outer := NewScope()
-	outer.Set(id, location)
+	outer.Set(id, &locations[0])
 	inner := NewScope()
-	scopeList := NewScopeList().Push(outer, 0).Push(inner, 0)
-	require.Exactly(t, location, scopeList.Get(id))
+	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, false)
+	bindingStackContext, ok := scopeList.Get(id)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[0])
+	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
 
 func TestScopeList_GetShadow(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
-	other := location()
-	location := location()
+	locations := test.Locations(2)
 	outer := NewScope()
-	outer.Set(id, other)
+	outer.Set(id, &locations[0])
 	inner := NewScope()
-	inner.Set(id, location)
-	scopeList := NewScopeList().Push(outer, 0).Push(inner, 0)
-	require.Exactly(t, location, scopeList.Get(id))
+	inner.Set(id, &locations[1])
+	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, false)
+	bindingStackContext, ok := scopeList.Get(id)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[1])
+	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
+}
+
+func TestScopeList_GetFrame(t *testing.T) {
+	id := NewIdentifier(Symbol("id"))
+	locations := test.Locations(1)
+	scope := NewScope()
+	scope.Set(id, &locations[0])
+	scopeList := NewScopeList().Push(scope, LEXICAL, true)
+	bindingStackContext, ok := scopeList.Get(id)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[0])
+	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
+}
+
+func TestScopeList_GetFrameNext(t *testing.T) {
+	id := NewIdentifier(Symbol("id"))
+	locations := test.Locations(1)
+	outer := NewScope()
+	outer.Set(id, &locations[0])
+	inner := NewScope()
+	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, true)
+	bindingStackContext, ok := scopeList.Get(id)
+	require.True(t, ok)
+	require.True(t, bindingStackContext.Binding.(*Variable) == &locations[0])
+	require.Equal(t, StackContext(1), bindingStackContext.StackContext)
 }

@@ -97,24 +97,26 @@ func (c ifConditionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 
 // Let evaluates its init expression and assigns it to its variable before evaluating its body.
 type Let struct {
-	Variable *common.Variable
-	Init     common.Expression
-	Body     common.Expression
+	Variable          *common.Variable
+	VariableReference common.StackFrameReference
+	Init              common.Expression
+	Body              common.Expression
 }
 
 func (e Let) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		letInitEvaluated{c, s, e.Variable, e.Body},
+		letInitEvaluated{c, s, e.Variable, e.VariableReference, e.Body},
 		s,
 		e.Init,
 	)
 }
 
 type letInitEvaluated struct {
-	continuation common.Continuation
-	stack        common.Stack
-	variable     *common.Variable
-	body         common.Expression
+	continuation      common.Continuation
+	stack             common.Stack
+	variable          *common.Variable
+	variableReference common.StackFrameReference
+	body              common.Expression
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.Evaluation, error) {
@@ -166,21 +168,23 @@ func (c beginFirstEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 
 // Define sets its variable to the value of its expression.
 type Define struct {
-	Variable   *common.Variable
-	Expression common.Expression
+	Variable          *common.Variable
+	VariableReference common.StackFrameReference
+	Expression        common.Expression
 }
 
 func (e Define) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		defineExpressionEvaluated{c, e.Variable},
+		defineExpressionEvaluated{c, e.Variable, e.VariableReference},
 		s,
 		e.Expression,
 	)
 }
 
 type defineExpressionEvaluated struct {
-	continuation common.Continuation
-	variable     *common.Variable
+	continuation      common.Continuation
+	variable          *common.Variable
+	variableReference common.StackFrameReference
 }
 
 func (c defineExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
@@ -192,24 +196,27 @@ func (c defineExpressionEvaluated) Call(d common.Datum) (common.Evaluation, erro
 }
 
 // Set sets its variable to the value of its expression.
+// TODO: rename Set -> Assign
 type Set struct {
-	Identifier common.Identifier
-	Variable   *common.Variable
-	Expression common.Expression
+	Identifier        common.Identifier
+	Variable          *common.Variable
+	VariableReference common.StackFrameReference
+	Expression        common.Expression
 }
 
 func (e Set) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		setExpressionEvaluated{c, e.Identifier, e.Variable},
+		setExpressionEvaluated{c, e.Identifier, e.Variable, e.VariableReference},
 		s,
 		e.Expression,
 	)
 }
 
 type setExpressionEvaluated struct {
-	continuation common.Continuation
-	identifier   common.Identifier
-	variable     *common.Variable
+	continuation      common.Continuation
+	identifier        common.Identifier
+	variable          *common.Variable
+	variableReference common.StackFrameReference
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
@@ -222,8 +229,9 @@ func (c setExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) 
 
 // Reference evaluates to the value of its variable.
 type Reference struct {
-	Identifier common.Identifier
-	Variable   *common.Variable
+	Identifier        common.Identifier
+	Variable          *common.Variable
+	VariableReference common.StackFrameReference
 }
 
 func (e Reference) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
@@ -235,9 +243,10 @@ func (e Reference) Evaluate(c common.Continuation, s common.Stack) (common.Evalu
 
 // Lambda evaluates to a closure.
 type Lambda struct {
-	FrameTemplate common.FrameTemplate
-	Variables     []*common.Variable
-	Body          common.Expression
+	FrameTemplate      common.FrameTemplate
+	Variables          []*common.Variable
+	VariableReferences []common.StackFrameReference
+	Body               common.Expression
 }
 
 func (e Lambda) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
@@ -246,53 +255,56 @@ func (e Lambda) Evaluate(c common.Continuation, s common.Stack) (common.Evaluati
 
 // SyntaxCase evaluates its input and evaluates to an output according to pattern matching and fender expressions.
 type SyntaxCase struct {
-	Input             common.Expression
-	Patterns          []common.Pattern
-	PatternVariabless [][]*common.PatternVariable
-	Fenders           []common.Expression
-	Outputs           []common.Expression
+	Input                      common.Expression
+	Patterns                   []common.Pattern
+	PatternVariabless          [][]*common.PatternVariable
+	PatternVariableReferencess [][]common.StackFrameReference
+	Fenders                    []common.Expression
+	Outputs                    []common.Expression
 }
 
 func (e SyntaxCase) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		syntaxCaseInputEvaluated{c, s, e.Patterns, e.PatternVariabless, e.Fenders, e.Outputs},
+		syntaxCaseInputEvaluated{c, s, e.Patterns, e.PatternVariabless, e.PatternVariableReferencess, e.Fenders, e.Outputs},
 		s,
 		e.Input,
 	)
 }
 
 type syntaxCaseInputEvaluated struct {
-	continuation      common.Continuation
-	stack             common.Stack
-	patterns          []common.Pattern
-	patternVariabless [][]*common.PatternVariable
-	fenders           []common.Expression
-	outputs           []common.Expression
+	continuation               common.Continuation
+	stack                      common.Stack
+	patterns                   []common.Pattern
+	patternVariabless          [][]*common.PatternVariable
+	patternVariableReferencess [][]common.StackFrameReference
+	fenders                    []common.Expression
+	outputs                    []common.Expression
 }
 
 func (c syntaxCaseInputEvaluated) Call(d common.Datum) (common.Evaluation, error) {
-	return syntaxCaseMatch(c.continuation, c.stack, d, c.patterns, c.patternVariabless, c.fenders, c.outputs)
+	return syntaxCaseMatch(c.continuation, c.stack, d, c.patterns, c.patternVariabless, c.patternVariableReferencess, c.fenders, c.outputs)
 }
 
 type syntaxCaseFenderEvaluated struct {
-	continuation      common.Continuation
-	stack             common.Stack
-	input             common.Datum
-	output            common.Expression
-	patterns          []common.Pattern
-	patternVariabless [][]*common.PatternVariable
-	fenders           []common.Expression
-	outputs           []common.Expression
+	continuation               common.Continuation
+	stack                      common.Stack
+	input                      common.Datum
+	output                     common.Expression
+	patterns                   []common.Pattern
+	patternVariabless          [][]*common.PatternVariable
+	patternVariableReferencess [][]common.StackFrameReference
+	fenders                    []common.Expression
+	outputs                    []common.Expression
 }
 
 func (c syntaxCaseFenderEvaluated) Call(d common.Datum) (common.Evaluation, error) {
 	if d == common.Boolean(false) {
-		return syntaxCaseMatch(c.continuation, c.stack, c.input, c.patterns, c.patternVariabless, c.fenders, c.outputs)
+		return syntaxCaseMatch(c.continuation, c.stack, c.input, c.patterns, c.patternVariabless, c.patternVariableReferencess, c.fenders, c.outputs)
 	}
 	return common.EvalC(c.continuation, c.stack, c.output)
 }
 
-func syntaxCaseMatch(c common.Continuation, s common.Stack, input common.Datum, patterns []common.Pattern, patternVariabless [][]*common.PatternVariable, fenders []common.Expression, outputs []common.Expression) (common.Evaluation, error) {
+func syntaxCaseMatch(c common.Continuation, s common.Stack, input common.Datum, patterns []common.Pattern, patternVariabless [][]*common.PatternVariable, patternVariableReferencess [][]common.StackFrameReference, fenders []common.Expression, outputs []common.Expression) (common.Evaluation, error) {
 	syntax := common.NewSyntax(input)
 	for i := range patterns {
 		result, ok := patterns[i].Match(syntax)
@@ -308,6 +320,7 @@ func syntaxCaseMatch(c common.Continuation, s common.Stack, input common.Datum, 
 					outputs[i],
 					patterns[i+1:],
 					patternVariabless[i+1:],
+					patternVariableReferencess[i+1:],
 					fenders[i+1:],
 					outputs[i+1:],
 				},
@@ -414,7 +427,8 @@ type Subtemplate struct {
 
 // PatternVariableReference represents a reference to a pattern variable.
 type PatternVariableReference struct {
-	PatternVariable *common.PatternVariable
+	PatternVariable          *common.PatternVariable
+	PatternVariableReference common.StackFrameReference
 }
 
 // Literal represents a literal value.
