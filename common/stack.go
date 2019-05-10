@@ -47,3 +47,7 @@ func (ft FrameTemplate) Instantiate() Frame {
 	}
 	return frame
 }
+
+func (ft FrameTemplate) Size() int {
+	return ft.size
+}

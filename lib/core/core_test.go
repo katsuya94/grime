@@ -313,3 +313,15 @@ func TestLambdaReentrance(t *testing.T) {
 `
 	testProgram(t, source, read.MustReadDatum("(a b c d e f)"))
 }
+
+func TestLambdaClosure(t *testing.T) {
+	source := `
+(~define make-add (lambda (f)
+	(lambda (r)
+		(cons f r))))
+(~define add-foo (make-add 'foo))
+(~define add-bar (make-add 'bar))
+(add-foo (add-bar 'baz))
+`
+	testProgram(t, source, read.MustReadDatum("(foo bar baz)"))
+}

@@ -19,8 +19,8 @@ func (err ExpressionCompileError) Error() string {
 	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
 }
 
-type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error)
-type ExpressionCompiler func(compiler Compiler, form common.Syntax) (common.Expression, error)
+type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error)
+type ExpressionCompiler func(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate) (common.Expression, error)
 type Expander func(compiler Compiler, form common.Syntax) (common.Syntax, bool, error)
 
 type Compiler struct {
@@ -37,12 +37,12 @@ func NewCompiler() Compiler {
 	}
 }
 
-func (compiler Compiler) BodyCompile(forms []common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
-	return compiler.BodyCompiler(compiler, forms, scope)
+func (compiler Compiler) BodyCompile(forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
+	return compiler.BodyCompiler(compiler, forms, scope, frameTemplate)
 }
 
-func (compiler Compiler) ExpressionCompile(form common.Syntax) (common.Expression, error) {
-	return compiler.ExpressionCompiler(compiler, form)
+func (compiler Compiler) ExpressionCompile(form common.Syntax, frameTemplate *common.FrameTemplate) (common.Expression, error) {
+	return compiler.ExpressionCompiler(compiler, form, frameTemplate)
 }
 
 func (compiler Compiler) Expand(form common.Syntax) (common.Syntax, bool, error) {
@@ -75,5 +75,10 @@ func Compile(body common.Syntax, scope common.Scope) (common.Expression, common.
 		forms = append(forms, first)
 		body = rest
 	}
-	return NewCompiler().BodyCompile(forms, scope)
+	frameTemplate := common.NewFrameTemplate()
+	expression, err := NewCompiler().BodyCompile(forms, scope, &frameTemplate)
+	if err != nil {
+		return nil, common.FrameTemplate{}, err
+	}
+	return expression, frameTemplate, nil
 }
