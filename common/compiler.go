@@ -1,3 +1,5 @@
 package common
 
-type Compiler func(Syntax, Scope) (Expression, FrameTemplate, error)
+type Compiler interface {
+	Compile(Syntax, Scope, *FrameTemplate) (Expression, error)
+}

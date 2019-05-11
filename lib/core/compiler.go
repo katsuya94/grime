@@ -61,7 +61,7 @@ func (compiler Compiler) ExpandCompletely(form common.Syntax) (common.Syntax, er
 	}
 }
 
-func Compile(body common.Syntax, scope common.Scope) (common.Expression, common.FrameTemplate, error) {
+func (compiler Compiler) Compile(body common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
 	scope = common.NewProxyScope(scope)
 	body = body.Push(scope, common.LEXICAL, false)
 	var forms []common.Syntax
@@ -75,10 +75,5 @@ func Compile(body common.Syntax, scope common.Scope) (common.Expression, common.
 		forms = append(forms, first)
 		body = rest
 	}
-	frameTemplate := common.NewFrameTemplate()
-	expression, err := NewCompiler().BodyCompile(forms, scope, &frameTemplate)
-	if err != nil {
-		return nil, common.FrameTemplate{}, err
-	}
-	return expression, frameTemplate, nil
+	return compiler.BodyCompile(forms, scope, frameTemplate)
 }

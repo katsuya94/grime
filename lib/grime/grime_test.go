@@ -11,7 +11,7 @@ import (
 )
 
 func TestGrime(t *testing.T) {
-	rt := runtime.NewRuntime(core.Compile)
+	rt := runtime.NewRuntime(core.NewCompiler())
 	rt.MustProvide(core.Library)
 	rt.MustBind(core.Library.Name(), core.Bindings)
 	rt.MustProvide(derived.Library)

@@ -26,7 +26,8 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 		scope.Set(common.NewIdentifier(name), location)
 	}
 	body = body.Push(scope, common.LEXICAL, false)
-	expression, frameTemplate, err := Compile(body, scope)
+	frameTemplate := common.NewFrameTemplate()
+	expression, err := NewCompiler().Compile(body, scope, &frameTemplate)
 	require.NoError(t, err)
 	frame := frameTemplate.Instantiate()
 	actual, err := common.Evaluate(common.NewStack(frame), expression)

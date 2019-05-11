@@ -112,7 +112,7 @@ func TestRuntime_Execute(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runtime := NewRuntime(core.Compile)
+			runtime := NewRuntime(core.NewCompiler())
 			runtime.MustProvide(core.Library)
 			runtime.MustBind(core.Library.Name(), core.Bindings)
 			for _, librarySource := range test.librarySources {

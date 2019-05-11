@@ -26,7 +26,7 @@ var StandardLibraryName = []common.Symbol{common.Symbol("grime")}
 var Runtime *runtime.Runtime
 
 func init() {
-	Runtime = runtime.NewRuntime(core.Compile)
+	Runtime = runtime.NewRuntime(core.NewCompiler())
 	for _, libraryBinding := range libraryBindings {
 		err := Runtime.Provide(libraryBinding.library)
 		if err != nil {

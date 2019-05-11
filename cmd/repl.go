@@ -36,6 +36,6 @@ func repl() error {
 	if err != nil {
 		return err
 	}
-	runtime.REPL(core.Compile, bindings, os.Stdin, os.Stdout)
+	runtime.REPL(core.NewCompiler(), bindings, os.Stdin, os.Stdout)
 	return nil
 }

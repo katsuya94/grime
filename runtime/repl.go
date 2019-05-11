@@ -44,7 +44,8 @@ func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w i
 			body = body.Push(scope, phase, false)
 		}
 		scope := common.NewFlushScope(scopes[0])
-		expression, frameTemplate, err := compiler(body, scope)
+		frameTemplate := common.NewFrameTemplate()
+		expression, err := compiler.Compile(body, scope, &frameTemplate)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}

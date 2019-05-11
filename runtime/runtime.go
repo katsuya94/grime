@@ -206,7 +206,8 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for phase, scope := range scopes {
 		body = body.Push(scope, phase, false)
 	}
-	expression, frameTemplate, err := r.compiler(body, scopes[0])
+	frameTemplate := common.NewFrameTemplate()
+	expression, err := r.compiler.Compile(body, scopes[0], &frameTemplate)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
