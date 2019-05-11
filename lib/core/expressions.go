@@ -120,7 +120,7 @@ type letInitEvaluated struct {
 }
 
 func (c letInitEvaluated) Call(d common.Datum) (common.Evaluation, error) {
-	(*c.variable).Value = d
+	c.stack.Set(c.variableReference, d)
 	return common.EvalC(
 		letBodyEvaluated{c.continuation},
 		c.stack,
@@ -175,7 +175,7 @@ type Define struct {
 
 func (e Define) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		defineExpressionEvaluated{c, e.Variable, e.VariableReference},
+		defineExpressionEvaluated{c, s, e.Variable, e.VariableReference},
 		s,
 		e.Expression,
 	)
@@ -183,15 +183,17 @@ func (e Define) Evaluate(c common.Continuation, s common.Stack) (common.Evaluati
 
 type defineExpressionEvaluated struct {
 	continuation      common.Continuation
+	stack             common.Stack
 	variable          *common.Variable
 	variableReference common.StackFrameReference
 }
 
 func (c defineExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
-	if c.variable.Value != nil {
+	value := c.stack.Get(c.variableReference)
+	if value != nil {
 		return common.ErrorC(fmt.Errorf("TODO: continuation calls need a new stack frame?"))
 	}
-	(*c.variable).Value = d
+	c.stack.Set(c.variableReference, d)
 	return common.CallC(c.continuation, common.Void)
 }
 
@@ -206,7 +208,7 @@ type Set struct {
 
 func (e Set) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	return common.EvalC(
-		setExpressionEvaluated{c, e.Identifier, e.Variable, e.VariableReference},
+		setExpressionEvaluated{c, s, e.Identifier, e.Variable, e.VariableReference},
 		s,
 		e.Expression,
 	)
@@ -214,16 +216,18 @@ func (e Set) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation,
 
 type setExpressionEvaluated struct {
 	continuation      common.Continuation
+	stack             common.Stack
 	identifier        common.Identifier
 	variable          *common.Variable
 	variableReference common.StackFrameReference
 }
 
 func (c setExpressionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
-	if c.variable.Value == nil {
+	value := c.stack.Get(c.variableReference)
+	if value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot set identifier before its definition", c.identifier.Name(), c.identifier.SourceLocation()))
 	}
-	(*c.variable).Value = d
+	c.stack.Set(c.variableReference, d)
 	return common.CallC(c.continuation, common.Void)
 }
 
@@ -235,10 +239,11 @@ type Reference struct {
 }
 
 func (e Reference) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
-	if e.Variable.Value == nil {
+	value := s.Get(e.VariableReference)
+	if value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot reference identifier before its definition", e.Identifier.Name(), e.Identifier.SourceLocation()))
 	}
-	return common.CallC(c, e.Variable.Value)
+	return common.CallC(c, value.(common.Datum))
 }
 
 // Lambda evaluates to a closure.
