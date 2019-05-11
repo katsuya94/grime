@@ -24,9 +24,9 @@ func TestPatternLiteral_MatchUnbound(t *testing.T) {
 }
 
 func TestPatternLiteral_MatchBound(t *testing.T) {
-	locations := test.Locations(1)
+	bindings := test.Bindings(1)
 
-	literal, ok := test.WithBinding(test.Identifier("literal"), &locations[0], test.Syntax("literal")).Identifier()
+	literal, ok := test.WithBinding(test.Identifier("literal"), &bindings[0], test.Syntax("literal")).Identifier()
 	require.True(t, ok)
 
 	pattern := test.WithLiteral(literal, test.Syntax("literal"))
@@ -37,7 +37,7 @@ func TestPatternLiteral_MatchBound(t *testing.T) {
 	require.Empty(t, patternVariableInfos)
 
 	input := test.Syntax("different")
-	input = test.WithBinding(test.Identifier("different"), &locations[0], test.Syntax("different"))
+	input = test.WithBinding(test.Identifier("different"), &bindings[0], test.Syntax("different"))
 
 	result, ok := compiled.Match(input)
 	require.True(t, ok)
@@ -59,9 +59,9 @@ func TestPatternLiteral_NoMatchUnbound(t *testing.T) {
 }
 
 func TestPatternLiteral_NoMatchBound(t *testing.T) {
-	locations := test.Locations(2)
+	bindings := test.Bindings(2)
 
-	literal, ok := test.WithBinding(test.Identifier("id"), &locations[0], test.Syntax("id")).Identifier()
+	literal, ok := test.WithBinding(test.Identifier("id"), &bindings[0], test.Syntax("id")).Identifier()
 	require.True(t, ok)
 
 	pattern := test.WithLiteral(literal, test.Syntax("id"))
@@ -72,7 +72,7 @@ func TestPatternLiteral_NoMatchBound(t *testing.T) {
 	require.Empty(t, patternVariableInfos)
 
 	input := test.Syntax("id")
-	input = test.WithBinding(test.Identifier("id"), &locations[1], test.Syntax("id"))
+	input = test.WithBinding(test.Identifier("id"), &bindings[1], test.Syntax("id"))
 
 	_, ok = compiled.Match(input)
 	require.False(t, ok)

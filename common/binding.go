@@ -1,12 +1,12 @@
 package common
 
-// TODO: *interface{} should be Location
-// TODO: rename Location
-type Location interface {
+// TODO: *interface{} should be Binding
+// TODO: rename Binding
+type Binding interface {
 	Export() (*interface{}, bool)
 }
 
-// Keyword binds a syntax transformer in the region where the location is bound.
+// Keyword binds a syntax transformer in the region where bound.
 type Keyword struct {
 	Transformer           Procedure
 	TransformerFrameIndex int
@@ -24,7 +24,7 @@ func (l Keyword) TransformerReference(stackContext StackContext) StackFrameRefer
 	return StackFrameReference{stackContext, l.TransformerFrameIndex}
 }
 
-// Variable binds a value in the region where the location is bound.
+// Variable binds a value in the region where bound.
 type Variable struct {
 	Value           Datum
 	ValueFrameIndex int
@@ -42,7 +42,7 @@ func (l Variable) ValueReference(stackContext StackContext) StackFrameReference 
 	return StackFrameReference{stackContext, l.ValueFrameIndex}
 }
 
-// PatternVariable binds a match result in the region where the location is bound.
+// PatternVariable binds a match result in the region where bound.
 type PatternVariable struct {
 	Match           interface{}
 	Nesting         int
@@ -61,7 +61,7 @@ func (l PatternVariable) PatternVariableReference(stackContext StackContext) Sta
 	return StackFrameReference{stackContext, l.MatchFrameIndex}
 }
 
-// Literal binds a pattern literal in the pattern for which the literal was given.
+// Literal binds a pattern literal in the pattern where bound.
 type Literal struct {
 	Id Identifier
 }

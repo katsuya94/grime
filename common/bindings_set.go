@@ -1,13 +1,13 @@
 package common
 
 // TODO: rename to LocationSet, also rename file.
-type BindingSet map[int]map[Symbol]Location
+type BindingSet map[int]map[Symbol]Binding
 
 func NewBindingSet() BindingSet {
 	return BindingSet{}
 }
 
-func (set BindingSet) Get(id Symbol, phase int) Location {
+func (set BindingSet) Get(id Symbol, phase int) Binding {
 	if _, ok := set[phase]; !ok {
 		return nil
 	}
@@ -15,20 +15,20 @@ func (set BindingSet) Get(id Symbol, phase int) Location {
 	return l
 }
 
-func (set BindingSet) Set(id Symbol, phase int, location Location) {
+func (set BindingSet) Set(id Symbol, phase int, binding Binding) {
 	if _, ok := set[phase]; !ok {
-		set[phase] = map[Symbol]Location{}
+		set[phase] = map[Symbol]Binding{}
 	}
-	set[phase][id] = location
+	set[phase][id] = binding
 }
 
 func (set BindingSet) Merge(other BindingSet) {
-	for phase, locations := range other {
+	for phase, bindings := range other {
 		if _, ok := set[phase]; !ok {
-			set[phase] = map[Symbol]Location{}
+			set[phase] = map[Symbol]Binding{}
 		}
-		for name, location := range locations {
-			set[phase][name] = location
+		for name, binding := range bindings {
+			set[phase][name] = binding
 		}
 	}
 }

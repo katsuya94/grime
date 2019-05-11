@@ -103,10 +103,10 @@ func TestCompile(t *testing.T) {
 			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(_test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
 			scopes := make(map[int]common.Scope)
-			for phase, locations := range Bindings {
+			for phase, bindings := range Bindings {
 				scopes[phase] = common.NewScope()
-				for name, location := range locations {
-					scopes[phase].Set(common.NewIdentifier(name), location)
+				for name, binding := range bindings {
+					scopes[phase].Set(common.NewIdentifier(name), binding)
 				}
 			}
 			// Make lambda, syntax available at phase 1

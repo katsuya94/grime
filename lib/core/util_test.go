@@ -22,8 +22,8 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 	syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(source)
 	body := common.Body(nullSourceLocationTree, syntaxes...)
 	scope := common.NewScope()
-	for name, location := range Bindings[0] {
-		scope.Set(common.NewIdentifier(name), location)
+	for name, binding := range Bindings[0] {
+		scope.Set(common.NewIdentifier(name), binding)
 	}
 	body = body.Push(scope, common.LEXICAL, false)
 	frameTemplate := common.NewFrameTemplate()

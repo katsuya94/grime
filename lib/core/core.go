@@ -11,7 +11,7 @@ import (
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
 
 var Bindings = common.BindingSet{
-	0: map[common.Symbol]common.Location{
+	0: map[common.Symbol]common.Binding{
 		common.Symbol("quote"):                &common.Keyword{common.Function(transformQuote), -1},
 		common.Symbol("syntax"):               &common.Keyword{common.Function(transformSyntax), -1},
 		common.Symbol("if"):                   &common.Keyword{common.Function(transformIf), -1},

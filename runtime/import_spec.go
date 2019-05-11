@@ -193,16 +193,16 @@ type identifierSpecOnly struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+func (spec identifierSpecOnly) resolve(bindingss common.BindingSet) (common.BindingSet, error) {
 	var err error
-	bindings, err = spec.identifierSpec.resolve(bindings)
+	bindingss, err = spec.identifierSpec.resolve(bindingss)
 	if err != nil {
 		return nil, err
 	}
 	for _, id := range spec.identifiers {
 		found := false
-		for _, locations := range bindings {
-			if _, ok := locations[id]; ok {
+		for _, bindings := range bindingss {
+			if _, ok := bindings[id]; ok {
 				found = true
 			}
 		}
@@ -211,8 +211,8 @@ func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.Bindi
 		}
 	}
 	filteredBindings := common.NewBindingSet()
-	for level, locations := range bindings {
-		for id, location := range locations {
+	for level, bindings := range bindingss {
+		for id, binding := range bindings {
 			found := false
 			for _, included := range spec.identifiers {
 				if id == included {
@@ -220,7 +220,7 @@ func (spec identifierSpecOnly) resolve(bindings common.BindingSet) (common.Bindi
 				}
 			}
 			if found {
-				filteredBindings.Set(id, level, location)
+				filteredBindings.Set(id, level, binding)
 			}
 		}
 	}
@@ -232,16 +232,16 @@ type identifierSpecExcept struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+func (spec identifierSpecExcept) resolve(bindingss common.BindingSet) (common.BindingSet, error) {
 	var err error
-	bindings, err = spec.identifierSpec.resolve(bindings)
+	bindingss, err = spec.identifierSpec.resolve(bindingss)
 	if err != nil {
 		return nil, err
 	}
 	for _, id := range spec.identifiers {
 		found := false
-		for _, locations := range bindings {
-			if _, ok := locations[id]; ok {
+		for _, bindings := range bindingss {
+			if _, ok := bindings[id]; ok {
 				found = true
 			}
 		}
@@ -250,8 +250,8 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 		}
 	}
 	filteredBindings := common.NewBindingSet()
-	for level, locations := range bindings {
-		for id, location := range locations {
+	for level, bindings := range bindingss {
+		for id, binding := range bindings {
 			found := false
 			for _, excluded := range spec.identifiers {
 				if id == excluded {
@@ -259,7 +259,7 @@ func (spec identifierSpecExcept) resolve(bindings common.BindingSet) (common.Bin
 				}
 			}
 			if !found {
-				filteredBindings.Set(id, level, location)
+				filteredBindings.Set(id, level, binding)
 			}
 		}
 	}
@@ -271,16 +271,16 @@ type identifierSpecPrefix struct {
 	identifier     common.Symbol
 }
 
-func (spec identifierSpecPrefix) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+func (spec identifierSpecPrefix) resolve(bindingss common.BindingSet) (common.BindingSet, error) {
 	var err error
-	bindings, err = spec.identifierSpec.resolve(bindings)
+	bindingss, err = spec.identifierSpec.resolve(bindingss)
 	if err != nil {
 		return nil, err
 	}
 	prefixedBindings := common.NewBindingSet()
-	for level, locations := range bindings {
-		for id, location := range locations {
-			prefixedBindings.Set(common.Symbol(spec.identifier+id), level, location)
+	for level, bindings := range bindingss {
+		for id, binding := range bindings {
+			prefixedBindings.Set(common.Symbol(spec.identifier+id), level, binding)
 		}
 	}
 	return prefixedBindings, nil
@@ -291,16 +291,16 @@ type identifierSpecRename struct {
 	identifierBindings []identifierBinding
 }
 
-func (spec identifierSpecRename) resolve(bindings common.BindingSet) (common.BindingSet, error) {
+func (spec identifierSpecRename) resolve(bindingss common.BindingSet) (common.BindingSet, error) {
 	var err error
-	bindings, err = spec.identifierSpec.resolve(bindings)
+	bindingss, err = spec.identifierSpec.resolve(bindingss)
 	if err != nil {
 		return nil, err
 	}
 	for _, identifierBinding := range spec.identifierBindings {
 		found := false
-		for _, locations := range bindings {
-			if _, ok := locations[identifierBinding.external]; ok {
+		for _, bindings := range bindingss {
+			if _, ok := bindings[identifierBinding.external]; ok {
 				found = true
 			}
 		}
@@ -309,14 +309,14 @@ func (spec identifierSpecRename) resolve(bindings common.BindingSet) (common.Bin
 		}
 	}
 	renamedBindings := common.NewBindingSet()
-	for level, locations := range bindings {
-		for id, location := range locations {
+	for level, bindings := range bindingss {
+		for id, binding := range bindings {
 			for _, identifierBinding := range spec.identifierBindings {
 				if identifierBinding.external == id {
 					id = identifierBinding.internal
 				}
 			}
-			renamedBindings.Set(id, level, location)
+			renamedBindings.Set(id, level, binding)
 		}
 	}
 	return renamedBindings, nil

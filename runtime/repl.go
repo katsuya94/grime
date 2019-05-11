@@ -10,12 +10,12 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func REPL(compiler common.Compiler, bindings common.BindingSet, r io.Reader, w io.Writer) {
-	scopes := make(map[int]common.BaseScope, len(bindings))
-	for phase, locations := range bindings {
+func REPL(compiler common.Compiler, bindingss common.BindingSet, r io.Reader, w io.Writer) {
+	scopes := make(map[int]common.BaseScope, len(bindingss))
+	for phase, bindings := range bindingss {
 		scopes[phase] = common.NewScope()
-		for name, location := range locations {
-			err := scopes[phase].Set(common.NewIdentifier(name), location)
+		for name, binding := range bindings {
+			err := scopes[phase].Set(common.NewIdentifier(name), binding)
 			if err != nil {
 				fmt.Fprintf(w, "error: %v\n", err)
 				continue

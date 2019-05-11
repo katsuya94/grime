@@ -16,34 +16,34 @@ func NewScopeList() *ScopeList {
 	return nil
 }
 
-func (l *ScopeList) Get(id Identifier) (BindingStackContext, bool) {
-	return l.get(id, CurrentStackContext)
+func (sl *ScopeList) Get(id Identifier) (BindingStackContext, bool) {
+	return sl.get(id, CurrentStackContext)
 }
 
-func (l *ScopeList) get(id Identifier, stackContext StackContext) (BindingStackContext, bool) {
-	if l == nil {
+func (sl *ScopeList) get(id Identifier, stackContext StackContext) (BindingStackContext, bool) {
+	if sl == nil {
 		return BindingStackContext{}, false
 	}
-	if l.phase == LEXICAL || l.phase == id.phase {
-		location := l.scope.Get(id)
-		if location != nil {
-			return BindingStackContext{location, stackContext}, true
+	if sl.phase == LEXICAL || sl.phase == id.phase {
+		binding := sl.scope.Get(id)
+		if binding != nil {
+			return BindingStackContext{binding, stackContext}, true
 		}
 	}
-	if l.frame {
+	if sl.frame {
 		stackContext++
 	}
-	return l.next.get(id, stackContext)
+	return sl.next.get(id, stackContext)
 }
 
-func (l *ScopeList) Push(scope Scope, phase int, frame bool) *ScopeList {
-	return &ScopeList{scope, phase, frame, l}
+func (sl *ScopeList) Push(scope Scope, phase int, frame bool) *ScopeList {
+	return &ScopeList{scope, phase, frame, sl}
 }
 
-// Scope is a set of mappings from Identifiers to Locations.
+// Scope is a set of mappings from Identifiers to Bindings.
 type Scope interface {
-	Get(Identifier) Location
-	Set(Identifier, Location) error
+	Get(Identifier) Binding
+	Set(Identifier, Binding) error
 }
 
 // https://docs.racket-lang.org/reference/syntax-model.html
@@ -53,19 +53,19 @@ func NewScope() BaseScope {
 	return BaseScope{}
 }
 
-type binding struct {
-	marks    markSet
-	location Location
+type scopeEntry struct {
+	marks   markSet
+	binding Binding
 }
 
 // BaseScope is a simple implementation of Scope.
-type BaseScope map[Symbol][]binding
+type BaseScope map[Symbol][]scopeEntry
 
-func (b BaseScope) Get(id Identifier) Location {
-	bindings, _ := b[id.Name()]
-	markSets := make([]markSet, len(bindings))
-	for i, binding := range bindings {
-		markSets[i] = binding.marks
+func (b BaseScope) Get(id Identifier) Binding {
+	entries, _ := b[id.Name()]
+	markSets := make([]markSet, len(entries))
+	for i, entry := range entries {
+		markSets[i] = entry.marks
 	}
 	i, ok := indexSuperSetContainedBy(id.marks, markSets...)
 	if !ok {
@@ -73,33 +73,33 @@ func (b BaseScope) Get(id Identifier) Location {
 	} else if i == -1 {
 		return nil
 	}
-	return bindings[i].location
+	return entries[i].binding
 }
 
-func (b BaseScope) Set(id Identifier, location Location) error {
-	bindings, _ := b[id.Name()]
-	markSets := make([]markSet, len(bindings)+1)
-	for i, binding := range bindings {
-		markSets[i] = binding.marks
+func (b BaseScope) Set(id Identifier, binding Binding) error {
+	entries, _ := b[id.Name()]
+	markSets := make([]markSet, len(entries)+1)
+	for i, entry := range entries {
+		markSets[i] = entry.marks
 	}
-	markSets[len(bindings)] = id.marks
+	markSets[len(entries)] = id.marks
 	// TODO: consider precomputing the graph
 	if duplicateMarkSets(markSets...) {
 		return fmt.Errorf("already defined: %v", id.Name())
 	}
-	b[id.Name()] = append(bindings, binding{
-		marks:    id.marks,
-		location: location,
+	b[id.Name()] = append(entries, scopeEntry{
+		marks:   id.marks,
+		binding: binding,
 	})
 	return nil
 }
 
-func (b BaseScope) Bindings() map[Symbol]Location {
-	m := map[Symbol]Location{}
+func (b BaseScope) Bindings() map[Symbol]Binding {
+	m := map[Symbol]Binding{}
 	for name, bindings := range b {
 		for _, binding := range bindings {
 			if (markSet{}).contains(binding.marks) {
-				m[name] = binding.location
+				m[name] = binding.binding
 			}
 		}
 	}
@@ -116,16 +116,16 @@ func NewProxyScope(s Scope) ProxyScope {
 	return ProxyScope{NewScope(), s}
 }
 
-func (p ProxyScope) Get(id Identifier) Location {
+func (p ProxyScope) Get(id Identifier) Binding {
 	return p.BaseScope.Get(id)
 }
 
-func (p ProxyScope) Set(id Identifier, location Location) error {
-	err := p.Scope.Set(id, location)
+func (p ProxyScope) Set(id Identifier, binding Binding) error {
+	err := p.Scope.Set(id, binding)
 	if err != nil {
 		return err
 	}
-	return p.BaseScope.Set(id, location)
+	return p.BaseScope.Set(id, binding)
 }
 
 // FlushScope wraps another scope, buffering bindings, and allowing unmarked bindings to later be flushed to the underlying scope. This allows isolating compilation from a shared scope.
@@ -138,25 +138,25 @@ func NewFlushScope(s Scope) FlushScope {
 	return FlushScope{NewScope(), s}
 }
 
-func (f FlushScope) Get(id Identifier) Location {
-	location := f.BaseScope.Get(id)
-	if location != nil {
-		return location
+func (f FlushScope) Get(id Identifier) Binding {
+	binding := f.BaseScope.Get(id)
+	if binding != nil {
+		return binding
 	}
 	return f.Scope.Get(id)
 }
 
-func (f FlushScope) Set(id Identifier, location Location) error {
+func (f FlushScope) Set(id Identifier, binding Binding) error {
 	existing := f.Scope.Get(id)
 	if existing != nil {
 		return fmt.Errorf("already defined: %v", id.Name())
 	}
-	return f.BaseScope.Set(id, location)
+	return f.BaseScope.Set(id, binding)
 }
 
 func (p FlushScope) Flush() {
-	for name, location := range p.BaseScope.Bindings() {
-		err := p.Scope.Set(NewIdentifier(name), location)
+	for name, binding := range p.BaseScope.Bindings() {
+		err := p.Scope.Set(NewIdentifier(name), binding)
 		if err != nil {
 			panic(fmt.Sprintf("encountered error while flushing scope: %v", err))
 		}

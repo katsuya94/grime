@@ -176,12 +176,12 @@ func (r *Runtime) instantiate(prov *provision) error {
 		if err != nil {
 			return err
 		}
-		bindings, err := resolutions[i].identifierSpec.resolve(subProvs[i].bindings)
+		bindingss, err := resolutions[i].identifierSpec.resolve(subProvs[i].bindings)
 		if err != nil {
 			return instantiationError{prov.library.name, err}
 		}
-		for exportLevel, locations := range bindings {
-			for name, location := range locations {
+		for exportLevel, bindings := range bindingss {
+			for name, binding := range bindings {
 				phases := make(map[int]struct{})
 				for _, importLevel := range resolutions[i].levels {
 					phases[importLevel+exportLevel] = struct{}{}
@@ -194,7 +194,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 					if !ok {
 						scopes[phase] = common.NewScope()
 					}
-					err := scopes[phase].Set(common.NewIdentifier(name), location)
+					err := scopes[phase].Set(common.NewIdentifier(name), binding)
 					if err != nil {
 						return instantiationError{prov.library.name, err}
 					}
@@ -217,11 +217,11 @@ func (r *Runtime) instantiate(prov *provision) error {
 	for _, exportSpec := range prov.library.exportSpecs {
 		exported := false
 		for phase, scope := range scopes {
-			for name, location := range scope.Bindings() {
+			for name, binding := range scope.Bindings() {
 				if exportSpec.internal != name {
 					continue
 				}
-				prov.bindings.Set(exportSpec.external, phase, location)
+				prov.bindings.Set(exportSpec.external, phase, binding)
 				exported = true
 			}
 		}

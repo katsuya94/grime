@@ -1,15 +1,22 @@
 package common
 
+type Location *interface{}
+
+func NewLocation() Location {
+	value := interface{}(nil)
+	return &value
+}
+
 type Stack struct {
 	frames []*Frame
 }
 
 func (s Stack) Get(ref StackFrameReference) interface{} {
-	return *s.frames[len(s.frames)-1-int(ref.StackContext)].locations[ref.FrameIndex]
+	return *s.frames[len(s.frames)-1-int(ref.StackContext)].bindings[ref.FrameIndex]
 }
 
 func (s Stack) Set(ref StackFrameReference, i interface{}) {
-	*s.frames[len(s.frames)-1-int(ref.StackContext)].locations[ref.FrameIndex] = i
+	*s.frames[len(s.frames)-1-int(ref.StackContext)].bindings[ref.FrameIndex] = i
 }
 
 func (s Stack) Push(frame *Frame) Stack {
@@ -24,7 +31,7 @@ func NewStack(frame *Frame) Stack {
 }
 
 type Frame struct {
-	locations []*interface{}
+	bindings []Location
 }
 
 type StackContext int
@@ -32,9 +39,15 @@ type StackContext int
 var CurrentStackContext StackContext = 0
 
 type BindingStackContext struct {
-	Binding      Location
+	Binding      Binding
 	StackContext StackContext
 }
+
+func (bsc BindingStackContext) Nil() bool {
+	return bsc == NilBindingStackContext
+}
+
+var NilBindingStackContext = BindingStackContext{nil, -1}
 
 type StackFrameReference struct {
 	StackContext StackContext
@@ -56,10 +69,9 @@ func (ft *FrameTemplate) Add() int {
 }
 
 func (ft FrameTemplate) Instantiate() *Frame {
-	frame := &Frame{make([]*interface{}, ft.size)}
+	frame := &Frame{make([]Location, ft.size)}
 	for i := 0; i < ft.size; i++ {
-		location := interface{}(nil)
-		frame.locations[i] = &location
+		frame.bindings[i] = NewLocation()
 	}
 	return frame
 }

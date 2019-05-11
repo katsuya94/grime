@@ -285,7 +285,7 @@ func TestExpressionCompile_Let(t *testing.T) {
 	id := test.Identifier("id")
 	initExpression := test.NewVoidExpression()
 	bodyExpression := test.NewVoidExpression()
-	var binding common.Location
+	var binding common.Binding
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.True(t, ft == &frameTemplate)
 		binding = forms[0].IdentifierOrDie().Binding()
@@ -323,8 +323,8 @@ func TestExpressionCompile_Lambda(t *testing.T) {
 	id0 := test.Identifier("arg0")
 	id1 := test.Identifier("arg1")
 	bodyExpression := test.NewVoidExpression()
-	var binding0 common.Location
-	var binding1 common.Location
+	var binding0 common.Binding
+	var binding1 common.Binding
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.Equal(t, 2, ft.Size())
 		binding0 = common.NewSyntax(forms[0].PairOrDie().First).IdentifierOrDie().Binding()
@@ -352,7 +352,7 @@ func TestExpressionCompile_LambdaCapture(t *testing.T) {
 	bodyExpression := test.NewVoidExpression()
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.Equal(t, 0, ft.Size())
-		bindingStackContext, ok := forms[0].IdentifierOrDie().Location()
+		bindingStackContext, ok := forms[0].IdentifierOrDie().BindingStackContext()
 		require.True(t, ok)
 		require.True(t, bindingStackContext.Binding.(*common.Variable) == variable)
 		require.Equal(t, common.StackContext(1), bindingStackContext.StackContext)
@@ -394,8 +394,8 @@ func TestExpressionCompile_ReferenceUnbound(t *testing.T) {
 func TestExpressionCompile_ReferenceNonVariable(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever}
-	location := &common.Keyword{}
-	id := test.WithBinding(test.Identifier("id"), location, test.Syntax("id")).IdentifierOrDie()
+	binding := &common.Keyword{}
+	id := test.WithBinding(test.Identifier("id"), binding, test.Syntax("id")).IdentifierOrDie()
 	form := common.NewSyntax(ReferenceForm{id})
 	_, err := ExpressionCompile(compiler, form, &frameTemplate)
 	require.EqualError(t, err, "compile: non-variable identifier id in expression context")
@@ -429,8 +429,8 @@ func TestExpressionCompile_SetUnbound(t *testing.T) {
 func TestExpressionCompile_SetNonVariable(t *testing.T) {
 	frameTemplate := common.NewFrameTemplate()
 	compiler := Compiler{Expander: expandNever, ExpressionCompiler: expressionCompileIdentity}
-	location := &common.Keyword{}
-	id := test.WithBinding(test.Identifier("id"), location, test.Syntax("id")).IdentifierOrDie()
+	binding := &common.Keyword{}
+	id := test.WithBinding(test.Identifier("id"), binding, test.Syntax("id")).IdentifierOrDie()
 	valueExpression := test.NewVoidExpression()
 	form := common.NewSyntax(SetForm{id, common.NewSyntax(valueExpression)})
 	_, err := ExpressionCompile(compiler, form, &frameTemplate)

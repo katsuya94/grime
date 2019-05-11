@@ -5,8 +5,7 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-// TODO: rename to Bindings
-func Locations(n int) []common.Variable {
+func Bindings(n int) []common.Variable {
 	frameTemplate := common.NewFrameTemplate()
 	variables := make([]common.Variable, n)
 	for i := 0; i < n; i++ {
@@ -31,9 +30,9 @@ func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {
 	return WithBinding(id, &common.Literal{id}, syntax)
 }
 
-func WithBinding(id common.Identifier, location common.Location, syntax common.Syntax) common.Syntax {
+func WithBinding(id common.Identifier, binding common.Binding, syntax common.Syntax) common.Syntax {
 	scope := common.NewScope()
-	err := scope.Set(id, location)
+	err := scope.Set(id, binding)
 	if err != nil {
 		panic(err)
 	}

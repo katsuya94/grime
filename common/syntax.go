@@ -15,13 +15,13 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-// TODO: rename Location -> BindingStackContext
-func (id Identifier) Location() (BindingStackContext, bool) {
+// TODO: use NilBindingStackContext rather than ok
+func (id Identifier) BindingStackContext() (BindingStackContext, bool) {
 	return id.scopeList.Get(id)
 }
 
-func (id Identifier) Binding() Location {
-	bindingStackContext, ok := id.Location()
+func (id Identifier) Binding() Binding {
+	bindingStackContext, ok := id.BindingStackContext()
 	if !ok {
 		return nil
 	}
@@ -56,9 +56,9 @@ func (id Identifier) FreeEqual(other Identifier) bool {
 	}
 }
 
-func (id Identifier) Bind(location Location) Identifier {
+func (id Identifier) Bind(binding Binding) Identifier {
 	scope := NewScope()
-	scope.Set(id, location)
+	scope.Set(id, binding)
 	id, ok := id.Push(scope, LEXICAL, false).Identifier()
 	if !ok {
 		panic("expected identifier")
