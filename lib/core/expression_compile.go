@@ -112,8 +112,8 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		}
 		return Lambda{frameTemplate, variables, variableReferences, expression}, nil
 	case ReferenceForm:
-		bindingStackContext, ok := form.Identifier.BindingStackContext()
-		if !ok {
+		bindingStackContext := form.Identifier.BindingStackContext()
+		if bindingStackContext.Nil() {
 			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
 		variable, ok := bindingStackContext.Binding.(*common.Variable)
@@ -123,8 +123,8 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		variableReference := variable.ValueReference(bindingStackContext.StackContext)
 		return Reference{form.Identifier, variable, variableReference}, nil
 	case SetForm:
-		bindingStackContext, ok := form.Identifier.BindingStackContext()
-		if !ok {
+		bindingStackContext := form.Identifier.BindingStackContext()
+		if bindingStackContext.Nil() {
 			return nil, fmt.Errorf("compile: unbound identifier %v at %v", form.Identifier.Name(), form.Identifier.SourceLocation())
 		}
 		variable, ok := bindingStackContext.Binding.(*common.Variable)
@@ -225,8 +225,8 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 
 func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVariable]int, error) {
 	if id, ok := syntax.Identifier(); ok {
-		bindingStackContext, ok := id.BindingStackContext()
-		if ok {
+		bindingStackContext := id.BindingStackContext()
+		if !bindingStackContext.Nil() {
 			if patternVariable, ok := bindingStackContext.Binding.(*common.PatternVariable); ok {
 				patternVariableReference := patternVariable.PatternVariableReference(bindingStackContext.StackContext)
 				return PatternVariableReference{patternVariable, patternVariableReference}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil

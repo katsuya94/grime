@@ -352,8 +352,7 @@ func TestExpressionCompile_LambdaCapture(t *testing.T) {
 	bodyExpression := test.NewVoidExpression()
 	compiler := Compiler{Expander: expandNever, BodyCompiler: func(_ Compiler, forms []common.Syntax, _ common.Scope, ft *common.FrameTemplate) (common.Expression, error) {
 		require.Equal(t, 0, ft.Size())
-		bindingStackContext, ok := forms[0].IdentifierOrDie().BindingStackContext()
-		require.True(t, ok)
+		bindingStackContext := forms[0].IdentifierOrDie().BindingStackContext()
 		require.True(t, bindingStackContext.Binding.(*common.Variable) == variable)
 		require.Equal(t, common.StackContext(1), bindingStackContext.StackContext)
 		return bodyExpression, nil

@@ -16,18 +16,18 @@ func NewScopeList() *ScopeList {
 	return nil
 }
 
-func (sl *ScopeList) Get(id Identifier) (BindingStackContext, bool) {
+func (sl *ScopeList) Get(id Identifier) BindingStackContext {
 	return sl.get(id, CurrentStackContext)
 }
 
-func (sl *ScopeList) get(id Identifier, stackContext StackContext) (BindingStackContext, bool) {
+func (sl *ScopeList) get(id Identifier, stackContext StackContext) BindingStackContext {
 	if sl == nil {
-		return BindingStackContext{}, false
+		return NilBindingStackContext
 	}
 	if sl.phase == LEXICAL || sl.phase == id.phase {
 		binding := sl.scope.Get(id)
 		if binding != nil {
-			return BindingStackContext{binding, stackContext}, true
+			return BindingStackContext{binding, stackContext}
 		}
 	}
 	if sl.frame {

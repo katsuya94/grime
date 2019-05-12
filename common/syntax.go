@@ -15,14 +15,13 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-// TODO: use NilBindingStackContext rather than ok
-func (id Identifier) BindingStackContext() (BindingStackContext, bool) {
+func (id Identifier) BindingStackContext() BindingStackContext {
 	return id.scopeList.Get(id)
 }
 
 func (id Identifier) Binding() Binding {
-	bindingStackContext, ok := id.BindingStackContext()
-	if !ok {
+	bindingStackContext := id.BindingStackContext()
+	if bindingStackContext.Nil() {
 		return nil
 	}
 	return bindingStackContext.Binding

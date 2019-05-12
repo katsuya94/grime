@@ -11,8 +11,8 @@ import (
 func TestScopeList_GetEmpty(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
 	scopeList := NewScopeList()
-	_, ok := scopeList.Get(id)
-	require.False(t, ok)
+	bindingStackContext := scopeList.Get(id)
+	require.True(t, bindingStackContext.Nil())
 }
 
 func TestScopeList_GetOtherIdentifier(t *testing.T) {
@@ -22,8 +22,8 @@ func TestScopeList_GetOtherIdentifier(t *testing.T) {
 	scope.Set(id, &bindings[0])
 	scopeList := NewScopeList().Push(scope, 0, false)
 	other := NewIdentifier(Symbol("other"))
-	_, ok := scopeList.Get(other)
-	require.False(t, ok)
+	bindingStackContext := scopeList.Get(other)
+	require.True(t, bindingStackContext.Nil())
 }
 func TestScopeList_GetOtherPhase(t *testing.T) {
 	id := NewIdentifier(Symbol("id"))
@@ -32,8 +32,8 @@ func TestScopeList_GetOtherPhase(t *testing.T) {
 	scope.Set(id, &bindings[0])
 	scopeList := NewScopeList().Push(scope, 0, false)
 	next, _ := id.Next().Identifier()
-	_, ok := scopeList.Get(next)
-	require.False(t, ok)
+	bindingStackContext := scopeList.Get(next)
+	require.True(t, bindingStackContext.Nil())
 }
 
 func TestScopeList_GetSamePhase(t *testing.T) {
@@ -42,8 +42,7 @@ func TestScopeList_GetSamePhase(t *testing.T) {
 	scope := NewScope()
 	scope.Set(id, &bindings[0])
 	scopeList := NewScopeList().Push(scope, 0, false)
-	bindingStackContext, ok := scopeList.Get(id)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(id)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[0])
 	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
@@ -55,8 +54,7 @@ func TestScopeList_GetLexical(t *testing.T) {
 	scope.Set(id, &bindings[0])
 	scopeList := NewScopeList().Push(scope, LEXICAL, false)
 	next, _ := id.Next().Identifier()
-	bindingStackContext, ok := scopeList.Get(next)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(next)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[0])
 	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
@@ -68,8 +66,7 @@ func TestScopeList_GetMany(t *testing.T) {
 	outer.Set(id, &bindings[0])
 	inner := NewScope()
 	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, false)
-	bindingStackContext, ok := scopeList.Get(id)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(id)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[0])
 	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
@@ -82,8 +79,7 @@ func TestScopeList_GetShadow(t *testing.T) {
 	inner := NewScope()
 	inner.Set(id, &bindings[1])
 	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, false)
-	bindingStackContext, ok := scopeList.Get(id)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(id)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[1])
 	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
@@ -94,8 +90,7 @@ func TestScopeList_GetFrame(t *testing.T) {
 	scope := NewScope()
 	scope.Set(id, &bindings[0])
 	scopeList := NewScopeList().Push(scope, LEXICAL, true)
-	bindingStackContext, ok := scopeList.Get(id)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(id)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[0])
 	require.Equal(t, CurrentStackContext, bindingStackContext.StackContext)
 }
@@ -107,8 +102,7 @@ func TestScopeList_GetFrameNext(t *testing.T) {
 	outer.Set(id, &bindings[0])
 	inner := NewScope()
 	scopeList := NewScopeList().Push(outer, 0, false).Push(inner, 0, true)
-	bindingStackContext, ok := scopeList.Get(id)
-	require.True(t, ok)
+	bindingStackContext := scopeList.Get(id)
 	require.True(t, bindingStackContext.Binding.(*Variable) == &bindings[0])
 	require.Equal(t, StackContext(1), bindingStackContext.StackContext)
 }
