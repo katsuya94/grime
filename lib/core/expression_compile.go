@@ -13,7 +13,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 	}
 	switch form := form.Datum().(type) {
 	case QuoteForm:
-		return Literal{form.Datum}, nil
+		return Literal(form), nil
 	case SyntaxForm:
 		template, patternVariablesUnexpanded, err := compileTemplate(form.Template)
 		if err != nil {
@@ -142,7 +142,6 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		if err != nil {
 			return nil, err
 		}
-		literals := []common.Identifier{}
 		literalScope := common.NewScope()
 		for _, literal := range form.Literals {
 			binding := literal.Binding()
@@ -152,8 +151,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			if binding == common.EllipsisKeyword {
 				return nil, fmt.Errorf("compile: ellipsis cannot appear in literals")
 			}
-			literals = append(literals, literal)
-			err := literalScope.Set(literal, &common.Literal{literal})
+			err := literalScope.Set(literal, common.NewLiteral(literal))
 			if err != nil {
 				return nil, err
 			}

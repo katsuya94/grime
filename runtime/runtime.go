@@ -8,7 +8,6 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 var PatternTopLevelProgramImportForm = common.MustCompileSimplePattern(read.MustReadDatum("(import import-spec ...)"), common.Symbol("import"))
@@ -201,7 +200,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 }
 
 func nameString(name []common.Symbol) string {
-	return common.Write(util.List(nameData(name)...))
+	return common.Write(list(nameData(name)...))
 }
 
 func nameData(name []common.Symbol) []common.Datum {
@@ -217,7 +216,15 @@ func versionString(version []subVersion) string {
 	for _, subV := range version {
 		data = append(data, common.Number(fmt.Sprintf("%d", subV)))
 	}
-	return common.Write(util.List(data...))
+	return common.Write(list(data...))
+}
+
+func list(data ...common.Datum) common.Datum {
+	if len(data) == 0 {
+		return common.Null
+	} else {
+		return common.Pair{data[0], list(data[1:]...)}
+	}
 }
 
 type provision struct {

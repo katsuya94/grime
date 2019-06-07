@@ -31,10 +31,6 @@ func (id Identifier) Mark(m *M) Identifier {
 	return Identifier{NewSyntax(id.WrappedSyntax).Mark(m).Datum().(WrappedSyntax)}
 }
 
-func (id Identifier) CapturedBy(other Identifier) bool {
-	return id.Name() == other.Name() && id.marks.contains(other.marks)
-}
-
 func (id Identifier) BoundEqual(other Identifier) bool {
 	return id.Name() == other.Name() && (id.marks.contains(other.marks) || other.marks.contains(id.marks))
 }

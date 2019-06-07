@@ -62,7 +62,7 @@ type scopeEntry struct {
 type BaseScope map[Symbol][]scopeEntry
 
 func (b BaseScope) Get(id Identifier) Binding {
-	entries, _ := b[id.Name()]
+	entries := b[id.Name()]
 	markSets := make([]markSet, len(entries))
 	for i, entry := range entries {
 		markSets[i] = entry.marks
@@ -77,7 +77,7 @@ func (b BaseScope) Get(id Identifier) Binding {
 }
 
 func (b BaseScope) Set(id Identifier, binding Binding) error {
-	entries, _ := b[id.Name()]
+	entries := b[id.Name()]
 	markSets := make([]markSet, len(entries)+1)
 	for i, entry := range entries {
 		markSets[i] = entry.marks

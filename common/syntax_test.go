@@ -3,39 +3,27 @@ package common_test
 import (
 	"testing"
 
-	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/test"
 	"github.com/stretchr/testify/require"
 )
 
-func data(source string) []common.Datum {
-	return read.MustReadData(source)
-}
-
-func datum(source string) common.Datum {
-	return read.MustReadDatum(source)
-}
-
-func wrap(datum common.Datum) common.WrappedSyntax {
-	return common.NewWrappedSyntax(datum, nil)
-}
-
 func TestIsSyntaxWrappedSyntax(t *testing.T) {
-	require.True(t, IsSyntax(wrap(datum("thing"))))
+	require.True(t, IsSyntax(test.Syntax("thing").Datum()))
 }
 func TestIsSyntaxPairBothSyntax(t *testing.T) {
-	require.True(t, IsSyntax(Pair{wrap(datum("thing")), wrap(datum("stuff"))}))
+	require.True(t, IsSyntax(Pair{test.Syntax("thing").Datum(), test.Syntax("stuff").Datum()}))
 }
 
 func TestIsSyntaxPairFirstNotSyntax(t *testing.T) {
-	require.False(t, IsSyntax(Pair{datum("thing"), wrap(datum("stuff"))}))
+	require.False(t, IsSyntax(Pair{read.MustReadDatum("thing"), test.Syntax("stuff")}))
 }
 
 func TestIsSyntaxPairRestNotSyntax(t *testing.T) {
-	require.False(t, IsSyntax(Pair{wrap(datum("thing")), datum("stuff")}))
+	require.False(t, IsSyntax(Pair{test.Syntax("thing"), read.MustReadDatum("stuff")}))
 }
 
 func TestIsSyntaxPairBothNotSyntax(t *testing.T) {
-	require.False(t, IsSyntax(Pair{datum("thing"), datum("stuff")}))
+	require.False(t, IsSyntax(Pair{read.MustReadDatum("thing"), read.MustReadDatum("stuff")}))
 }

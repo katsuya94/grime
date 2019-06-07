@@ -45,16 +45,6 @@ func (nullType) Mark(m *M) Marker {
 	return Null
 }
 
-// Underscore is a value used in patterns as a non-capturing wildcard.
-var Underscore = &underscoreType{}
-
-type underscoreType struct{}
-
-// Ellipsis is a value used in patterns to signify repitition.
-var Ellipsis = &ellipsisType{}
-
-type ellipsisType struct{}
-
 // Boolean represents a boolean value.
 type Boolean bool
 

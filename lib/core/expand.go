@@ -5,7 +5,6 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/util"
 )
 
 var setIdentifier = common.NewIdentifier(common.Symbol("set!")).Bind(setKeyword)
@@ -71,7 +70,9 @@ func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (co
 	}
 	mark := common.NewMark()
 	input := syntax.Mark(mark)
-	output, err := util.Invoke(keyword.Transformer, input.Datum())
+	output, err := common.WithEscape(func(escape common.Continuation) (common.Evaluation, error) {
+		return keyword.Transformer.Call(escape, input.Datum())
+	})
 	if err != nil {
 		return common.Syntax{}, false, err
 	}

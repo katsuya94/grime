@@ -107,8 +107,8 @@ type Literal struct {
 	Id Identifier
 }
 
-func NewLiteral() *Literal {
-	return &Literal{}
+func NewLiteral(Id Identifier) *Literal {
+	return &Literal{Id}
 }
 
 func (l Literal) Copy(src *Frame, dest FrameBuilder) Binding {

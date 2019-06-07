@@ -24,7 +24,6 @@ type Library struct {
 	importSpecs            []importSpec
 	exportSpecs            []identifierBinding
 	body                   []common.Syntax
-	additionalScopes       []common.Scope
 	nullSourceLocationTree common.SourceLocationTree
 }
 
@@ -146,10 +145,6 @@ func MustNewEmptyLibrary(name []common.Symbol, version []int) *Library {
 
 func (l *Library) Name() []common.Symbol {
 	return l.name
-}
-
-func (l *Library) AddScope(scope common.Scope) {
-	l.additionalScopes = append(l.additionalScopes, scope)
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
