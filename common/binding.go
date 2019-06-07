@@ -1,9 +1,10 @@
 package common
 
-// TODO: *interface{} should be Binding
-// TODO: rename Binding
+// TODO: bindings no longer have to be pointers. One issue with this is special bingings like _ and ...
+// TODO: make indices private
+
 type Binding interface {
-	Export() (*interface{}, bool)
+	Copy(src *Frame, dest FrameBuilder) Binding
 }
 
 // Keyword binds a syntax transformer in the region where bound.
@@ -16,8 +17,15 @@ func NewKeyword(frameTemplate *FrameTemplate) *Keyword {
 	return &Keyword{nil, frameTemplate.Add()}
 }
 
-func (l Keyword) Export() (*interface{}, bool) {
-	return nil, false
+func (l *Keyword) Copy(src *Frame, dest FrameBuilder) Binding {
+	// TODO: temporary hack to get shared keywords to work
+	if l == UnderscoreKeyword {
+		return UnderscoreKeyword
+	}
+	if l == EllipsisKeyword {
+		return EllipsisKeyword
+	}
+	return &Keyword{l.Transformer, dest.Copy(src, l.TransformerFrameIndex)}
 }
 
 func (l Keyword) TransformerReference(stackContext StackContext) StackFrameReference {
@@ -34,8 +42,8 @@ func NewVariable(frameTemplate *FrameTemplate) *Variable {
 	return &Variable{nil, frameTemplate.Add()}
 }
 
-func (l Variable) Export() (*interface{}, bool) {
-	return nil, false
+func (l Variable) Copy(src *Frame, dest FrameBuilder) Binding {
+	return &Variable{l.Value, dest.Copy(src, l.ValueFrameIndex)}
 }
 
 func (l Variable) ValueReference(stackContext StackContext) StackFrameReference {
@@ -45,16 +53,16 @@ func (l Variable) ValueReference(stackContext StackContext) StackFrameReference 
 // PatternVariable binds a match result in the region where bound.
 type PatternVariable struct {
 	Match           interface{}
-	Nesting         int
 	MatchFrameIndex int
+	Nesting         int
 }
 
 func NewPatternVariable(frameTemplate *FrameTemplate) *PatternVariable {
-	return &PatternVariable{nil, 0, frameTemplate.Add()}
+	return &PatternVariable{nil, frameTemplate.Add(), 0}
 }
 
-func (l PatternVariable) Export() (*interface{}, bool) {
-	return nil, false
+func (l PatternVariable) Copy(src *Frame, dest FrameBuilder) Binding {
+	return &PatternVariable{l.Match, dest.Copy(src, l.MatchFrameIndex), l.Nesting}
 }
 
 func (l PatternVariable) PatternVariableReference(stackContext StackContext) StackFrameReference {
@@ -70,6 +78,6 @@ func NewLiteral() *Literal {
 	return &Literal{}
 }
 
-func (l Literal) Export() (*interface{}, bool) {
-	return nil, false
+func (l Literal) Copy(src *Frame, dest FrameBuilder) Binding {
+	return l
 }

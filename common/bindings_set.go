@@ -1,6 +1,35 @@
 package common
 
-// TODO: rename to LocationSet, also rename file.
+// TODO: make bindingSet private, rename file
+type BindingsFrame struct {
+	bindingSet BindingSet
+	frame      *Frame
+}
+
+var EmptyBindingsFrame = BindingsFrame{}
+
+func NewBindingsFrame() BindingsFrame {
+	return BindingsFrame{NewBindingSet(), NewFrame()}
+}
+
+func (bfs BindingsFrame) Empty() bool {
+	return bfs.bindingSet == nil && bfs.frame == nil
+}
+
+// TODO: this seems invasive
+func (bfs BindingsFrame) Get(id Symbol, phase int) Binding {
+	return bfs.bindingSet.Get(id, phase)
+}
+
+func (bfs BindingsFrame) Copy(id Symbol, phase int, binding Binding, frame *Frame) {
+	binding = binding.Copy(frame, bfs.frame.NewBuilder())
+	bfs.bindingSet.Set(id, phase, binding)
+}
+
+func (bfs BindingsFrame) CopyFrom(id Symbol, phase int, other BindingsFrame) {
+	binding := other.bindingSet.Get(id, phase)
+	bfs.Copy(id, phase, binding, other.frame)
+}
 
 type IdentifierTransformerFactory interface {
 	New() IdentifierTransformer
@@ -39,8 +68,7 @@ func (set BindingSet) Get(id Symbol, phase int) Binding {
 	if _, ok := set[phase]; !ok {
 		return nil
 	}
-	l, _ := set[phase][id]
-	return l
+	return set[phase][id]
 }
 
 func (set BindingSet) Set(id Symbol, phase int, binding Binding) {
@@ -48,15 +76,4 @@ func (set BindingSet) Set(id Symbol, phase int, binding Binding) {
 		set[phase] = map[Symbol]Binding{}
 	}
 	set[phase][id] = binding
-}
-
-func (set BindingSet) Merge(other BindingSet) {
-	for phase, bindings := range other {
-		if _, ok := set[phase]; !ok {
-			set[phase] = map[Symbol]Binding{}
-		}
-		for name, binding := range bindings {
-			set[phase][name] = binding
-		}
-	}
 }

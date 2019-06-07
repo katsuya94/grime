@@ -31,7 +31,33 @@ func NewStack(frame *Frame) Stack {
 }
 
 type Frame struct {
+	// TODO: rename bindings -> locations
 	bindings []Location
+}
+
+func NewFrame() *Frame {
+	return &Frame{[]Location{}}
+}
+
+func (f *Frame) Grow(frameTemplate FrameTemplate) {
+	if frameTemplate.Size() < len(f.bindings) {
+		panic("can't grow with smaller FrameTemplate")
+	}
+	old := f.bindings
+	f.bindings = make([]Location, frameTemplate.Size())
+	copy(f.bindings, old)
+	for i := len(old); i < len(f.bindings); i++ {
+		f.bindings[i] = NewLocation()
+	}
+}
+
+// TODO: rename to NewTemplate
+func (f *Frame) Template() FrameTemplate {
+	return FrameTemplate{len(f.bindings)}
+}
+
+func (f *Frame) NewBuilder() FrameBuilder {
+	return FrameBuilder{f}
 }
 
 type StackContext int
@@ -54,6 +80,7 @@ type StackFrameReference struct {
 	FrameIndex   int
 }
 
+// Refactor into CompilationContext from which an EvaluationContext can be derived
 type FrameTemplate struct {
 	size int
 }
@@ -78,4 +105,24 @@ func (ft FrameTemplate) Instantiate() *Frame {
 
 func (ft FrameTemplate) Size() int {
 	return ft.size
+}
+
+type FrameBuilder struct {
+	frame *Frame
+}
+
+func (fb FrameBuilder) Add(value interface{}) int {
+	frameTemplate := fb.frame.Template()
+	i := frameTemplate.Add()
+	fb.frame.Grow(frameTemplate)
+	*fb.frame.bindings[i] = value
+	return i
+}
+
+func (fb FrameBuilder) Copy(frame *Frame, index int) int {
+	frameTemplate := fb.frame.Template()
+	i := frameTemplate.Add()
+	fb.frame.Grow(frameTemplate)
+	fb.frame.bindings[i] = frame.bindings[index]
+	return i
 }
