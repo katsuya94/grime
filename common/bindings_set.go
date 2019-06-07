@@ -31,6 +31,32 @@ func (bfs BindingsFrame) CopyFrom(id Symbol, phase int, other BindingsFrame) {
 	bfs.Copy(id, phase, binding, other.frame)
 }
 
+func (bfs BindingsFrame) Load(levels []int, scopeSet ScopeSet, frame *Frame, identifierTransformerFactory IdentifierTransformerFactory) error {
+	it := identifierTransformerFactory.New()
+	for phase, bindings := range bfs.bindingSet {
+		for id, binding := range bindings {
+			id, ok := it.Transform(id)
+			if ok {
+				binding = binding.Copy(bfs.frame, frame.NewBuilder())
+				phases := make(map[int]struct{})
+				for _, level := range levels {
+					phases[phase+level] = struct{}{}
+				}
+				for phase := range phases {
+					if phase < 0 {
+						continue
+					}
+					err := scopeSet.Set(phase, id, binding)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return it.Error()
+}
+
 type IdentifierTransformerFactory interface {
 	New() IdentifierTransformer
 }
