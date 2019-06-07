@@ -80,7 +80,7 @@ func (r *Runtime) Execute(topLevelProgram []common.Syntax, nullSourceLocationTre
 func (r *Runtime) ExecuteFile(name string) error {
 	_, filename, _, ok := runtime.Caller(1)
 	if !ok {
-		fmt.Errorf("failed to determine source location")
+		return fmt.Errorf("failed to determine source location")
 	}
 	sourcePath := filepath.Join(filepath.Dir(filename), fmt.Sprintf("%v.scm", name))
 	f, err := os.Open(sourcePath)
