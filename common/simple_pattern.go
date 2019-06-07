@@ -1,12 +1,6 @@
 package common
 
-var simplePatternScope BaseScope
-
-func init() {
-	simplePatternScope = NewScope()
-	simplePatternScope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
-	simplePatternScope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
-}
+var simplePatternScope = NewScope()
 
 type SimplePattern struct {
 	pattern              Pattern

@@ -1,5 +1,9 @@
 package common
 
+type BindingFactory interface {
+	New(FrameBuilder) Binding
+}
+
 // TODO: make bindingSet private, rename file
 type BindingsFrame struct {
 	bindingSet BindingSet
@@ -19,6 +23,12 @@ func (bfs BindingsFrame) Empty() bool {
 // TODO: this seems invasive
 func (bfs BindingsFrame) Get(id Symbol, phase int) Binding {
 	return bfs.bindingSet.Get(id, phase)
+}
+
+func (bfs BindingsFrame) Add(id Symbol, phase int, bindingFactory BindingFactory) Binding {
+	binding := bindingFactory.New(bfs.frame.NewBuilder())
+	bfs.bindingSet.Set(id, phase, binding)
+	return binding
 }
 
 func (bfs BindingsFrame) Copy(id Symbol, phase int, binding Binding, frame *Frame) {

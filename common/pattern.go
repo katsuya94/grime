@@ -2,14 +2,23 @@ package common
 
 import "fmt"
 
+var Bindings = NewBindingsFrame()
+
 var (
-	UnderscoreKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
-		return nil, fmt.Errorf("cannot expand underscore")
-	}), -1}
-	EllipsisKeyword = &Keyword{Function(func(Continuation, ...Datum) (Evaluation, error) {
-		return nil, fmt.Errorf("cannot expand ellipsis")
-	}), -1}
+	UnderscoreKeyword *Keyword
+	EllipsisKeyword   *Keyword
 )
+
+func init() {
+	UnderscoreKeyword = Bindings.Add(Symbol("_"), 0, KeywordFactory{Function(func(Continuation, ...Datum) (Evaluation, error) {
+		return nil, fmt.Errorf("cannot expand underscore")
+	})}).(*Keyword)
+	EllipsisKeyword = Bindings.Add(Symbol("..."), 0, KeywordFactory{Function(func(Continuation, ...Datum) (Evaluation, error) {
+		return nil, fmt.Errorf("cannot expand ellipsis")
+	})}).(*Keyword)
+	simplePatternScope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
+	simplePatternScope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
+}
 
 type Pattern interface {
 	Match(Syntax) (map[*PatternVariable]interface{}, bool)

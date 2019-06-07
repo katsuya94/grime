@@ -1,10 +1,18 @@
 package common
 
 // TODO: bindings no longer have to be pointers. One issue with this is special bingings like _ and ...
-// TODO: make indices private
+// TODO: make indices private, instead expose methods that return values given a frame
 
 type Binding interface {
 	Copy(src *Frame, dest FrameBuilder) Binding
+}
+
+type KeywordFactory struct {
+	Transformer Procedure
+}
+
+func (bf KeywordFactory) New(frameBuilder FrameBuilder) Binding {
+	return &Keyword{bf.Transformer, frameBuilder.Add(bf.Transformer)}
 }
 
 // Keyword binds a syntax transformer in the region where bound.
@@ -32,6 +40,14 @@ func (l Keyword) TransformerReference(stackContext StackContext) StackFrameRefer
 	return StackFrameReference{stackContext, l.TransformerFrameIndex}
 }
 
+type VariableFactory struct {
+	Value Datum
+}
+
+func (bf VariableFactory) New(frameBuilder FrameBuilder) Binding {
+	return &Variable{bf.Value, frameBuilder.Add(bf.Value)}
+}
+
 // Variable binds a value in the region where bound.
 type Variable struct {
 	Value           Datum
@@ -48,6 +64,15 @@ func (l Variable) Copy(src *Frame, dest FrameBuilder) Binding {
 
 func (l Variable) ValueReference(stackContext StackContext) StackFrameReference {
 	return StackFrameReference{stackContext, l.ValueFrameIndex}
+}
+
+type PatternVariableFactory struct {
+	Match   interface{}
+	Nesting int
+}
+
+func (bf PatternVariableFactory) New(frameBuilder FrameBuilder) Binding {
+	return &PatternVariable{bf.Match, frameBuilder.Add(bf.Match), bf.Nesting}
 }
 
 // PatternVariable binds a match result in the region where bound.
@@ -67,6 +92,14 @@ func (l PatternVariable) Copy(src *Frame, dest FrameBuilder) Binding {
 
 func (l PatternVariable) PatternVariableReference(stackContext StackContext) StackFrameReference {
 	return StackFrameReference{stackContext, l.MatchFrameIndex}
+}
+
+type LiteralFactory struct {
+	Id Identifier
+}
+
+func (bf LiteralFactory) New(frameBuilder FrameBuilder) Binding {
+	return &Literal{bf.Id}
 }
 
 // Literal binds a pattern literal in the pattern where bound.
