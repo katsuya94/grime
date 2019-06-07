@@ -10,42 +10,42 @@ import (
 
 var Library *runtime.Library = runtime.MustNewEmptyLibrary([]common.Symbol{common.Symbol("core")}, []int{})
 
-var Bindings = common.BindingSet{
-	0: map[common.Symbol]common.Binding{
-		common.Symbol("quote"):                &common.Keyword{common.Function(transformQuote), -1},
-		common.Symbol("syntax"):               &common.Keyword{common.Function(transformSyntax), -1},
-		common.Symbol("if"):                   &common.Keyword{common.Function(transformIf), -1},
-		common.Symbol("~let"):                 &common.Keyword{common.Function(transformLet), -1},
-		common.Symbol("begin"):                &common.Keyword{common.Function(transformBegin), -1},
-		common.Symbol("lambda"):               &common.Keyword{common.Function(transformLambda), -1},
-		common.Symbol("~define"):              &common.Keyword{common.Function(transformDefine), -1},
-		common.Symbol("define-syntax"):        &common.Keyword{common.Function(transformDefineSyntax), -1},
-		common.Symbol("syntax-case"):          &common.Keyword{common.Function(transformSyntaxCase), -1},
-		common.Symbol("set!"):                 setKeyword,
-		common.Symbol("_"):                    common.UnderscoreKeyword,
-		common.Symbol("..."):                  common.EllipsisKeyword,
-		common.Symbol("not"):                  &common.Variable{common.Function(not), -1},
-		common.Symbol("cons"):                 &common.Variable{common.Function(cons), -1},
-		common.Symbol("car"):                  &common.Variable{common.Function(car), -1},
-		common.Symbol("cdr"):                  &common.Variable{common.Function(cdr), -1},
-		common.Symbol("null?"):                &common.Variable{common.Function(null), -1},
-		common.Symbol("pair?"):                &common.Variable{common.Function(pair), -1},
-		common.Symbol("proc?"):                &common.Variable{common.Function(proc), -1},
-		common.Symbol("write"):                &common.Variable{common.Function(write), -1},
-		common.Symbol("call/cc"):              &common.Variable{common.Function(callWithCurrentContinuation), -1},
-		common.Symbol("error"):                &common.Variable{common.Function(err), -1},
-		common.Symbol("eqv?"):                 &common.Variable{common.Function(eqv), -1},
-		common.Symbol("syntax->datum"):        &common.Variable{common.Function(syntaxDatum), -1},
-		common.Symbol("datum->syntax"):        &common.Variable{common.Function(datumSyntax), -1},
-		common.Symbol("identifier?"):          &common.Variable{common.Function(identifier), -1},
-		common.Symbol("generate-temporaries"): &common.Variable{common.Function(generateTemporaries), -1},
-		common.Symbol("list"):                 &common.Variable{common.Function(list), -1},
-		common.Symbol("bound-identifier=?"):   &common.Variable{common.Function(boundIdentifier), -1},
-		common.Symbol("free-identifier=?"):    &common.Variable{common.Function(freeIdentifier), -1},
-	},
-}
+var Bindings = common.NewBindingsFrame()
 
-var setKeyword = &common.Keyword{common.Function(transformSet), -1}
+var setKeyword *common.Keyword
+
+func init() {
+	Bindings.Add(common.Symbol("quote"), 0, common.KeywordFactory{common.Function(transformQuote)})
+	Bindings.Add(common.Symbol("syntax"), 0, common.KeywordFactory{common.Function(transformSyntax)})
+	Bindings.Add(common.Symbol("if"), 0, common.KeywordFactory{common.Function(transformIf)})
+	Bindings.Add(common.Symbol("~let"), 0, common.KeywordFactory{common.Function(transformLet)})
+	Bindings.Add(common.Symbol("begin"), 0, common.KeywordFactory{common.Function(transformBegin)})
+	Bindings.Add(common.Symbol("lambda"), 0, common.KeywordFactory{common.Function(transformLambda)})
+	Bindings.Add(common.Symbol("~define"), 0, common.KeywordFactory{common.Function(transformDefine)})
+	Bindings.Add(common.Symbol("define-syntax"), 0, common.KeywordFactory{common.Function(transformDefineSyntax)})
+	Bindings.Add(common.Symbol("syntax-case"), 0, common.KeywordFactory{common.Function(transformSyntaxCase)})
+	setKeyword = Bindings.Add(common.Symbol("set!"), 0, common.KeywordFactory{common.Function(transformSet)}).(*common.Keyword)
+	Bindings.CopyFrom(common.Symbol("_"), 0, common.Bindings)
+	Bindings.CopyFrom(common.Symbol("..."), 0, common.Bindings)
+	Bindings.Add(common.Symbol("not"), 0, common.VariableFactory{common.Function(not)})
+	Bindings.Add(common.Symbol("cons"), 0, common.VariableFactory{common.Function(cons)})
+	Bindings.Add(common.Symbol("car"), 0, common.VariableFactory{common.Function(car)})
+	Bindings.Add(common.Symbol("cdr"), 0, common.VariableFactory{common.Function(cdr)})
+	Bindings.Add(common.Symbol("null?"), 0, common.VariableFactory{common.Function(null)})
+	Bindings.Add(common.Symbol("pair?"), 0, common.VariableFactory{common.Function(pair)})
+	Bindings.Add(common.Symbol("proc?"), 0, common.VariableFactory{common.Function(proc)})
+	Bindings.Add(common.Symbol("write"), 0, common.VariableFactory{common.Function(write)})
+	Bindings.Add(common.Symbol("call/cc"), 0, common.VariableFactory{common.Function(callWithCurrentContinuation)})
+	Bindings.Add(common.Symbol("error"), 0, common.VariableFactory{common.Function(err)})
+	Bindings.Add(common.Symbol("eqv?"), 0, common.VariableFactory{common.Function(eqv)})
+	Bindings.Add(common.Symbol("syntax->datum"), 0, common.VariableFactory{common.Function(syntaxDatum)})
+	Bindings.Add(common.Symbol("datum->syntax"), 0, common.VariableFactory{common.Function(datumSyntax)})
+	Bindings.Add(common.Symbol("identifier?"), 0, common.VariableFactory{common.Function(identifier)})
+	Bindings.Add(common.Symbol("generate-temporaries"), 0, common.VariableFactory{common.Function(generateTemporaries)})
+	Bindings.Add(common.Symbol("list"), 0, common.VariableFactory{common.Function(list)})
+	Bindings.Add(common.Symbol("bound-identifier=?"), 0, common.VariableFactory{common.Function(boundIdentifier)})
+	Bindings.Add(common.Symbol("free-identifier=?"), 0, common.VariableFactory{common.Function(freeIdentifier)})
+}
 
 var (
 	PatternQuote                      = common.MustCompileSimplePattern(read.MustReadDatum("(quote datum)"))
