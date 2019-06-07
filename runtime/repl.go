@@ -10,17 +10,13 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func REPL(compiler common.Compiler, bindingss common.BindingSet, r io.Reader, w io.Writer) {
-	scopes := make(map[int]common.BaseScope, len(bindingss))
-	for phase, bindings := range bindingss {
-		scopes[phase] = common.NewScope()
-		for name, binding := range bindings {
-			err := scopes[phase].Set(common.NewIdentifier(name), binding)
-			if err != nil {
-				fmt.Fprintf(w, "error: %v\n", err)
-				continue
-			}
-		}
+func REPL(compiler common.Compiler, bindings common.BindingsFrame, r io.Reader, w io.Writer) {
+	scopeSet := common.NewScopeSet()
+	frame := common.NewFrame()
+	stack := common.NewStack(frame)
+	err := bindings.Load([]int{0}, scopeSet, frame, identifierSpecAll{})
+	if err != nil {
+		panic(err)
 	}
 	var program []common.Syntax
 	for {
@@ -40,11 +36,9 @@ func REPL(compiler common.Compiler, bindingss common.BindingSet, r io.Reader, w 
 		}
 		program = append(program, syntaxes...)
 		body := common.Body(nullSourceLocationTree, program...)
-		for phase, scope := range scopes {
-			body = body.Push(scope, phase, false)
-		}
-		scope := common.NewFlushScope(scopes[0])
-		frameTemplate := common.NewFrameTemplate()
+		body = scopeSet.Apply(body)
+		scope := common.NewFlushScope(scopeSet[0])
+		frameTemplate := frame.Template()
 		expression, err := compiler.Compile(body, scope, &frameTemplate)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
@@ -55,9 +49,7 @@ func REPL(compiler common.Compiler, bindingss common.BindingSet, r io.Reader, w 
 			fmt.Fprintf(w, "error: %v\n", err)
 			continue
 		}
-		// TODO: should this be shared across REP loops?
-		frame := frameTemplate.Instantiate()
-		stack := common.NewStack(frame)
+		frame.Grow(frameTemplate)
 		result, err := common.Evaluate(stack, expression)
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)

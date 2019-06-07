@@ -27,7 +27,7 @@ func (r *Runtime) Provide(library *Library) error {
 	if _, ok := r.provisions[ns]; ok {
 		return fmt.Errorf("runtime: library %v already provided", ns)
 	}
-	r.provisions[ns] = &provision{library, nil, false}
+	r.provisions[ns] = &provision{library, common.EmptyBindingsFrame, false}
 	return nil
 }
 
@@ -38,17 +38,17 @@ func (r *Runtime) MustProvide(library *Library) {
 	}
 }
 
-func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingSet) error {
+func (r *Runtime) Bind(name []common.Symbol, bindings common.BindingsFrame) error {
 	ns := nameString(name)
 	prov, ok := r.provisions[ns]
 	if !ok {
 		return fmt.Errorf("runtime: cannot bind unknown library %v", ns)
 	}
-	prov.bindings = bindings
+	prov.exports = bindings
 	return nil
 }
 
-func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingSet) {
+func (r *Runtime) MustBind(name []common.Symbol, bindings common.BindingsFrame) {
 	err := r.Bind(name, bindings)
 	if err != nil {
 		panic(err)
@@ -94,16 +94,16 @@ func (r *Runtime) ExecuteFile(name string) error {
 	return r.Execute(syntaxes, nullSourceLocationTree)
 }
 
-func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingSet, error) {
+func (r *Runtime) BindingsFor(name []common.Symbol) (common.BindingsFrame, error) {
 	prov, err := r.provisionFor(name)
 	if err != nil {
-		return nil, err
+		return common.EmptyBindingsFrame, err
 	}
 	err = r.instantiate(prov)
 	if err != nil {
-		return nil, err
+		return common.EmptyBindingsFrame, err
 	}
-	return prov.bindings, nil
+	return prov.exports, nil
 }
 
 func (r *Runtime) provisionFor(name []common.Symbol) (*provision, error) {
@@ -142,7 +142,7 @@ func (r *Runtime) MustInstantiate(name []common.Symbol) {
 }
 
 func (r *Runtime) instantiate(prov *provision) error {
-	if prov.bindings != nil {
+	if !prov.exports.Empty() {
 		return nil
 	}
 	if prov.visited {
@@ -169,70 +169,33 @@ func (r *Runtime) instantiate(prov *provision) error {
 		resolutions = append(resolutions, resolution)
 	}
 	syntaxes := append(prov.library.body, common.NewSyntax(common.NewWrappedSyntax(common.Void, &prov.library.nullSourceLocationTree)))
-	scopes := map[int]common.BaseScope{}
-	scopes[0] = common.NewScope()
+	scopeSet := common.NewScopeSet()
+	frame := common.NewFrame()
+	stack := common.NewStack(frame)
 	for i := range subProvs {
 		err := r.instantiate(subProvs[i])
 		if err != nil {
 			return err
 		}
-		bindingss, err := resolutions[i].identifierSpec.resolve(subProvs[i].bindings)
+		err = subProvs[i].exports.Load(resolutions[i].levels, scopeSet, frame, resolutions[i].identifierSpec)
 		if err != nil {
 			return instantiationError{prov.library.name, err}
 		}
-		for exportLevel, bindings := range bindingss {
-			for name, binding := range bindings {
-				phases := make(map[int]struct{})
-				for _, importLevel := range resolutions[i].levels {
-					phases[importLevel+exportLevel] = struct{}{}
-				}
-				for phase := range phases {
-					if phase < 0 {
-						continue
-					}
-					_, ok := scopes[phase]
-					if !ok {
-						scopes[phase] = common.NewScope()
-					}
-					err := scopes[phase].Set(common.NewIdentifier(name), binding)
-					if err != nil {
-						return instantiationError{prov.library.name, err}
-					}
-				}
-			}
-		}
 	}
-	body := common.Body(prov.library.nullSourceLocationTree, syntaxes...)
-	for phase, scope := range scopes {
-		body = body.Push(scope, phase, false)
-	}
-	frameTemplate := common.NewFrameTemplate()
-	expression, err := r.compiler.Compile(body, scopes[0], &frameTemplate)
+	body := scopeSet.Apply(common.Body(prov.library.nullSourceLocationTree, syntaxes...))
+	frameTemplate := frame.Template()
+	expression, err := r.compiler.Compile(body, scopeSet[0], &frameTemplate)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}
-	frame := frameTemplate.Instantiate()
-	// TODO: compute location allocated in the frame for each exported binding
-	prov.bindings = common.NewBindingSet()
-	for _, exportSpec := range prov.library.exportSpecs {
-		exported := false
-		for phase, scope := range scopes {
-			for name, binding := range scope.Bindings() {
-				if exportSpec.internal != name {
-					continue
-				}
-				prov.bindings.Set(exportSpec.external, phase, binding)
-				exported = true
-			}
-		}
-		if !exported {
-			return instantiationError{prov.library.name, fmt.Errorf("can't export unbound identifier %v", exportSpec.internal)}
-		}
-	}
-	stack := common.NewStack(frame)
+	frame.Grow(frameTemplate)
 	_, err = common.Evaluate(stack, expression)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
+	}
+	prov.exports = common.NewBindingsFrame()
+	for _, exportSpec := range prov.library.exportSpecs {
+		scopeSet.Save(prov.exports, frame, exportSpec.internal, exportSpec.external)
 	}
 	return nil
 }
@@ -258,9 +221,9 @@ func versionString(version []subVersion) string {
 }
 
 type provision struct {
-	library  *Library
-	bindings common.BindingSet
-	visited  bool
+	library *Library
+	exports common.BindingsFrame
+	visited bool
 }
 
 type identifierBinding struct {

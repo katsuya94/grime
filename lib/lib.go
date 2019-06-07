@@ -11,14 +11,14 @@ import (
 
 type libraryBinding struct {
 	library  *runtime.Library
-	bindings common.BindingSet
+	bindings common.BindingsFrame
 }
 
 var libraryBindings = []libraryBinding{
 	{core.Library, core.Bindings},
-	{derived.Library, nil},
-	{base.Library, nil},
-	{grime.Library, nil},
+	{derived.Library, common.EmptyBindingsFrame},
+	{base.Library, common.EmptyBindingsFrame},
+	{grime.Library, common.EmptyBindingsFrame},
 }
 
 var StandardLibraryName = []common.Symbol{common.Symbol("grime")}
@@ -32,7 +32,7 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
-		if libraryBinding.bindings != nil {
+		if !libraryBinding.bindings.Empty() {
 			err := Runtime.Bind(libraryBinding.library.Name(), libraryBinding.bindings)
 			if err != nil {
 				panic(err)
