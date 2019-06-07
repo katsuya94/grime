@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate) (common.Expression, error) {
+func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
 	form, err := compiler.ExpandCompletely(form)
 	if err != nil {
 		return nil, err
@@ -33,27 +33,27 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		for i := range form.Forms {
 			forms[i] = form.Forms[i].Push(scope, common.LEXICAL, false)
 		}
-		expression, err := compiler.BodyCompile(forms, scope, frameTemplate)
+		expression, err := compiler.BodyCompile(forms, scope, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
 		return expression, nil
 	case IfForm:
-		conditionExpression, err := compiler.ExpressionCompile(form.Condition, frameTemplate)
+		conditionExpression, err := compiler.ExpressionCompile(form.Condition, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
-		thenExpression, err := compiler.ExpressionCompile(form.Then, frameTemplate)
+		thenExpression, err := compiler.ExpressionCompile(form.Then, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
-		elseExpression, err := compiler.ExpressionCompile(form.Else, frameTemplate)
+		elseExpression, err := compiler.ExpressionCompile(form.Else, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
 		return If{conditionExpression, thenExpression, elseExpression}, nil
 	case LetForm:
-		initExpression, err := compiler.ExpressionCompile(form.Init, frameTemplate)
+		initExpression, err := compiler.ExpressionCompile(form.Init, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
@@ -68,19 +68,19 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		for i := range form.Body {
 			forms[i] = form.Body[i].Push(scope, common.LEXICAL, false)
 		}
-		bodyExpression, err := compiler.BodyCompile(forms, scope, frameTemplate)
+		bodyExpression, err := compiler.BodyCompile(forms, scope, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
 		return Let{variable, variableReference, initExpression, bodyExpression}, nil
 	case ApplicationForm:
-		procedureExpression, err := compiler.ExpressionCompile(form.Procedure, frameTemplate)
+		procedureExpression, err := compiler.ExpressionCompile(form.Procedure, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
 		var argumentExpressions []common.Expression
 		for _, argumentForm := range form.Arguments {
-			expression, err := compiler.ExpressionCompile(argumentForm, frameTemplate)
+			expression, err := compiler.ExpressionCompile(argumentForm, frameTemplate, stack)
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +106,7 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		for i := range form.Body {
 			forms[i] = form.Body[i].Push(scope, common.LEXICAL, true)
 		}
-		expression, err := compiler.BodyCompile(forms, scope, &frameTemplate)
+		expression, err := compiler.BodyCompile(forms, scope, &frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
@@ -132,13 +132,13 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			return nil, fmt.Errorf("compile: non-variable identifier %v in assignment", form.Identifier.Name())
 		}
 		variableReference := variable.ValueReference(bindingStackContext.StackContext)
-		expression, err := compiler.ExpressionCompile(form.Form, frameTemplate)
+		expression, err := compiler.ExpressionCompile(form.Form, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
 		return Set{form.Identifier, variable, variableReference, expression}, nil
 	case SyntaxCaseForm:
-		inputExpression, err := compiler.ExpressionCompile(form.Input, frameTemplate)
+		inputExpression, err := compiler.ExpressionCompile(form.Input, frameTemplate, stack)
 		if err != nil {
 			return nil, err
 		}
@@ -191,11 +191,11 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 			}
 			fender := form.Fenders[i].Push(scope, common.LEXICAL, false)
 			output := form.Outputs[i].Push(scope, common.LEXICAL, false)
-			fenderExpression, err := compiler.ExpressionCompile(fender, frameTemplate)
+			fenderExpression, err := compiler.ExpressionCompile(fender, frameTemplate, stack)
 			if err != nil {
 				return nil, err
 			}
-			outputExpression, err := compiler.ExpressionCompile(output, frameTemplate)
+			outputExpression, err := compiler.ExpressionCompile(output, frameTemplate, stack)
 			if err != nil {
 				return nil, err
 			}

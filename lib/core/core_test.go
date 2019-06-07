@@ -7,6 +7,7 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCore(t *testing.T) {
@@ -239,28 +240,21 @@ func TestCore(t *testing.T) {
 			}
 			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
-			scopes := make(map[int]common.Scope)
-			for phase, bindings := range Bindings {
-				scopes[phase] = common.NewScope()
-				for name, binding := range bindings {
-					scopes[phase].Set(common.NewIdentifier(name), binding)
-				}
-			}
-			// Make lambda, syntax available at phase 1
-			if _, ok := scopes[1]; !ok {
-				scopes[1] = common.NewScope()
-			}
-			scopes[1].Set(common.NewIdentifier(common.Symbol("lambda")), Bindings[0][common.Symbol("lambda")])
-			scopes[1].Set(common.NewIdentifier(common.Symbol("syntax")), Bindings[0][common.Symbol("syntax")])
-			for phase, scope := range scopes {
-				body = body.Push(scope, phase, false)
-			}
-			frameTemplate := common.NewFrameTemplate()
-			expression, err := NewCompiler().Compile(body, scopes[0], &frameTemplate)
+			scopeSet := common.NewScopeSet()
+			frame := common.NewFrame()
+			err := Bindings.Load([]int{0}, scopeSet, frame, common.IdentifierTransformerFactoryAll)
+			require.NoError(t, err)
+			scopeSet.Set(1, common.Symbol("lambda"), Bindings.Get(common.Symbol("lambda"), 0))
+			scopeSet.Set(1, common.Symbol("syntax"), Bindings.Get(common.Symbol("syntax"), 0))
+			body = scopeSet.Apply(body)
+			frameTemplate := frame.Template()
+			stack := common.NewStack(frame)
+			expression, err := NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := common.Evaluate(common.NewStack(frameTemplate.Instantiate()), expression)
+			frame.Grow(frameTemplate)
+			actual, err := common.Evaluate(stack, expression)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

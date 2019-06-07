@@ -8,7 +8,6 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/core"
 	"github.com/katsuya94/grime/read"
-	"github.com/katsuya94/grime/test"
 )
 
 func TestCompile(t *testing.T) {
@@ -102,24 +101,16 @@ func TestCompile(t *testing.T) {
 		t.Run(_test.name, func(t *testing.T) {
 			syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(_test.source)
 			body := common.Body(nullSourceLocationTree, syntaxes...)
-			scopes := make(map[int]common.Scope)
-			for phase, bindings := range Bindings {
-				scopes[phase] = common.NewScope()
-				for name, binding := range bindings {
-					scopes[phase].Set(common.NewIdentifier(name), binding)
-				}
-			}
-			// Make lambda, syntax available at phase 1
-			if _, ok := scopes[1]; !ok {
-				scopes[1] = common.NewScope()
-			}
-			scopes[1].Set(test.Identifier("lambda"), Bindings[0][common.Symbol("lambda")])
-			scopes[1].Set(test.Identifier("syntax"), Bindings[0][common.Symbol("syntax")])
-			for phase, scope := range scopes {
-				body = body.Push(scope, phase, false)
-			}
-			frameTemplate := common.NewFrameTemplate()
-			_, err := NewCompiler().Compile(body, scopes[0], &frameTemplate)
+			scopeSet := common.NewScopeSet()
+			frame := common.NewFrame()
+			err := Bindings.Load([]int{0}, scopeSet, frame, common.IdentifierTransformerFactoryAll)
+			require.NoError(t, err)
+			scopeSet.Set(1, common.Symbol("lambda"), Bindings.Get(common.Symbol("lambda"), 0))
+			scopeSet.Set(1, common.Symbol("syntax"), Bindings.Get(common.Symbol("syntax"), 0))
+			body = scopeSet.Apply(body)
+			frameTemplate := frame.Template()
+			stack := common.NewStack(frame)
+			_, err = NewCompiler().Compile(body, scopeSet[1], &frameTemplate, stack)
 			if _test.error == "" {
 				require.NoError(t, err)
 			} else {

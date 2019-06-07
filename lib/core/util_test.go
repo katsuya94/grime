@@ -14,23 +14,24 @@ func expandNever(Compiler, common.Syntax) (common.Syntax, bool, error) {
 	return common.Syntax{}, false, nil
 }
 
-func expressionCompileIdentity(_ Compiler, form common.Syntax, _ *common.FrameTemplate) (common.Expression, error) {
+func expressionCompileIdentity(_ Compiler, form common.Syntax, _ *common.FrameTemplate, _ common.Stack) (common.Expression, error) {
 	return form.Datum().(common.Expression), nil
 }
 
 func testProgram(t *testing.T, source string, expected common.Datum) {
 	syntaxes, nullSourceLocationTree := read.MustReadSyntaxes(source)
 	body := common.Body(nullSourceLocationTree, syntaxes...)
-	scope := common.NewScope()
-	for name, binding := range Bindings[0] {
-		scope.Set(common.NewIdentifier(name), binding)
-	}
-	body = body.Push(scope, common.LEXICAL, false)
-	frameTemplate := common.NewFrameTemplate()
-	expression, err := NewCompiler().Compile(body, scope, &frameTemplate)
+	scopeSet := common.NewScopeSet()
+	frame := common.NewFrame()
+	err := Bindings.Load([]int{0}, scopeSet, frame, common.IdentifierTransformerFactoryAll)
 	require.NoError(t, err)
-	frame := frameTemplate.Instantiate()
-	actual, err := common.Evaluate(common.NewStack(frame), expression)
+	body = body.Push(scopeSet[0], common.LEXICAL, false)
+	frameTemplate := frame.Template()
+	stack := common.NewStack(frame)
+	expression, err := NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
+	require.NoError(t, err)
+	frame.Grow(frameTemplate)
+	actual, err := common.Evaluate(stack, expression)
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 }

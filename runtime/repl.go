@@ -39,7 +39,7 @@ func REPL(compiler common.Compiler, bindings common.BindingsFrame, r io.Reader, 
 		body = scopeSet.Apply(body)
 		scope := common.NewFlushScope(scopeSet[0])
 		frameTemplate := frame.Template()
-		expression, err := compiler.Compile(body, scope, &frameTemplate)
+		expression, err := compiler.Compile(body, scope, &frameTemplate, stack)
 		if err == common.ErrUnexpectedFinalForm && !eof {
 			continue
 		}

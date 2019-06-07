@@ -6,7 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
+func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
 	var (
 		i                            int
 		sourceLocations              []common.SourceLocation
@@ -37,12 +37,11 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 					return nil, err
 				}
 				form := v.Form.Push(rhsScope, common.LEXICAL, false).Next()
-				expression, err := compiler.ExpressionCompile(form, frameTemplate)
+				expression, err := compiler.ExpressionCompile(form, frameTemplate, stack)
 				if err != nil {
 					return nil, ExpressionCompileError{err, "right-hand side of syntax definition", sourceLocations[i]}
 				}
-				// TODO: where does the stack come from?
-				value, err := common.Evaluate(common.NewStack(nil), expression)
+				value, err := common.Evaluate(stack, expression)
 				if err != nil {
 					return nil, err
 				}
@@ -109,7 +108,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 	// Compile define expressions for the definitions.
 	var expressions []common.Expression
 	for i := range definitionVariables {
-		expression, err := compiler.ExpressionCompile(definitionForms[i], frameTemplate)
+		expression, err := compiler.ExpressionCompile(definitionForms[i], frameTemplate, stack)
 		if err != nil {
 			return nil, ExpressionCompileError{err, "right-hand side of definition", definitionSourceLocations[i]}
 		}
@@ -120,7 +119,7 @@ func BodyCompile(compiler Compiler, forms []common.Syntax, scope common.Scope, f
 		return nil, common.ErrUnexpectedFinalForm
 	}
 	for j := i; j < len(forms); j++ {
-		expression, err := compiler.ExpressionCompile(forms[j], frameTemplate)
+		expression, err := compiler.ExpressionCompile(forms[j], frameTemplate, stack)
 		if err != nil {
 			return nil, ExpressionCompileError{err, "body expression", sourceLocations[j]}
 		}

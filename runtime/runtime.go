@@ -184,7 +184,7 @@ func (r *Runtime) instantiate(prov *provision) error {
 	}
 	body := scopeSet.Apply(common.Body(prov.library.nullSourceLocationTree, syntaxes...))
 	frameTemplate := frame.Template()
-	expression, err := r.compiler.Compile(body, scopeSet[0], &frameTemplate)
+	expression, err := r.compiler.Compile(body, scopeSet[0], &frameTemplate, stack)
 	if err != nil {
 		return instantiationError{prov.library.name, err}
 	}

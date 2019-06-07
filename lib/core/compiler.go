@@ -19,8 +19,8 @@ func (err ExpressionCompileError) Error() string {
 	return fmt.Sprintf("in %v expanded from %v: %v", err.context, err.sourceLocation, err.err)
 }
 
-type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error)
-type ExpressionCompiler func(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate) (common.Expression, error)
+type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error)
+type ExpressionCompiler func(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error)
 type Expander func(compiler Compiler, form common.Syntax) (common.Syntax, bool, error)
 
 type Compiler struct {
@@ -37,12 +37,12 @@ func NewCompiler() Compiler {
 	}
 }
 
-func (compiler Compiler) BodyCompile(forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
-	return compiler.BodyCompiler(compiler, forms, scope, frameTemplate)
+func (compiler Compiler) BodyCompile(forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
+	return compiler.BodyCompiler(compiler, forms, scope, frameTemplate, stack)
 }
 
-func (compiler Compiler) ExpressionCompile(form common.Syntax, frameTemplate *common.FrameTemplate) (common.Expression, error) {
-	return compiler.ExpressionCompiler(compiler, form, frameTemplate)
+func (compiler Compiler) ExpressionCompile(form common.Syntax, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
+	return compiler.ExpressionCompiler(compiler, form, frameTemplate, stack)
 }
 
 func (compiler Compiler) Expand(form common.Syntax) (common.Syntax, bool, error) {
@@ -61,7 +61,7 @@ func (compiler Compiler) ExpandCompletely(form common.Syntax) (common.Syntax, er
 	}
 }
 
-func (compiler Compiler) Compile(body common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate) (common.Expression, error) {
+func (compiler Compiler) Compile(body common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
 	scope = common.NewProxyScope(scope)
 	body = body.Push(scope, common.LEXICAL, false)
 	var forms []common.Syntax
@@ -75,5 +75,5 @@ func (compiler Compiler) Compile(body common.Syntax, scope common.Scope, frameTe
 		forms = append(forms, first)
 		body = rest
 	}
-	return compiler.BodyCompile(forms, scope, frameTemplate)
+	return compiler.BodyCompile(forms, scope, frameTemplate, stack)
 }
