@@ -1,6 +1,34 @@
 package common
 
 // TODO: rename to LocationSet, also rename file.
+
+type IdentifierTransformerFactory interface {
+	New() IdentifierTransformer
+}
+
+type IdentifierTransformer interface {
+	Transform(Symbol) (Symbol, bool)
+	Error() error
+}
+
+type identifierTransformerFactoryAll struct{}
+
+func (identifierTransformerFactoryAll) New() IdentifierTransformer {
+	return identifierTransformerAll{}
+}
+
+type identifierTransformerAll struct{}
+
+func (identifierTransformerAll) Transform(name Symbol) (Symbol, bool) {
+	return name, true
+}
+
+func (identifierTransformerAll) Error() error {
+	return nil
+}
+
+var IdentifierTransformerFactoryAll = identifierTransformerFactoryAll{}
+
 type BindingSet map[int]map[Symbol]Binding
 
 func NewBindingSet() BindingSet {
