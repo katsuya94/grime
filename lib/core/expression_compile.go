@@ -15,18 +15,20 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 	case QuoteForm:
 		return Literal(form), nil
 	case SyntaxForm:
-		template, patternVariablesUnexpanded, err := compileTemplate(form.Template)
+		template, templateCompilationResults, err := compileTemplate(form.Template)
 		if err != nil {
 			return nil, err
 		}
-		var patternVariables []*common.PatternVariable
-		for patternVariable, n := range patternVariablesUnexpanded {
-			if n > 0 {
+		patternVariables := make([]*common.PatternVariable, 0, len(templateCompilationResults))
+		patternVariableReferences := make([]common.StackFrameReference, 0, len(templateCompilationResults))
+		for patternVariable, templateCompilationResult := range templateCompilationResults {
+			if templateCompilationResult.unexpanded > 0 {
 				return nil, fmt.Errorf("compile: in syntax template at %v: encountered unexpanded pattern variable", form.Template.SourceLocation())
 			}
 			patternVariables = append(patternVariables, patternVariable)
+			patternVariableReferences = append(patternVariableReferences, templateCompilationResult.patternVariableReference)
 		}
-		return SyntaxTemplate{template, patternVariables}, nil
+		return SyntaxTemplate{template, patternVariables, patternVariableReferences}, nil
 	case BeginForm:
 		scope := common.NewScope()
 		forms := make([]common.Syntax, len(form.Forms))
@@ -221,19 +223,24 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 	}
 }
 
-func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVariable]int, error) {
+type templateCompilationResult struct {
+	unexpanded               int
+	patternVariableReference common.StackFrameReference
+}
+
+func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVariable]templateCompilationResult, error) {
 	if id, ok := syntax.Identifier(); ok {
 		bindingStackContext := id.BindingStackContext()
 		if !bindingStackContext.Nil() {
 			if patternVariable, ok := bindingStackContext.Binding.(*common.PatternVariable); ok {
 				patternVariableReference := patternVariable.PatternVariableReference(bindingStackContext.StackContext)
-				return PatternVariableReference{patternVariable, patternVariableReference}, map[*common.PatternVariable]int{patternVariable: patternVariable.Nesting}, nil
+				return PatternVariableReference{patternVariable, patternVariableReference}, map[*common.PatternVariable]templateCompilationResult{patternVariable: {patternVariable.Nesting, patternVariableReference}}, nil
 			}
 			if bindingStackContext.Binding == common.EllipsisKeyword {
 				return nil, nil, fmt.Errorf("compile: in syntax template at %v: improper use of ellipsis", id.SourceLocation())
 			}
 		}
-		return syntax.Datum(), map[*common.PatternVariable]int{}, nil
+		return syntax.Datum(), map[*common.PatternVariable]templateCompilationResult{}, nil
 	}
 	if pair, ok := syntax.Pair(); ok {
 		first := common.NewSyntax(pair.First)
@@ -254,50 +261,55 @@ func compileTemplate(syntax common.Syntax) (common.Datum, map[*common.PatternVar
 			ellipsis++
 			rest = common.NewSyntax(pair.Rest)
 		}
-		firstCompiled, firstPatternVariables, err := compileTemplate(first)
+		firstCompiled, firstTemplateCompilationResults, err := compileTemplate(first)
 		if err != nil {
 			return nil, nil, err
 		}
-		firstStatic := len(firstPatternVariables) == 0
+		firstStatic := len(firstTemplateCompilationResults) == 0
 		if firstStatic && ellipsis > 0 {
 			return nil, nil, fmt.Errorf("compile: in syntax template at %v: syntax subtemplate must contain a pattern variable", first.SourceLocation())
 		}
-		restCompiled, restPatternVariables, err := compileTemplate(rest)
+		restCompiled, restTemplateCompilationResults, err := compileTemplate(rest)
 		if err != nil {
 			return nil, nil, err
 		}
-		restStatic := len(restPatternVariables) == 0
+		restStatic := len(restTemplateCompilationResults) == 0
 		if firstStatic && restStatic {
-			return syntax.Datum(), map[*common.PatternVariable]int{}, nil
+			return syntax.Datum(), map[*common.PatternVariable]templateCompilationResult{}, nil
 		}
 		if ellipsis > 0 {
 			var expansionPatternVariables []*common.PatternVariable
-			var patternVariables []*common.PatternVariable
-			for patternVariable, n := range firstPatternVariables {
-				if n >= ellipsis {
-					firstPatternVariables[patternVariable] -= ellipsis
+			patternVariables := make([]*common.PatternVariable, 0, len(firstTemplateCompilationResults))
+			patternVariableReferences := make([]common.StackFrameReference, 0, len(firstTemplateCompilationResults))
+			for patternVariable, result := range firstTemplateCompilationResults {
+				if result.unexpanded >= ellipsis {
+					firstTemplateCompilationResults[patternVariable] = templateCompilationResult{
+						result.unexpanded - ellipsis,
+						result.patternVariableReference,
+					}
 					expansionPatternVariables = append(expansionPatternVariables, patternVariable)
 				}
 				patternVariables = append(patternVariables, patternVariable)
+				patternVariableReferences = append(patternVariableReferences, result.patternVariableReference)
 			}
 			if len(expansionPatternVariables) == 0 {
 				return nil, nil, fmt.Errorf("compile: in syntax template at %v: syntax subtemplate must contain a pattern variable determining expansion count", first.SourceLocation())
 			}
-			firstCompiled = Subtemplate{SyntaxTemplate{firstCompiled, patternVariables}, ellipsis, expansionPatternVariables}
+			firstCompiled = Subtemplate{SyntaxTemplate{firstCompiled, patternVariables, patternVariableReferences}, ellipsis, expansionPatternVariables}
 		}
-		patternVariables := map[*common.PatternVariable]int{}
-		for patternVariable, n := range firstPatternVariables {
-			patternVariables[patternVariable] = n
+		patternVariables := map[*common.PatternVariable]templateCompilationResult{}
+		for patternVariable, result := range firstTemplateCompilationResults {
+			patternVariables[patternVariable] = result
 		}
-		for patternVariable, rest := range restPatternVariables {
-			if first, ok := patternVariables[patternVariable]; ok {
-				if rest != first {
+		for patternVariable, restResult := range restTemplateCompilationResults {
+			if firstResult, ok := patternVariables[patternVariable]; ok {
+				if restResult.unexpanded != firstResult.unexpanded {
 					return nil, nil, fmt.Errorf("compile: in syntax template at %v: incompatible expansion counts in first and rest of pair", syntax.SourceLocation())
 				}
 			}
-			patternVariables[patternVariable] = rest
+			patternVariables[patternVariable] = restResult
 		}
 		return common.Pair{firstCompiled, restCompiled}, patternVariables, nil
 	}
-	return syntax.Datum(), map[*common.PatternVariable]int{}, nil
+	return syntax.Datum(), map[*common.PatternVariable]templateCompilationResult{}, nil
 }

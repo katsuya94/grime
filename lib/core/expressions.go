@@ -309,8 +309,8 @@ func syntaxCaseMatch(c common.Continuation, s common.Stack, input common.Datum, 
 	for i := range patterns {
 		result, ok := patterns[i].Match(syntax)
 		if ok {
-			for _, patternVariable := range patternVariabless[i] {
-				(*patternVariable).Match = result[patternVariable]
+			for j := range patternVariabless[i] {
+				s.Set(patternVariableReferencess[i][j], result[patternVariabless[i][j]])
 			}
 			return common.EvalC(
 				syntaxCaseFenderEvaluated{
@@ -334,14 +334,15 @@ func syntaxCaseMatch(c common.Continuation, s common.Stack, input common.Datum, 
 
 // SyntaxTemplate evaluates to syntax handling repitition and pattern variable references accordingly.
 type SyntaxTemplate struct {
-	Template         common.Datum
-	PatternVariables []*common.PatternVariable
+	Template                  common.Datum
+	PatternVariables          []*common.PatternVariable
+	PatternVariableReferences []common.StackFrameReference
 }
 
 func (e SyntaxTemplate) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
 	bindings := make(map[*common.PatternVariable]interface{}, len(e.PatternVariables))
-	for _, patternVariable := range e.PatternVariables {
-		bindings[patternVariable] = patternVariable.Match
+	for i := range e.PatternVariables {
+		bindings[e.PatternVariables[i]] = s.Get(e.PatternVariableReferences[i])
 	}
 	datum, err := evaluateSyntaxTemplate(e.Template, bindings)
 	if err != nil {
