@@ -10,7 +10,7 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func expandNever(Compiler, common.Syntax) (common.Syntax, bool, error) {
+func expandNever(Compiler, common.Syntax, common.Stack) (common.Syntax, bool, error) {
 	return common.Syntax{}, false, nil
 }
 
@@ -28,10 +28,16 @@ func testProgram(t *testing.T, source string, expected common.Datum) {
 	body = body.Push(scopeSet[0], common.LEXICAL, false)
 	frameTemplate := frame.Template()
 	stack := common.NewStack(frame)
-	expression, err := NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
+	var expression common.Expression
+	require.NotPanics(t, func() {
+		expression, err = NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
+	})
 	require.NoError(t, err)
 	frame.Grow(frameTemplate)
-	actual, err := common.Evaluate(stack, expression)
+	var actual common.Datum
+	require.NotPanics(t, func() {
+		actual, err = common.Evaluate(stack, expression)
+	})
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 }

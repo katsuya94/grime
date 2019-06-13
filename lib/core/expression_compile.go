@@ -7,7 +7,7 @@ import (
 )
 
 func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error) {
-	form, err := compiler.ExpandCompletely(form)
+	form, err := compiler.ExpandCompletely(form, stack)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +90,10 @@ func ExpressionCompile(compiler Compiler, form common.Syntax, frameTemplate *com
 		}
 		return Application{procedureExpression, argumentExpressions}, nil
 	case LambdaForm:
-		frameTemplate := common.NewFrameTemplate()
-		var variables []*common.Variable
+		frame := common.NewFrame()
+		stack := stack.Push(frame)
+		frameTemplate := frame.Template()
+		variables := []*common.Variable{}
 		variableReferences := []common.StackFrameReference{}
 		scope := common.NewScope()
 		for _, formal := range form.Formals {

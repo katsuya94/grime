@@ -21,7 +21,7 @@ func (err ExpressionCompileError) Error() string {
 
 type BodyCompiler func(compiler Compiler, forms []common.Syntax, scope common.Scope, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error)
 type ExpressionCompiler func(compiler Compiler, form common.Syntax, frameTemplate *common.FrameTemplate, stack common.Stack) (common.Expression, error)
-type Expander func(compiler Compiler, form common.Syntax) (common.Syntax, bool, error)
+type Expander func(compiler Compiler, form common.Syntax, stack common.Stack) (common.Syntax, bool, error)
 
 type Compiler struct {
 	BodyCompiler       BodyCompiler
@@ -45,13 +45,13 @@ func (compiler Compiler) ExpressionCompile(form common.Syntax, frameTemplate *co
 	return compiler.ExpressionCompiler(compiler, form, frameTemplate, stack)
 }
 
-func (compiler Compiler) Expand(form common.Syntax) (common.Syntax, bool, error) {
-	return compiler.Expander(compiler, form)
+func (compiler Compiler) Expand(form common.Syntax, stack common.Stack) (common.Syntax, bool, error) {
+	return compiler.Expander(compiler, form, stack)
 }
 
-func (compiler Compiler) ExpandCompletely(form common.Syntax) (common.Syntax, error) {
+func (compiler Compiler) ExpandCompletely(form common.Syntax, stack common.Stack) (common.Syntax, error) {
 	for {
-		expanded, ok, err := compiler.Expand(form)
+		expanded, ok, err := compiler.Expand(form, stack)
 		if err != nil {
 			return common.Syntax{}, err
 		} else if !ok {

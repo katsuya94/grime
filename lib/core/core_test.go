@@ -249,12 +249,16 @@ func TestCore(t *testing.T) {
 			body = scopeSet.Apply(body)
 			frameTemplate := frame.Template()
 			stack := common.NewStack(frame)
-			expression, err := NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
-			if err != nil {
-				t.Fatal(err)
-			}
+			var expression common.Expression
+			require.NotPanics(t, func() {
+				expression, err = NewCompiler().Compile(body, scopeSet[0], &frameTemplate, stack)
+			})
+			require.NoError(t, err)
 			frame.Grow(frameTemplate)
-			actual, err := common.Evaluate(stack, expression)
+			var actual common.Datum
+			require.NotPanics(t, func() {
+				actual, err = common.Evaluate(stack, expression)
+			})
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)
@@ -268,12 +272,35 @@ func TestCore(t *testing.T) {
 	}
 }
 
+func TestDefineSyntaxReferenceGlobal(t *testing.T) {
+	source := `
+(define-syntax reference-global
+	(lambda (stx)
+		#'(cons 'foo 'bar)))
+(reference-global)
+`
+	testProgram(t, source, read.MustReadDatum("(foo . bar)"))
+}
+
+func TestDefineSyntaxReferenceLocal(t *testing.T) {
+	source := `
+(~define id 'foo)
+(define-syntax reference-local
+	(lambda (stx)
+		(~define id 'bar)
+		; TODO: it's looking like we need to reevaluate the scopes within which we resolve transformer output
+		#'id))
+(reference-local)
+`
+	testProgram(t, source, read.MustReadDatum("foo"))
+}
+
 func TestSyntaxCaseHygiene(t *testing.T) {
 	source := `
 (define-syntax with-marked-id
 	(lambda (stx)
-	(syntax-case stx ()
-		[(_ e) #'(~let (id #f) e)])))
+		(syntax-case stx ()
+			[(_ e) #'(~let (id #f) e)])))
 (~let (id #t) (with-marked-id id))
 `
 	testProgram(t, source, read.MustReadDatum("#t"))
@@ -290,6 +317,8 @@ func TestSyntaxCaseLambdaHygiene(t *testing.T) {
 		(syntax-case (cons #'id (marked-id)) ()
 			[(unmarked . marked)
 				#'(lambda (unmarked marked)
+						; TODO: this reference to cons references frame 2, but len(stack) is 2
+						; the frame introduced by the transformer during expansion is not introduced during evaluation
 						(cons unmarked marked))])))
 ((syntax-case-with-unmarked-and-marked-lambda-ids) 'foo 'bar)
 `

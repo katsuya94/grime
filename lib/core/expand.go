@@ -17,20 +17,20 @@ var (
 	PatternApplication                 = common.MustCompileSimplePattern(read.MustReadDatum("(procedure arguments ...)"))
 )
 
-func Expand(compiler Compiler, form common.Syntax) (common.Syntax, bool, error) {
+func Expand(compiler Compiler, form common.Syntax, stack common.Stack) (common.Syntax, bool, error) {
 	// TODO: what happens if we limit this to WrappedSyntax only?
 	// r6rs-lib 12.3 seems to imply that transformers should only take wrapped syntax objects,
 	// however macro uses would then often be unable to expand into macro uses
-	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSet, stack); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, PatternMacroUseList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseList, stack); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, PatternMacroUseImproperList); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseImproperList, stack); ok || err != nil {
 		return form, ok, err
 	}
-	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier); ok || err != nil {
+	if form, ok, err := expandMacroMatching(form, PatternMacroUseSingletonIdentifier, stack); ok || err != nil {
 		return form, ok, err
 	}
 	if result, ok := PatternApplication.Match(form); ok {
@@ -48,7 +48,7 @@ func Expand(compiler Compiler, form common.Syntax) (common.Syntax, bool, error) 
 	return common.Syntax{}, false, nil
 }
 
-func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (common.Syntax, bool, error) {
+func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern, stack common.Stack) (common.Syntax, bool, error) {
 	result, ok := pattern.Match(syntax)
 	if !ok {
 		return common.Syntax{}, false, nil
@@ -57,15 +57,17 @@ func expandMacroMatching(syntax common.Syntax, pattern common.SimplePattern) (co
 	if !ok {
 		return common.Syntax{}, false, nil
 	}
-	binding := id.Binding()
-	if binding == nil {
+	bindingStackContext := id.BindingStackContext()
+	if bindingStackContext.Nil() {
 		return common.Syntax{}, false, nil
 	}
-	keyword, ok := binding.(*common.Keyword)
+	keyword, ok := bindingStackContext.Binding.(*common.Keyword)
 	if !ok {
 		return common.Syntax{}, false, nil
 	}
-	if keyword.Transformer == nil {
+	transformerReference := keyword.TransformerReference(bindingStackContext.StackContext)
+	transformer := stack.Get(transformerReference)
+	if transformer == nil {
 		return common.Syntax{}, false, fmt.Errorf("expand: cannot use keyword before definition")
 	}
 	mark := common.NewMark()
