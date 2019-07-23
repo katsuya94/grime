@@ -17,17 +17,37 @@ func (coreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 
 type Expander interface {
 	Expand(ExpansionContext, common.Syntax) (CoreForm, error)
+	LookupBinding(common.Identifier) (Binding, bool)
+}
+
+type EnvEntry interface{}
+
+type VariableEnvEntry struct{}
+
+type KeywordEnvEntry struct {
+	transformer common.Procedure
 }
 
 type ExpansionContext struct {
 	Expander Expander
+	env      map[Binding]EnvEntry
+}
+
+func (ctx ExpansionContext) Lookup(b Binding) EnvEntry {
+	return ctx.env[b]
 }
 
 var (
 	patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 )
 
-type CoreExpander struct{}
+type CoreExpander struct {
+	bindingsTable BindingsTable
+}
+
+func NewCoreExpander(bindingsTable BindingsTable) CoreExpander {
+	return CoreExpander{bindingsTable}
+}
 
 func (e CoreExpander) Expand(ctx ExpansionContext, syntax common.Syntax) (CoreForm, error) {
 	// TODO: what happens if we limit this to WrappedSyntax only?
@@ -41,6 +61,10 @@ func (e CoreExpander) Expand(ctx ExpansionContext, syntax common.Syntax) (CoreFo
 			panic("unhandled transformer")
 		}
 	}
+}
+
+func (e CoreExpander) LookupBinding(id common.Identifier) (Binding, bool) {
+	return e.bindingsTable.LookupBinding(id)
 }
 
 func syntacticAbstraction(ctx ExpansionContext, syntax common.Syntax) common.Procedure {
@@ -61,10 +85,10 @@ func transformerMatching(ctx ExpansionContext, syntax common.Syntax, pattern com
 	if !ok {
 		return nil
 	}
-	binding := id.Binding()
-	if binding == nil {
+	binding, ok := ctx.Expander.LookupBinding(id)
+	if !ok {
 		return nil
 	}
-	// ctx.Lookup(binding)
+	entry := ctx.Lookup(binding)
 	return nil
 }

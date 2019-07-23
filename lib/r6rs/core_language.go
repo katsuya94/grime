@@ -57,7 +57,7 @@ func transformLambda(ctx ExpansionContext, syntax common.Syntax) (CoreForm, erro
 	if common.DuplicateIdentifiers(formals...) {
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
 	}
-	inner, err := ctx.Expander.Expand(result[common.Symbol("inner")].(common.Syntax))
+	inner, err := ctx.Expander.Expand(ctx, result[common.Symbol("inner")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +71,14 @@ func transformApplication(ctx ExpansionContext, syntax common.Syntax) (CoreForm,
 	if !ok {
 		return nil, fmt.Errorf("#%%application: bad syntax")
 	}
-	proc, err := ctx.Expander.Expand(result[common.Symbol("proc")].(common.Syntax))
+	proc, err := ctx.Expander.Expand(ctx, result[common.Symbol("proc")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
 	argsResults := result[common.Symbol("args")].([]interface{})
 	args := make([]CoreForm, len(argsResults))
 	for i := range argsResults {
-		args[i], err = ctx.Expander.Expand(argsResults[i].(common.Syntax))
+		args[i], err = ctx.Expander.Expand(ctx, argsResults[i].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
