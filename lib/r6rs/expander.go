@@ -89,6 +89,6 @@ func transformerMatching(ctx ExpansionContext, syntax common.Syntax, pattern com
 	if !ok {
 		return nil
 	}
-	entry := ctx.Lookup(binding)
+	_ = ctx.Lookup(binding)
 	return nil
 }
