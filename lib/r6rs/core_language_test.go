@@ -5,16 +5,17 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/r6rs"
+	"github.com/katsuya94/grime/read"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCoreLanguageLiteral(t *testing.T) {
+	bindingsTable := NewBindingsTable()
 	source := "(#%literal id)"
 	syntax := Introduce(read.MustReadSyntax(source))
-	expander := NewCoreExpander()
-	ctx := NewExpansionContext(expander)
-	coreForm, err := expander.Expand(ctx, syntax)
+	expander := NewCoreExpander(bindingsTable)
+	coreForm, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
-	assert.Equal(coreForm, LiteralForm{common.Symbol("id")})
+	assert.Equal(t, coreForm, LiteralForm{common.Symbol("id")})
 }

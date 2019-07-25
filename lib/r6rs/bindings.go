@@ -6,6 +6,8 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
+var GlobalBindingsTable = NewBindingsTable()
+
 type Binding int
 
 var nextBinding = Binding(0)
@@ -25,7 +27,7 @@ func NewBindingsTable() BindingsTable {
 	return BindingsTable{}
 }
 
-func (bt BindingsTable) MakeBinding(id common.Identifier) Binding {
+func (bt BindingsTable) Bind(id common.Identifier) Binding {
 	name := id.Name()
 	binding := nextBinding
 	nextBinding++
@@ -33,6 +35,6 @@ func (bt BindingsTable) MakeBinding(id common.Identifier) Binding {
 	return binding
 }
 
-func (bt BindingsTable) LookupBinding(id common.Identifier) (Binding, bool) {
+func (bt BindingsTable) Lookup(id common.Identifier) (Binding, bool) {
 	return Binding(-1), false
 }

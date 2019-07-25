@@ -7,6 +7,15 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
+type ExpansionContext struct {
+	Expander Expander
+	Env      Environment
+}
+
+func (ctx ExpansionContext) Expand(syntax common.Syntax) (CoreForm, error) {
+	return ctx.Expander.Expand(syntax, ctx.Env)
+}
+
 type coreTransformer struct {
 	coreForm func(ExpansionContext, common.Syntax) (CoreForm, error)
 }
@@ -16,25 +25,7 @@ func (coreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 }
 
 type Expander interface {
-	Expand(ExpansionContext, common.Syntax) (CoreForm, error)
-	LookupBinding(common.Identifier) (Binding, bool)
-}
-
-type EnvEntry interface{}
-
-type VariableEnvEntry struct{}
-
-type KeywordEnvEntry struct {
-	transformer common.Procedure
-}
-
-type ExpansionContext struct {
-	Expander Expander
-	env      map[Binding]EnvEntry
-}
-
-func (ctx ExpansionContext) Lookup(b Binding) EnvEntry {
-	return ctx.env[b]
+	Expand(common.Syntax, Environment) (CoreForm, error)
 }
 
 var (
@@ -49,12 +40,11 @@ func NewCoreExpander(bindingsTable BindingsTable) CoreExpander {
 	return CoreExpander{bindingsTable}
 }
 
-func (e CoreExpander) Expand(ctx ExpansionContext, syntax common.Syntax) (CoreForm, error) {
-	// TODO: what happens if we limit this to WrappedSyntax only?
-	// r6rs-lib 12.3 seems to imply that transformers should only take wrapped syntax objects,
+func (e CoreExpander) Expand(syntax common.Syntax, env Environment) (CoreForm, error) {
 	for {
-		switch transformer := syntacticAbstraction(ctx, syntax).(type) {
+		switch transformer := e.syntacticAbstraction(syntax, env).(type) {
 		case coreTransformer:
+			ctx := ExpansionContext{Expander: e, Env: env}
 			return transformer.coreForm(ctx, syntax)
 		// partialTransformer
 		default:
@@ -63,20 +53,16 @@ func (e CoreExpander) Expand(ctx ExpansionContext, syntax common.Syntax) (CoreFo
 	}
 }
 
-func (e CoreExpander) LookupBinding(id common.Identifier) (Binding, bool) {
-	return e.bindingsTable.LookupBinding(id)
-}
-
-func syntacticAbstraction(ctx ExpansionContext, syntax common.Syntax) common.Procedure {
+func (e CoreExpander) syntacticAbstraction(syntax common.Syntax, env Environment) common.Procedure {
 	var transformer common.Procedure
-	transformer = transformerMatching(ctx, syntax, patternMacroUseList)
+	transformer = e.transformerMatching(syntax, env, patternMacroUseList)
 	if transformer != nil {
 		return transformer
 	}
 	return nil
 }
 
-func transformerMatching(ctx ExpansionContext, syntax common.Syntax, pattern common.SimplePattern) common.Procedure {
+func (e CoreExpander) transformerMatching(syntax common.Syntax, env Environment, pattern common.SimplePattern) common.Procedure {
 	result, ok := pattern.Match(syntax)
 	if !ok {
 		return nil
@@ -85,10 +71,17 @@ func transformerMatching(ctx ExpansionContext, syntax common.Syntax, pattern com
 	if !ok {
 		return nil
 	}
-	binding, ok := ctx.Expander.LookupBinding(id)
+	binding, ok := e.bindingsTable.Lookup(id)
 	if !ok {
 		return nil
 	}
-	_ = ctx.Lookup(binding)
-	return nil
+	role := env.Lookup(binding)
+	if role == nil {
+		return nil
+	}
+	syntacticAbstraction, ok := role.(SyntacticAbstraction)
+	if !ok {
+		return nil
+	}
+	return syntacticAbstraction.transformer
 }

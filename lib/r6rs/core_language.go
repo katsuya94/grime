@@ -7,11 +7,27 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-var CoreLanguageBaseScope = map[common.Symbol]common.Procedure{
+var CoreScope = NewScope()
+var CoreEnvironment = NewEnvironment()
+
+var coreForms = map[common.Symbol]common.Procedure{
 	common.Symbol("#%literal"):     coreTransformer{transformLiteral},
 	common.Symbol("#%reference"):   coreTransformer{transformReference},
 	common.Symbol("#%lambda"):      coreTransformer{transformLambda},
 	common.Symbol("#%application"): coreTransformer{transformApplication},
+}
+
+func init() {
+	for name, transformer := range coreForms {
+		id := Introduce(common.NewSyntax(name)).IdentifierOrDie()
+		binding := GlobalBindingsTable.Bind(id)
+		CoreScope.Add(id, binding)
+		(&CoreEnvironment).Extend(binding, NewSyntacticAbstraction(transformer))
+	}
+}
+
+func Introduce(syntax common.Syntax) common.Syntax {
+	return syntax.Push(CoreScope, 0)
 }
 
 var patternLiteral = common.MustCompileSimplePattern(read.MustReadDatum("(#%literal datum)"))
@@ -57,7 +73,7 @@ func transformLambda(ctx ExpansionContext, syntax common.Syntax) (CoreForm, erro
 	if common.DuplicateIdentifiers(formals...) {
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
 	}
-	inner, err := ctx.Expander.Expand(ctx, result[common.Symbol("inner")].(common.Syntax))
+	inner, err := ctx.Expand(result[common.Symbol("inner")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +87,14 @@ func transformApplication(ctx ExpansionContext, syntax common.Syntax) (CoreForm,
 	if !ok {
 		return nil, fmt.Errorf("#%%application: bad syntax")
 	}
-	proc, err := ctx.Expander.Expand(ctx, result[common.Symbol("proc")].(common.Syntax))
+	proc, err := ctx.Expand(result[common.Symbol("proc")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
 	argsResults := result[common.Symbol("args")].([]interface{})
 	args := make([]CoreForm, len(argsResults))
 	for i := range argsResults {
-		args[i], err = ctx.Expander.Expand(ctx, argsResults[i].(common.Syntax))
+		args[i], err = ctx.Expand(argsResults[i].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
