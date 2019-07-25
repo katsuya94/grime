@@ -11,10 +11,9 @@ import (
 )
 
 func TestCoreLanguageLiteral(t *testing.T) {
-	bindingsTable := NewBindingsTable()
 	source := "(#%literal id)"
 	syntax := Introduce(read.MustReadSyntax(source))
-	expander := NewCoreExpander(bindingsTable)
+	expander := NewCoreExpander()
 	coreForm, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
 	assert.Equal(t, coreForm, LiteralForm{common.Symbol("id")})

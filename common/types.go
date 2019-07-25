@@ -116,7 +116,7 @@ func (d Pair) Mark(m *M) Marker {
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
 	datum              Datum
-	scopeList          *ScopeList
+	scopeList          scopeList
 	marks              markSet
 	phase              int
 	sourceLocationTree *SourceLocationTree
@@ -125,7 +125,7 @@ type WrappedSyntax struct {
 func NewWrappedSyntax(d Datum, sourceLocationTree *SourceLocationTree) WrappedSyntax {
 	return WrappedSyntax{
 		datum:              d,
-		scopeList:          NewScopeList(),
+		scopeList:          scopeList{},
 		sourceLocationTree: sourceLocationTree,
 	}
 }
@@ -138,9 +138,8 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) Push(scope Scope, phase int, frame bool) WrappedSyntax {
-	d.scopeList = d.scopeList.Push(scope, phase, frame)
-	return d
+func (d WrappedSyntax) Push(scope *Scope, phase int) WrappedSyntax {
+	d.scopeList.push(scope, phase)
 }
 
 func (d WrappedSyntax) Next() WrappedSyntax {
@@ -188,30 +187,6 @@ func (f Function) Write() string {
 
 func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	return f(c, args...)
-}
-
-// Closure represents a Grime closure.
-type Closure struct {
-	Stack              Stack
-	FrameTemplate      FrameTemplate
-	Variables          []*Variable
-	VariableReferences []StackFrameReference
-	Body               Expression
-}
-
-func (Closure) Write() string {
-	return "#<closure>"
-}
-
-func (d Closure) Call(c Continuation, args ...Datum) (Evaluation, error) {
-	if len(args) != len(d.Variables) {
-		return ErrorC(fmt.Errorf("wrong number of arguments %v for closure expecting %v arguments", len(args), len(d.Variables)))
-	}
-	stack := d.Stack.Push(d.FrameTemplate.Instantiate())
-	for i := range d.VariableReferences {
-		stack.Set(d.VariableReferences[i], args[i])
-	}
-	return EvalC(c, stack, d.Body)
 }
 
 // ContinuationProcedure represents a callable continuation.

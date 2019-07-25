@@ -32,12 +32,10 @@ var (
 	patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 )
 
-type CoreExpander struct {
-	bindingsTable BindingsTable
-}
+type CoreExpander struct{}
 
-func NewCoreExpander(bindingsTable BindingsTable) CoreExpander {
-	return CoreExpander{bindingsTable}
+func NewCoreExpander() CoreExpander {
+	return CoreExpander{}
 }
 
 func (e CoreExpander) Expand(syntax common.Syntax, env Environment) (CoreForm, error) {
@@ -71,7 +69,7 @@ func (e CoreExpander) transformerMatching(syntax common.Syntax, env Environment,
 	if !ok {
 		return nil
 	}
-	binding, ok := e.bindingsTable.Lookup(id)
+	binding, ok := id.Binding()
 	if !ok {
 		return nil
 	}

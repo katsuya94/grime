@@ -20,7 +20,7 @@ var coreForms = map[common.Symbol]common.Procedure{
 func init() {
 	for name, transformer := range coreForms {
 		id := Introduce(common.NewSyntax(name)).IdentifierOrDie()
-		binding := GlobalBindingsTable.Bind(id)
+		binding := NewBinding()
 		CoreScope.Add(id, binding)
 		(&CoreEnvironment).Extend(binding, NewSyntacticAbstraction(transformer))
 	}

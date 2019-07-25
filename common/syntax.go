@@ -15,16 +15,8 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-func (id Identifier) BindingStackContext() BindingStackContext {
-	return id.scopeList.Get(id)
-}
-
-func (id Identifier) Binding() Binding {
-	bindingStackContext := id.BindingStackContext()
-	if bindingStackContext.Nil() {
-		return nil
-	}
-	return bindingStackContext.Binding
+func (id Identifier) Binding(phase int) (Binding, bool) {
+	return id.scopeList.lookup(id, phase)
 }
 
 func (id Identifier) Mark(m *M) Identifier {
@@ -32,33 +24,28 @@ func (id Identifier) Mark(m *M) Identifier {
 }
 
 func (id Identifier) BoundEqual(other Identifier) bool {
-	return id.Name() == other.Name() && (id.marks.contains(other.marks) || other.marks.contains(id.marks))
-}
-
-func (id Identifier) Equal(other Identifier) bool {
 	return id.Name() == other.Name() && id.marks.equal(other.marks)
 }
 
 func (id Identifier) FreeEqual(other Identifier) bool {
-	idBinding := id.Binding()
-	otherBinding := other.Binding()
-	if idBinding == nil && otherBinding == nil {
+	// TODO: what's the phase for free-equal?
+	idBinding, idOk := id.Binding(0)
+	otherBinding, otherOk := other.Binding(0)
+	if !idOk && !otherOk {
 		return id.Name() == other.Name()
-	} else if idBinding != nil && otherBinding != nil {
+	} else if idOk && otherOk {
 		return idBinding == otherBinding
 	} else {
 		return false
 	}
 }
 
-func (id Identifier) Bind(binding Binding) Identifier {
-	scope := NewScope()
-	scope.Set(id, binding)
-	id, ok := id.Push(scope, LEXICAL, false).Identifier()
-	if !ok {
-		panic("expected identifier")
+func (id Identifier) Binds(other Identifier) bool {
+	if other.Name() != id.Name() {
+		return false
 	}
-	return id
+	if id.marks
+	return false
 }
 
 func DuplicateIdentifiers(ids ...Identifier) bool {
@@ -98,15 +85,15 @@ func NewSyntax(datum Datum) Syntax {
 	return Syntax{datum}
 }
 
-func (s Syntax) Push(scope Scope, phase int, frame bool) Syntax {
+func (s Syntax) Push(scope *Scope, phase int) Syntax {
 	switch d := s.datum.(type) {
 	case WrappedSyntax:
-		return Syntax{d.Push(scope, phase, frame)}
+		return Syntax{d.Push(scope, phase)}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope, phase, frame).datum,
-				Syntax{d.Rest}.Push(scope, phase, frame).datum,
+				Syntax{d.First}.Push(scope, phase).datum,
+				Syntax{d.Rest}.Push(scope, phase).datum,
 			},
 		}
 	default:
