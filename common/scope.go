@@ -28,8 +28,13 @@ func (s *Scope) lookup(id Identifier) (Binding, bool) {
 
 type scopeList map[int][]*Scope
 
-func (sl scopeList) push(scope *Scope, phase int) {
-	sl[phase] = append(sl[phase], scope)
+func (sl scopeList) push(scope *Scope, phase int) scopeList {
+	pushed := make(scopeList, len(sl))
+	for phase, scopes := range sl {
+		pushed[phase] = scopes
+	}
+	pushed[phase] = append(sl[phase], scope)
+	return pushed
 }
 
 func (sl scopeList) lookup(id Identifier, phase int) (Binding, bool) {

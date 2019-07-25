@@ -1,6 +1,18 @@
 package common
 
 var simplePatternScope = NewScope()
+var simplePatternEnvironment = NewEnvironment()
+
+func init() {
+	underscoreId := NewSyntax(NewIdentifier(Symbol("_")).Push(simplePatternScope, 0)).IdentifierOrDie()
+	underscoreBinding := NewBinding()
+	simplePatternScope.Add(underscoreId, underscoreBinding)
+	simplePatternEnvironment.Add(underscoreBinding, NewSyntacticAbstraction(UnderscoreTransformer))
+	ellipsisId := NewSyntax(NewIdentifier(Symbol("...")).Push(simplePatternScope, 0)).IdentifierOrDie()
+	ellipsisBinding := NewBinding()
+	simplePatternScope.Add(ellipsisId, ellipsisBinding)
+	simplePatternEnvironment.Add(ellipsisBinding, NewSyntacticAbstraction(EllipsisTransformer))
+}
 
 type SimplePattern struct {
 	pattern              Pattern
@@ -25,18 +37,20 @@ func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
 
 func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) (SimplePattern, error) {
 	syntax := NewSyntax(NewWrappedSyntax(datum, nil))
-	syntax = syntax.Push(simplePatternScope, LEXICAL, false)
+	syntax = syntax.Push(simplePatternScope, 0)
+	env := simplePatternEnvironment
 	if len(literals) > 0 {
 		literalScope := NewScope()
 		for _, literal := range literals {
 			// when compiling, treat an identifier with the same name as a literal for the provided identifier
 			id := NewIdentifier(literal.Name())
-			literalScope.Set(id, &Literal{literal})
+			binding := NewBinding()
+			literalScope.Add(id, binding)
+			(&env).Extend(binding, NewPatternLiteral(literal))
 		}
-		syntax = syntax.Push(literalScope, LEXICAL, false)
+		syntax = syntax.Push(literalScope, 0)
 	}
-	frameTemplate := NewFrameTemplate()
-	pattern, patternVariableInfos, err := CompilePattern(syntax, &frameTemplate)
+	pattern, patternVariableInfos, err := CompilePattern(syntax, env)
 	if err != nil {
 		return SimplePattern{}, err
 	}
@@ -58,7 +72,7 @@ func (sp SimplePattern) Match(syntax Syntax) (map[Symbol]interface{}, bool) {
 	}
 	simpleResult := map[Symbol]interface{}{}
 	for _, patternVariableInfo := range sp.patternVariableInfos {
-		match := result[patternVariableInfo.PatternVariable]
+		match := result[patternVariableInfo.Binding]
 		simpleResult[patternVariableInfo.Id.Name()] = match
 	}
 	return simpleResult, true

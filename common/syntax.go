@@ -4,7 +4,7 @@ import "fmt"
 
 // Identifier wraps a wrapped symbol (an identifier), providing access to its binding.
 type Identifier struct {
-	WrappedSyntax
+	WrappedSyntax // TODO: this should be private
 }
 
 func NewIdentifier(name Symbol) Identifier {
@@ -15,8 +15,16 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-func (id Identifier) Binding(phase int) (Binding, bool) {
-	return id.scopeList.lookup(id, phase)
+func (id Identifier) Binding() (Binding, bool) {
+	return id.scopeList.lookup(id, id.phase)
+}
+
+func (id Identifier) Role(env Environment) Role {
+	binding, ok := id.Binding()
+	if !ok {
+		return nil
+	}
+	return env.Lookup(binding)
 }
 
 func (id Identifier) Mark(m *M) Identifier {
@@ -29,8 +37,8 @@ func (id Identifier) BoundEqual(other Identifier) bool {
 
 func (id Identifier) FreeEqual(other Identifier) bool {
 	// TODO: what's the phase for free-equal?
-	idBinding, idOk := id.Binding(0)
-	otherBinding, otherOk := other.Binding(0)
+	idBinding, idOk := id.Binding()
+	otherBinding, otherOk := other.Binding()
 	if !idOk && !otherOk {
 		return id.Name() == other.Name()
 	} else if idOk && otherOk {
@@ -44,8 +52,7 @@ func (id Identifier) Binds(other Identifier) bool {
 	if other.Name() != id.Name() {
 		return false
 	}
-	if id.marks
-	return false
+	return id.marks.equal(other.marks)
 }
 
 func DuplicateIdentifiers(ids ...Identifier) bool {

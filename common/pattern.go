@@ -2,33 +2,32 @@ package common
 
 import "fmt"
 
-var Bindings = NewBindingsFrame()
+type underscoreTransformer struct{}
 
-var (
-	UnderscoreKeyword *Keyword
-	EllipsisKeyword   *Keyword
-)
-
-func init() {
-	UnderscoreKeyword = Bindings.Add(Symbol("_"), 0, KeywordFactory{Function(func(Continuation, ...Datum) (Evaluation, error) {
-		return nil, fmt.Errorf("cannot expand underscore")
-	})}).(*Keyword)
-	EllipsisKeyword = Bindings.Add(Symbol("..."), 0, KeywordFactory{Function(func(Continuation, ...Datum) (Evaluation, error) {
-		return nil, fmt.Errorf("cannot expand ellipsis")
-	})}).(*Keyword)
-	simplePatternScope.Set(NewIdentifier(Symbol("_")), UnderscoreKeyword)
-	simplePatternScope.Set(NewIdentifier(Symbol("...")), EllipsisKeyword)
+func (underscoreTransformer) Call(c Continuation, args ...Datum) (Evaluation, error) {
+	return ErrorC(fmt.Errorf("cannot expand underscore"))
 }
 
+type ellipsisTransformer struct{}
+
+func (ellipsisTransformer) Call(c Continuation, args ...Datum) (Evaluation, error) {
+	return ErrorC(fmt.Errorf("cannot expand ellipsis"))
+}
+
+var (
+	UnderscoreTransformer = underscoreTransformer{}
+	EllipsisTransformer   = ellipsisTransformer{}
+)
+
 type Pattern interface {
-	Match(Syntax) (map[*PatternVariable]interface{}, bool)
+	Match(Syntax) (map[Binding]interface{}, bool)
 }
 
 type patternLiteral struct {
 	id Identifier
 }
 
-func (p patternLiteral) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+func (p patternLiteral) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	id, ok := syntax.Identifier()
 	if !ok {
 		return nil, false
@@ -36,33 +35,33 @@ func (p patternLiteral) Match(syntax Syntax) (map[*PatternVariable]interface{}, 
 	if !id.FreeEqual(p.id) {
 		return nil, false
 	}
-	return map[*PatternVariable]interface{}{}, true
+	return map[Binding]interface{}{}, true
 }
 
 type patternUnderscore struct{}
 
-func (p patternUnderscore) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
-	return map[*PatternVariable]interface{}{}, true
+func (p patternUnderscore) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+	return map[Binding]interface{}{}, true
 }
 
 type patternPatternVariable struct {
-	patternVariable *PatternVariable
+	patternVariable Binding
 }
 
-func (p patternPatternVariable) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
-	return map[*PatternVariable]interface{}{p.patternVariable: syntax}, true
+func (p patternPatternVariable) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+	return map[Binding]interface{}{p.patternVariable: syntax}, true
 }
 
 type patternEllipsis struct {
 	subPattern          Pattern
-	subPatternVariables []*PatternVariable
+	subPatternVariables []Binding
 	restPattern         Pattern
 }
 
-func (p patternEllipsis) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+func (p patternEllipsis) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	var (
-		result     map[*PatternVariable]interface{}
-		subResults []map[*PatternVariable]interface{}
+		result     map[Binding]interface{}
+		subResults []map[Binding]interface{}
 	)
 	for {
 		if pair, ok := syntax.Pair(); ok {
@@ -110,7 +109,7 @@ type patternPair struct {
 	rest  Pattern
 }
 
-func (p patternPair) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+func (p patternPair) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	pair, ok := syntax.Pair()
 	if !ok {
 		return nil, false
@@ -123,7 +122,7 @@ func (p patternPair) Match(syntax Syntax) (map[*PatternVariable]interface{}, boo
 	if !ok {
 		return nil, false
 	}
-	result := map[*PatternVariable]interface{}{}
+	result := map[Binding]interface{}{}
 	for patternVariable, match := range firstResult {
 		result[patternVariable] = match
 	}
@@ -137,61 +136,71 @@ type patternDatum struct {
 	datum Datum
 }
 
-func (p patternDatum) Match(syntax Syntax) (map[*PatternVariable]interface{}, bool) {
+func (p patternDatum) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	if syntax.Unwrap() != p.datum {
 		return nil, false
 	}
-	return map[*PatternVariable]interface{}{}, true
+	return map[Binding]interface{}{}, true
 }
 
 type PatternVariableInfo struct {
-	Id              Identifier
-	PatternVariable *PatternVariable
+	Id      Identifier
+	Binding Binding
+	Nesting int
 }
 
-func CompilePattern(syntax Syntax, frameTemplate *FrameTemplate) (Pattern, []PatternVariableInfo, error) {
+func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableInfo, error) {
 	if syntax, ok := syntax.Identifier(); ok {
-		binding := syntax.Binding()
-		if binding, ok := binding.(*Literal); ok {
-			return patternLiteral{binding.Id}, nil, nil
+		role := syntax.Role(env)
+		if role != nil {
+			if role, ok := role.(PatternLiteral); ok {
+				return patternLiteral{role.Id}, nil, nil
+			}
+			if role, ok := role.(SyntacticAbsraction); ok {
+				if role.Transformer == UnderscoreTransformer {
+					return patternUnderscore{}, nil, nil
+				}
+				if role.Transformer == EllipsisTransformer {
+					return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
+				}
+			}
 		}
-		if binding == UnderscoreKeyword {
-			return patternUnderscore{}, nil, nil
-		}
-		if binding == EllipsisKeyword {
-			return nil, nil, fmt.Errorf("pattern: invalid use of ellipsis")
-		}
-		patternVariable := NewPatternVariable(frameTemplate)
-		return patternPatternVariable{patternVariable}, []PatternVariableInfo{{syntax, patternVariable}}, nil
+		patternVariableBinding := NewBinding()
+		return patternPatternVariable{patternVariableBinding}, []PatternVariableInfo{{syntax, patternVariableBinding, 0}}, nil
 	}
 	if syntax, ok := syntax.Pair(); ok {
 		if cdr, ok := NewSyntax(syntax.Rest).Pair(); ok {
 			if cadr, ok := NewSyntax(cdr.First).Identifier(); ok {
-				if cadr.Binding() == EllipsisKeyword {
-					subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), frameTemplate)
-					if err != nil {
-						return nil, nil, err
+				role := cadr.Role(env)
+				if role != nil {
+					if role, ok := role.(SyntacticAbsraction); ok {
+						if role.Transformer == EllipsisTransformer {
+							subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), env)
+							if err != nil {
+								return nil, nil, err
+							}
+							subPatternVariables := []Binding{}
+							for _, subPatternVariableInfo := range subPatternVariableInfos {
+								subPatternVariableInfo.Nesting++
+								subPatternVariables = append(subPatternVariables, subPatternVariableInfo.Binding)
+							}
+							cddr := NewSyntax(cdr.Rest)
+							restPattern, restPatternVariableInfos, err := CompilePattern(cddr, env)
+							if err != nil {
+								return nil, nil, err
+							}
+							patternVariableInfos := append(subPatternVariableInfos, restPatternVariableInfos...)
+							return patternEllipsis{subPattern, subPatternVariables, restPattern}, patternVariableInfos, nil
+						}
 					}
-					subPatternVariables := []*PatternVariable{}
-					for _, subPatternVariableInfo := range subPatternVariableInfos {
-						subPatternVariableInfo.PatternVariable.Nesting++
-						subPatternVariables = append(subPatternVariables, subPatternVariableInfo.PatternVariable)
-					}
-					cddr := NewSyntax(cdr.Rest)
-					restPattern, restPatternVariableInfos, err := CompilePattern(cddr, frameTemplate)
-					if err != nil {
-						return nil, nil, err
-					}
-					patternVariableInfos := append(subPatternVariableInfos, restPatternVariableInfos...)
-					return patternEllipsis{subPattern, subPatternVariables, restPattern}, patternVariableInfos, nil
 				}
 			}
 		}
-		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), frameTemplate)
+		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), env)
 		if err != nil {
 			return nil, nil, err
 		}
-		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest), frameTemplate)
+		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest), env)
 		if err != nil {
 			return nil, nil, err
 		}

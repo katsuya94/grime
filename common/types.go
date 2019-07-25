@@ -139,7 +139,8 @@ func (d WrappedSyntax) Datum() Datum {
 }
 
 func (d WrappedSyntax) Push(scope *Scope, phase int) WrappedSyntax {
-	d.scopeList.push(scope, phase)
+	d.scopeList = d.scopeList.push(scope, phase)
+	return d
 }
 
 func (d WrappedSyntax) Next() WrappedSyntax {
