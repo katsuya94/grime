@@ -19,11 +19,11 @@ func (f LiteralForm) Unexpand() common.Datum {
 }
 
 type ReferenceForm struct {
-	Identifier common.Identifier
+	Id common.Identifier
 }
 
 func (f ReferenceForm) Unexpand() common.Datum {
-	return list(common.Symbol("#%reference"), f.Identifier.Datum())
+	return list(common.Symbol("#%reference"), f.Id.WrappedSyntax)
 }
 
 type LambdaForm struct {

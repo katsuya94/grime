@@ -156,7 +156,7 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 			if role, ok := role.(PatternLiteral); ok {
 				return patternLiteral{role.Id}, nil, nil
 			}
-			if role, ok := role.(SyntacticAbsraction); ok {
+			if role, ok := role.(SyntacticAbstraction); ok {
 				if role.Transformer == UnderscoreTransformer {
 					return patternUnderscore{}, nil, nil
 				}
@@ -173,7 +173,7 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 			if cadr, ok := NewSyntax(cdr.First).Identifier(); ok {
 				role := cadr.Role(env)
 				if role != nil {
-					if role, ok := role.(SyntacticAbsraction); ok {
+					if role, ok := role.(SyntacticAbstraction); ok {
 						if role.Transformer == EllipsisTransformer {
 							subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), env)
 							if err != nil {

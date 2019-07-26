@@ -248,7 +248,8 @@ func (l *LexemeReader) readIdentifier() (Lexeme, bool, error) {
 	if r, ok, err := l.readNonDelimiter(); err != nil {
 		return nil, false, err
 	} else if !ok {
-		return nil, false, nil
+		l.reader.Return()
+		return l.readPeculiarIdentifier()
 	} else if !initial(r) {
 		l.reader.Return()
 		return l.readPeculiarIdentifier()
@@ -258,7 +259,7 @@ func (l *LexemeReader) readIdentifier() (Lexeme, bool, error) {
 }
 
 func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
-	r, ok, err := l.readNonDelimiter()
+	r, ok, err := l.readNonEOF()
 	if err != nil {
 		return nil, false, err
 	} else if !ok {
@@ -297,6 +298,17 @@ func (l *LexemeReader) readPeculiarIdentifier() (Lexeme, bool, error) {
 			return nil, false, err
 		}
 		return Identifier("..."), true, nil
+	case '#':
+		if r, ok, err := l.readNonDelimiter(); err != nil {
+			return nil, false, err
+		} else if !ok {
+			l.reader.Return()
+			return nil, false, nil
+		} else if r != '%' {
+			l.reader.Return()
+			return nil, false, nil
+		}
+		return l.readSubsequent([]rune{'#', '%'})
 	default:
 		l.reader.Return()
 		return nil, false, nil
@@ -309,6 +321,9 @@ func (l *LexemeReader) readSubsequent(prefix []rune) (Lexeme, bool, error) {
 		if r, ok, err := l.readNonDelimiter(); err != nil {
 			return nil, false, err
 		} else if ok {
+			if !subsequent(r) {
+				return nil, false, l.runeErrorf("expected subsequent")
+			}
 			runes = append(runes, r)
 		} else {
 			break

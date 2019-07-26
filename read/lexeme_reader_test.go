@@ -400,6 +400,20 @@ func TestLex(t *testing.T) {
 			[]common.SourceLocation{sl("0:0:0:4")},
 			"",
 		},
+		{
+			"identifier #%",
+			"#%",
+			[]Lexeme{Identifier("#%")},
+			[]common.SourceLocation{sl("0:0:0:2")},
+			"",
+		},
+		{
+			"identifier #% with trailing",
+			"#%literal",
+			[]Lexeme{Identifier("#%literal")},
+			[]common.SourceLocation{sl("0:0:0:9")},
+			"",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

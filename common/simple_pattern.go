@@ -7,11 +7,11 @@ func init() {
 	underscoreId := NewSyntax(NewIdentifier(Symbol("_")).Push(simplePatternScope, 0)).IdentifierOrDie()
 	underscoreBinding := NewBinding()
 	simplePatternScope.Add(underscoreId, underscoreBinding)
-	simplePatternEnvironment.Add(underscoreBinding, NewSyntacticAbstraction(UnderscoreTransformer))
+	(&simplePatternEnvironment).Extend(underscoreBinding, NewSyntacticAbstraction(UnderscoreTransformer))
 	ellipsisId := NewSyntax(NewIdentifier(Symbol("...")).Push(simplePatternScope, 0)).IdentifierOrDie()
 	ellipsisBinding := NewBinding()
 	simplePatternScope.Add(ellipsisId, ellipsisBinding)
-	simplePatternEnvironment.Add(ellipsisBinding, NewSyntacticAbstraction(EllipsisTransformer))
+	(&simplePatternEnvironment).Extend(ellipsisBinding, NewSyntacticAbstraction(EllipsisTransformer))
 }
 
 type SimplePattern struct {

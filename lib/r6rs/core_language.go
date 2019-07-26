@@ -7,8 +7,8 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-var CoreScope = NewScope()
-var CoreEnvironment = NewEnvironment()
+var CoreScope = common.NewScope()
+var CoreEnvironment = common.NewEnvironment()
 
 var coreForms = map[common.Symbol]common.Procedure{
 	common.Symbol("#%literal"):     coreTransformer{transformLiteral},
@@ -19,10 +19,10 @@ var coreForms = map[common.Symbol]common.Procedure{
 
 func init() {
 	for name, transformer := range coreForms {
-		id := Introduce(common.NewSyntax(name)).IdentifierOrDie()
-		binding := NewBinding()
+		id := Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
+		binding := common.NewBinding()
 		CoreScope.Add(id, binding)
-		(&CoreEnvironment).Extend(binding, NewSyntacticAbstraction(transformer))
+		(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	}
 }
 

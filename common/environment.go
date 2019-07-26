@@ -1,9 +1,7 @@
-package r6rs
+package common
 
 import (
 	"fmt"
-
-	"github.com/katsuya94/grime/common"
 )
 
 type Environment struct {
@@ -33,13 +31,25 @@ type Role interface {
 }
 
 type SyntacticAbstraction struct {
-	transformer common.Procedure
+	Transformer Procedure
 }
 
-func NewSyntacticAbstraction(transformer common.Procedure) SyntacticAbstraction {
+func NewSyntacticAbstraction(transformer Procedure) SyntacticAbstraction {
 	return SyntacticAbstraction{transformer}
 }
 
 func (r SyntacticAbstraction) Description() string {
-	return fmt.Sprintf("%#v", r.transformer)
+	return fmt.Sprintf("SyntacticAbstraction{%#v}", r.Transformer)
+}
+
+type PatternLiteral struct {
+	Id Identifier
+}
+
+func NewPatternLiteral(id Identifier) PatternLiteral {
+	return PatternLiteral{id}
+}
+
+func (r PatternLiteral) Description() string {
+	return fmt.Sprintf("PatternLiteral{%#v}", r.Id)
 }

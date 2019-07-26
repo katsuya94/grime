@@ -5,54 +5,50 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-func Bindings(n int) []common.Variable {
-	frameTemplate := common.NewFrameTemplate()
-	variables := make([]common.Variable, n)
-	for i := 0; i < n; i++ {
-		variables[i] = *common.NewVariable(&frameTemplate)
-	}
-	return variables
-}
+// func Bindings(n int) []common.Variable {
+// 	frameTemplate := common.NewFrameTemplate()
+// 	variables := make([]common.Variable, n)
+// 	for i := 0; i < n; i++ {
+// 		variables[i] = *common.NewVariable(&frameTemplate)
+// 	}
+// 	return variables
+// }
 
 func Syntax(s string) common.Syntax {
 	return common.NewSyntax(common.NewWrappedSyntax(read.MustReadDatum(s), nil))
 }
 
 func Identifier(s string) common.Identifier {
-	id, ok := Syntax(s).Identifier()
-	if !ok {
-		panic("not an identifier")
-	}
-	return id
+	return Syntax(s).IdentifierOrDie()
 }
 
-func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {
-	return WithBinding(id, &common.Literal{id}, syntax)
-}
+// func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {
+// 	return WithBinding(id, &common.Literal{id}, syntax)
+// }
 
-func WithBinding(id common.Identifier, binding common.Binding, syntax common.Syntax) common.Syntax {
-	scope := common.NewScope()
-	err := scope.Set(id, binding)
-	if err != nil {
-		panic(err)
-	}
-	return syntax.Push(scope, common.LEXICAL, false)
-}
+// func WithBinding(id common.Identifier, binding common.Binding, syntax common.Syntax) common.Syntax {
+// 	scope := common.NewScope()
+// 	err := scope.Set(id, binding)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return syntax.Push(scope, common.LEXICAL, false)
+// }
 
 // voidExpression must be of non-zero size for equality comparison
 type voidExpression struct {
 	self *voidExpression
 }
 
-func (*voidExpression) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
-	return common.CallC(c, common.Void)
-}
+// func (*voidExpression) Evaluate(c common.Continuation, s common.Stack) (common.Evaluation, error) {
+// 	return common.CallC(c, common.Void)
+// }
 
-func NewVoidExpression() common.Expression {
-	e := &voidExpression{}
-	e.self = e
-	return e
-}
+// func NewVoidExpression() common.Expression {
+// 	e := &voidExpression{}
+// 	e.self = e
+// 	return e
+// }
 
 // func Grime(t *testing.T, source string) {
 // 	_, file, line, ok := runtime.Caller(1)

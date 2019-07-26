@@ -9,7 +9,7 @@ import (
 
 type ExpansionContext struct {
 	Expander Expander
-	Env      Environment
+	Env      common.Environment
 }
 
 func (ctx ExpansionContext) Expand(syntax common.Syntax) (CoreForm, error) {
@@ -25,7 +25,7 @@ func (coreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 }
 
 type Expander interface {
-	Expand(common.Syntax, Environment) (CoreForm, error)
+	Expand(common.Syntax, common.Environment) (CoreForm, error)
 }
 
 var (
@@ -38,7 +38,7 @@ func NewCoreExpander() CoreExpander {
 	return CoreExpander{}
 }
 
-func (e CoreExpander) Expand(syntax common.Syntax, env Environment) (CoreForm, error) {
+func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
 	for {
 		switch transformer := e.syntacticAbstraction(syntax, env).(type) {
 		case coreTransformer:
@@ -51,7 +51,7 @@ func (e CoreExpander) Expand(syntax common.Syntax, env Environment) (CoreForm, e
 	}
 }
 
-func (e CoreExpander) syntacticAbstraction(syntax common.Syntax, env Environment) common.Procedure {
+func (e CoreExpander) syntacticAbstraction(syntax common.Syntax, env common.Environment) common.Procedure {
 	var transformer common.Procedure
 	transformer = e.transformerMatching(syntax, env, patternMacroUseList)
 	if transformer != nil {
@@ -60,7 +60,7 @@ func (e CoreExpander) syntacticAbstraction(syntax common.Syntax, env Environment
 	return nil
 }
 
-func (e CoreExpander) transformerMatching(syntax common.Syntax, env Environment, pattern common.SimplePattern) common.Procedure {
+func (e CoreExpander) transformerMatching(syntax common.Syntax, env common.Environment, pattern common.SimplePattern) common.Procedure {
 	result, ok := pattern.Match(syntax)
 	if !ok {
 		return nil
@@ -77,9 +77,9 @@ func (e CoreExpander) transformerMatching(syntax common.Syntax, env Environment,
 	if role == nil {
 		return nil
 	}
-	syntacticAbstraction, ok := role.(SyntacticAbstraction)
+	syntacticAbstraction, ok := role.(common.SyntacticAbstraction)
 	if !ok {
 		return nil
 	}
-	return syntacticAbstraction.transformer
+	return syntacticAbstraction.Transformer
 }
