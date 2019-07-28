@@ -15,7 +15,7 @@ type LiteralForm struct {
 }
 
 func (f LiteralForm) Unexpand() common.Datum {
-	return list(common.Symbol("#%literal"), f.Datum)
+	return list(literalId, f.Datum)
 }
 
 type ReferenceForm struct {

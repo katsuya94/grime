@@ -10,19 +10,44 @@ import (
 var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
 
-var coreForms = map[common.Symbol]common.Procedure{
-	common.Symbol("#%literal"):     coreTransformer{transformLiteral},
-	common.Symbol("#%reference"):   coreTransformer{transformReference},
-	common.Symbol("#%lambda"):      coreTransformer{transformLambda},
-	common.Symbol("#%application"): coreTransformer{transformApplication},
+var (
+	literalId     = newCoreIdentifier(common.Symbol("#%literal"))
+	referenceId   = newCoreIdentifier(common.Symbol("#%reference"))
+	lambdaId      = newCoreIdentifier(common.Symbol("#%lambda"))
+	applicationId = newCoreIdentifier(common.Symbol("#%application"))
+)
+
+func newCoreIdentifier(name common.Symbol) common.Identifier {
+	return Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
+}
+
+var coreDefinitions = []struct {
+	id          common.Identifier
+	transformer common.Procedure
+}{
+	{
+		literalId,
+		coreTransformer{transformLiteral},
+	},
+	{
+		referenceId,
+		coreTransformer{transformReference},
+	},
+	{
+		lambdaId,
+		coreTransformer{transformLambda},
+	},
+	{
+		applicationId,
+		coreTransformer{transformApplication},
+	},
 }
 
 func init() {
-	for name, transformer := range coreForms {
-		id := Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
+	for _, definition := range coreDefinitions {
 		binding := common.NewBinding()
-		CoreScope.Add(id, binding)
-		(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+		CoreScope.Add(definition.id, binding)
+		(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(definition.transformer))
 	}
 }
 
