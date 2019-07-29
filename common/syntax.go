@@ -1,6 +1,9 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 // Identifier wraps a wrapped symbol (an identifier), providing access to its binding.
 type Identifier struct {
@@ -92,6 +95,15 @@ func NewSyntax(datum Datum) Syntax {
 	return Syntax{datum}
 }
 
+func (s Syntax) Equal(other Syntax) bool {
+	pair, ok := s.Pair()
+	otherPair, otherOk := other.Pair()
+	if ok && otherOk {
+		return Syntax{pair.First}.Equal(Syntax{otherPair.First}) && Syntax{pair.Rest}.Equal(Syntax{otherPair.Rest})
+	}
+	return reflect.DeepEqual(s.datum, other.datum)
+}
+
 func (s Syntax) Push(scope *Scope, phase int) Syntax {
 	switch d := s.datum.(type) {
 	case WrappedSyntax:
@@ -147,6 +159,7 @@ func (s Syntax) IdentifierOrDie() Identifier {
 	return id
 }
 
+// TODO: remove this or generalize it for partially wrapped syntax
 func (s Syntax) Unwrap() Datum {
 	datum := s.datum
 	if wrapped, ok := datum.(WrappedSyntax); ok {

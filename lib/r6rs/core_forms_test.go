@@ -13,5 +13,5 @@ func TestLiteralForm_Unexpand(t *testing.T) {
 	coreForm := LiteralForm{Datum: common.Boolean(true)}
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%literal #t)"))
-	assert.Equal(t, expected, actual)
+	assert.True(t, expected.Equal(actual))
 }

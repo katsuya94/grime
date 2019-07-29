@@ -7,23 +7,23 @@ import (
 type EqualityContext interface{}
 
 type CoreForm interface {
-	Unexpand() common.Datum
+	Unexpand() common.Syntax
 }
 
 type LiteralForm struct {
 	Datum common.Datum
 }
 
-func (f LiteralForm) Unexpand() common.Datum {
-	return list(literalId, f.Datum)
+func (f LiteralForm) Unexpand() common.Syntax {
+	return common.NewSyntax(list(literalId, f.Datum))
 }
 
 type ReferenceForm struct {
 	Id common.Identifier
 }
 
-func (f ReferenceForm) Unexpand() common.Datum {
-	return list(common.Symbol("#%reference"), f.Id.WrappedSyntax)
+func (f ReferenceForm) Unexpand() common.Syntax {
+	return common.NewSyntax(list(common.Symbol("#%reference"), f.Id.WrappedSyntax))
 }
 
 type LambdaForm struct {
@@ -31,12 +31,12 @@ type LambdaForm struct {
 	Inner   CoreForm
 }
 
-func (f LambdaForm) Unexpand() common.Datum {
+func (f LambdaForm) Unexpand() common.Syntax {
 	formals := make([]common.Datum, len(f.Formals))
 	for i := range f.Formals {
 		formals[i] = f.Formals[i].Datum()
 	}
-	return list(common.Symbol("#%lambda"), list(formals...), f.Inner.Unexpand())
+	return common.NewSyntax(list(common.Symbol("#%lambda"), list(formals...), f.Inner.Unexpand()))
 }
 
 type ApplicationForm struct {
@@ -44,12 +44,12 @@ type ApplicationForm struct {
 	Arguments []CoreForm
 }
 
-func (f ApplicationForm) Unexpand() common.Datum {
+func (f ApplicationForm) Unexpand() common.Syntax {
 	args := make([]common.Datum, len(f.Arguments))
 	for i := range f.Arguments {
 		args[i] = f.Arguments[i].Unexpand()
 	}
-	return common.Pair{f.Procedure.Unexpand(), list(args...)}
+	return common.NewSyntax(common.Pair{f.Procedure.Unexpand(), list(args...)})
 }
 
 func list(data ...common.Datum) common.Datum {
