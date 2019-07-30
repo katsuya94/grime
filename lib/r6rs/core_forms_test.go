@@ -16,17 +16,15 @@ func TestLiteralForm_Unexpand(t *testing.T) {
 }
 
 func TestReferenceForm_Unexpand(t *testing.T) {
-	coreForm := ReferenceForm{Id: Introduce(test.Syntax("id")).IdentifierOrDie()}
+	id := Introduce(test.Syntax("id")).IdentifierOrDie()
+	coreForm := ReferenceForm{Id: id}
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%reference id)"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 
 func TestLambdaForm_Unexpand(t *testing.T) {
-	scope := common.NewScope()
-	id := Introduce(test.Syntax("id")).Push(scope, 0).IdentifierOrDie()
-	binding := common.NewBinding()
-	scope.Add(id, binding)
+	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := LambdaForm{
 		Formals: []common.Identifier{id},
 		Inner:   LiteralForm{Datum: common.Boolean(true)},
@@ -37,8 +35,9 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 }
 
 func TestApplicationForm_Unexpand(t *testing.T) {
+	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := ApplicationForm{
-		Procedure: ReferenceForm{Id: Introduce(test.Syntax("id")).IdentifierOrDie()},
+		Procedure: ReferenceForm{Id: id},
 		Arguments: []CoreForm{LiteralForm{common.Boolean(true)}},
 	}
 	actual := coreForm.Unexpand()

@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/katsuya94/grime/common"
@@ -33,18 +34,21 @@ func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Synta
 		return
 	}
 	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        difflib.SplitLines(expected.PrettyPrint(0)),
-		B:        difflib.SplitLines(actual.PrettyPrint(0)),
+		A:        difflib.SplitLines(strings.Replace(expected.PrettyPrint(0), "%", "%%", -1)),
+		B:        difflib.SplitLines(strings.Replace(actual.PrettyPrint(0), "%", "%%", -1)),
 		FromFile: "Expected",
 		FromDate: "",
 		ToFile:   "Actual",
 		ToDate:   "",
 		Context:  1,
 	})
-	msg := "\n\nDiff:\n" + diff
-	assert.Fail(t, fmt.Sprintf("Not equal: \n"+
+	msg := fmt.Sprintf("Syntax not equal: \n"+
 		"expected: %s\n"+
-		"actual  : %s%s", common.Write(expected.Datum()), common.Write(actual.Datum()), msg), msgAndArgs...)
+		"actual  : %s\n"+
+		"\n"+
+		"Diff:\n"+
+		"%s", common.Write(expected.Datum()), common.Write(actual.Datum()), diff)
+	assert.Fail(t, msg, msgAndArgs...)
 }
 
 // func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {
