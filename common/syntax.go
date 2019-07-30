@@ -243,27 +243,33 @@ func (s Syntax) SourceLocation() SourceLocation {
 }
 
 func (s Syntax) PrettyPrint(indent int) string {
-	switch d := s.datum.(type) {
-	case WrappedSyntax:
-		return PrettyPrint(d.Datum(), indent)
-	case Pair:
-		return fmt.Sprintf("(%v%v", Syntax{d.First}.PrettyPrint(indent), Syntax{d.Rest}.prettyPrintRest(indent+1))
-	default:
-		panic(fmt.Sprintf("not syntax: %v", Write(d)))
+	if pair, ok := s.Pair(); ok {
+		return fmt.Sprintf("(%v%v", Syntax{pair.First}.PrettyPrint(indent), Syntax{pair.Rest}.prettyPrintRest(indent+1))
 	}
+	if id, ok := s.Identifier(); ok {
+		if binding, ok := id.Binding(); ok {
+			return fmt.Sprintf("%v #;%v", PrettyPrint(id.Datum(), indent), binding)
+		}
+
+		return PrettyPrint(id.Datum(), indent)
+	}
+	wrapped, ok := s.datum.(WrappedSyntax)
+	if !ok {
+		panic(fmt.Sprintf("not syntax: %v", Write(s.datum)))
+	}
+	return PrettyPrint(wrapped.Datum(), indent)
 }
 
 func (s Syntax) prettyPrintRest(indent int) string {
 	indentString := strings.Repeat(" ", indent)
-	switch d := s.datum.(type) {
-	case WrappedSyntax:
-		if d.Datum() == Null {
-			return ")"
-		}
-		return fmt.Sprintf("\n%v.\n%v%v)", indentString, indentString, Syntax{s.datum}.PrettyPrint(indent))
-	case Pair:
-		return fmt.Sprintf("\n%v%v%v", indentString, Syntax{d.First}.PrettyPrint(indent), Syntax{d.Rest}.prettyPrintRest(indent))
-	default:
-		panic(fmt.Sprintf("not syntax: %v", Write(d)))
+	if pair, ok := s.Pair(); ok {
+		return fmt.Sprintf("\n%v%v%v", indentString, Syntax{pair.First}.PrettyPrint(indent), Syntax{pair.Rest}.prettyPrintRest(indent))
 	}
+	wrapped, ok := s.datum.(WrappedSyntax)
+	if !ok {
+		panic(fmt.Sprintf("not syntax: %v", Write(s.datum)))
+	} else if wrapped.Datum() == Null {
+		return ")"
+	}
+	return fmt.Sprintf("\n%v.\n%v%v)", indentString, indentString, Syntax{s.datum}.PrettyPrint(indent))
 }

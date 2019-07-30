@@ -23,8 +23,12 @@ func TestReferenceForm_Unexpand(t *testing.T) {
 }
 
 func TestLambdaForm_Unexpand(t *testing.T) {
+	scope := common.NewScope()
+	id := Introduce(test.Syntax("id")).Push(scope, 0).IdentifierOrDie()
+	binding := common.NewBinding()
+	scope.Add(id, binding)
 	coreForm := LambdaForm{
-		Formals: []common.Identifier{Introduce(test.Syntax("id")).IdentifierOrDie()},
+		Formals: []common.Identifier{id},
 		Inner:   LiteralForm{Datum: common.Boolean(true)},
 	}
 	actual := coreForm.Unexpand()

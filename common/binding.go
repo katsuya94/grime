@@ -15,5 +15,5 @@ func NewBinding() Binding {
 }
 
 func (b Binding) String() string {
-	return fmt.Sprintf("%#8x", int(b))
+	return fmt.Sprintf("%#08x", int(b))
 }
