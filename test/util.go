@@ -1,8 +1,14 @@
 package test
 
 import (
+	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/pmezard/go-difflib/difflib"
+	"github.com/stretchr/testify/assert"
 )
 
 // func Bindings(n int) []common.Variable {
@@ -20,6 +26,27 @@ func Syntax(s string) common.Syntax {
 
 func Identifier(s string) common.Identifier {
 	return Syntax(s).IdentifierOrDie()
+}
+
+func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
+	equal := actual.Equal(expected)
+	if equal {
+		return
+	}
+	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+		A:        difflib.SplitLines(strings.Replace(expected.PrettyPrint(0), "%", "%%", -1)),
+		B:        difflib.SplitLines(strings.Replace(actual.PrettyPrint(0), "%", "%%", -1)),
+		FromFile: "Expected",
+		FromDate: "",
+		ToFile:   "Actual",
+		ToDate:   "",
+		Context:  1,
+	})
+	fmt.Println(diff)
+	msg := "\n\nDiff:\n" + diff
+	assert.Fail(t, fmt.Sprintf("Not equal: \n"+
+		"expected: %s\n"+
+		"actual  : %s%s", common.Write(expected.Datum()), common.Write(actual.Datum()), msg), msgAndArgs...)
 }
 
 // func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {

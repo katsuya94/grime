@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // Identifier wraps a wrapped symbol (an identifier), providing access to its binding.
@@ -96,12 +97,29 @@ func NewSyntax(datum Datum) Syntax {
 }
 
 func (s Syntax) Equal(other Syntax) bool {
-	pair, ok := s.Pair()
-	otherPair, otherOk := other.Pair()
-	if ok && otherOk {
-		return Syntax{pair.First}.Equal(Syntax{otherPair.First}) && Syntax{pair.Rest}.Equal(Syntax{otherPair.Rest})
+	if pair, ok := s.Pair(); ok {
+		if otherPair, otherOk := other.Pair(); ok && otherOk {
+			return Syntax{pair.First}.Equal(Syntax{otherPair.First}) && Syntax{pair.Rest}.Equal(Syntax{otherPair.Rest})
+		} else if ok != otherOk {
+			return false
+		}
 	}
-	return reflect.DeepEqual(s.datum, other.datum)
+	if id, ok := s.Identifier(); ok {
+		if otherId, otherOk := other.Identifier(); ok && otherOk {
+			return id.FreeEqual(otherId)
+		} else if ok != otherOk {
+			return false
+		}
+	}
+	wrapped, ok := s.datum.(WrappedSyntax)
+	if !ok {
+		panic(fmt.Sprintf("not syntax: %v", Write(s.datum)))
+	}
+	otherWrapped, ok := other.datum.(WrappedSyntax)
+	if !ok {
+		panic(fmt.Sprintf("not syntax: %v", Write(other.datum)))
+	}
+	return reflect.DeepEqual(wrapped.Datum(), otherWrapped.Datum())
 }
 
 func (s Syntax) Push(scope *Scope, phase int) Syntax {
@@ -222,4 +240,30 @@ func (s Syntax) SourceLocation() SourceLocation {
 		return SourceLocation{}
 	}
 	return s.SourceLocationTree().SourceLocation
+}
+
+func (s Syntax) PrettyPrint(indent int) string {
+	switch d := s.datum.(type) {
+	case WrappedSyntax:
+		return PrettyPrint(d.Datum(), indent)
+	case Pair:
+		return fmt.Sprintf("(%v%v", Syntax{d.First}.PrettyPrint(indent), Syntax{d.Rest}.prettyPrintRest(indent+1))
+	default:
+		panic(fmt.Sprintf("not syntax: %v", Write(d)))
+	}
+}
+
+func (s Syntax) prettyPrintRest(indent int) string {
+	indentString := strings.Repeat(" ", indent)
+	switch d := s.datum.(type) {
+	case WrappedSyntax:
+		if d.Datum() == Null {
+			return ")"
+		}
+		return fmt.Sprintf("\n%v.\n%v%v)", indentString, indentString, Syntax{s.datum}.PrettyPrint(indent))
+	case Pair:
+		return fmt.Sprintf("\n%v%v%v", indentString, Syntax{d.First}.PrettyPrint(indent), Syntax{d.Rest}.prettyPrintRest(indent))
+	default:
+		panic(fmt.Sprintf("not syntax: %v", Write(d)))
+	}
 }

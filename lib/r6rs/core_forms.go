@@ -15,7 +15,7 @@ type LiteralForm struct {
 }
 
 func (f LiteralForm) Unexpand() common.Syntax {
-	return common.NewSyntax(list(literalId, f.Datum))
+	return common.NewSyntax(list(literalId.WrappedSyntax, introduce(f.Datum)))
 }
 
 type ReferenceForm struct {
@@ -23,7 +23,7 @@ type ReferenceForm struct {
 }
 
 func (f ReferenceForm) Unexpand() common.Syntax {
-	return common.NewSyntax(list(common.Symbol("#%reference"), f.Id.WrappedSyntax))
+	return common.NewSyntax(list(referenceId.WrappedSyntax, f.Id.WrappedSyntax))
 }
 
 type LambdaForm struct {
@@ -34,9 +34,9 @@ type LambdaForm struct {
 func (f LambdaForm) Unexpand() common.Syntax {
 	formals := make([]common.Datum, len(f.Formals))
 	for i := range f.Formals {
-		formals[i] = f.Formals[i].Datum()
+		formals[i] = f.Formals[i].WrappedSyntax
 	}
-	return common.NewSyntax(list(common.Symbol("#%lambda"), list(formals...), f.Inner.Unexpand()))
+	return common.NewSyntax(list(lambdaId.WrappedSyntax, list(formals...), f.Inner.Unexpand().Datum()))
 }
 
 type ApplicationForm struct {
@@ -45,16 +45,21 @@ type ApplicationForm struct {
 }
 
 func (f ApplicationForm) Unexpand() common.Syntax {
+	proc := f.Procedure.Unexpand().Datum()
 	args := make([]common.Datum, len(f.Arguments))
 	for i := range f.Arguments {
-		args[i] = f.Arguments[i].Unexpand()
+		args[i] = f.Arguments[i].Unexpand().Datum()
 	}
-	return common.NewSyntax(common.Pair{f.Procedure.Unexpand(), list(args...)})
+	return common.NewSyntax(common.Pair{applicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
+}
+
+func introduce(datum common.Datum) common.Datum {
+	return Introduce(common.NewSyntax(common.NewWrappedSyntax(datum, nil))).Datum()
 }
 
 func list(data ...common.Datum) common.Datum {
 	if len(data) == 0 {
-		return common.Null
+		return introduce(common.Null)
 	} else {
 		return common.Pair{data[0], list(data[1:]...)}
 	}

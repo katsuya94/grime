@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 )
 
 type Datum interface{}
@@ -94,6 +95,10 @@ func (d Pair) Write() string {
 	return fmt.Sprintf("(%v%v", Write(d.First), formatRest(d.Rest))
 }
 
+func (d Pair) PrettyPrint(indent int) string {
+	return fmt.Sprintf("(%v%v", PrettyPrint(d.First, indent), prettyPrintRest(d.Rest, indent+1))
+}
+
 func formatRest(d Datum) string {
 	switch d := d.(type) {
 	case Pair:
@@ -103,6 +108,19 @@ func formatRest(d Datum) string {
 			return ")"
 		}
 		return fmt.Sprintf(" . %v)", Write(d))
+	}
+}
+
+func prettyPrintRest(d Datum, indent int) string {
+	indentString := strings.Repeat(" ", indent)
+	switch d := d.(type) {
+	case Pair:
+		return fmt.Sprintf("\n%v%v%v", indentString, PrettyPrint(d.First, indent), prettyPrintRest(d.Rest, indent))
+	default:
+		if d == Null {
+			return ")"
+		}
+		return fmt.Sprintf("\n%v.\n%v%v)", indentString, indentString, Write(d))
 	}
 }
 
