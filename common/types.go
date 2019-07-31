@@ -195,17 +195,51 @@ func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationT
 	return d
 }
 
-// Function represents a Go function.
-type Function func(Continuation, ...Datum) (Evaluation, error)
-
-func (f Function) Write() string {
-	var i interface{} = f
-	name := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-	return fmt.Sprintf("#<function: %v>", name)
+// Function represents a Grime function.
+type Function struct {
+	inner Expression
+	argn  int
 }
 
-func (f Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
-	return f(c, args...)
+func NewFunction(inner Expression, argn int) Function {
+	return Function{inner, argn}
+}
+
+func (d Function) Write() string {
+	return "#<procedure>"
+}
+
+func (d Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
+	if len(args) != d.argn {
+		return ErrorC(fmt.Errorf("evaluate: received %d arguments for procedure expecting %d", len(args), d.argn))
+	}
+	locations := make([]Location, len(args))
+	for i, arg := range args {
+		variable := NewVariable()
+		variable.Set(arg)
+		locations[i] = variable
+	}
+	ctx := NewEvaluationContext(locations...)
+	return EvalC(ctx, c, d.inner)
+}
+
+// Native represents a Go function.
+type Native struct {
+	function func(Continuation, ...Datum) (Evaluation, error)
+}
+
+func NewNative(function func(Continuation, ...Datum) (Evaluation, error)) Native {
+	return Native{function}
+}
+
+func (d Native) Write() string {
+	i := interface{}(d.function)
+	name := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	return fmt.Sprintf("#<go: %v>", name)
+}
+
+func (d Native) Call(c Continuation, args ...Datum) (Evaluation, error) {
+	return d.function(c, args...)
 }
 
 // ContinuationProcedure represents a callable continuation.

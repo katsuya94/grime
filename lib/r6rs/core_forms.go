@@ -8,6 +8,7 @@ type EqualityContext interface{}
 
 type CoreForm interface {
 	Unexpand() common.Syntax
+	CpsTransform() common.Expression
 }
 
 type LiteralForm struct {
@@ -18,12 +19,20 @@ func (f LiteralForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(literalId.WrappedSyntax, introduce(f.Datum)))
 }
 
+func (f LiteralForm) CpsTransform() common.Expression {
+	return Literal{f.Datum}
+}
+
 type ReferenceForm struct {
 	Id common.Identifier
 }
 
 func (f ReferenceForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(referenceId.WrappedSyntax, f.Id.WrappedSyntax))
+}
+
+func (f ReferenceForm) CpsTransform() common.Expression {
+	return nil
 }
 
 type LambdaForm struct {
@@ -37,6 +46,10 @@ func (f LambdaForm) Unexpand() common.Syntax {
 		formals[i] = f.Formals[i].WrappedSyntax
 	}
 	return common.NewSyntax(list(lambdaId.WrappedSyntax, list(formals...), f.Inner.Unexpand().Datum()))
+}
+
+func (f LambdaForm) CpsTransform() common.Expression {
+	return nil
 }
 
 type ApplicationForm struct {
@@ -63,4 +76,8 @@ func list(data ...common.Datum) common.Datum {
 	} else {
 		return common.Pair{data[0], list(data[1:]...)}
 	}
+}
+
+func (f ApplicationForm) CpsTransform() common.Expression {
+	return nil
 }

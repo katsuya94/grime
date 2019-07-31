@@ -6,8 +6,25 @@ import (
 
 var ErrUnexpectedFinalForm = fmt.Errorf("unexpected final form")
 
+type EvaluationContext struct {
+	locations []Location
+}
+
+func NewEvaluationContext(locations ...Location) EvaluationContext {
+	clone := make([]Location, len(locations))
+	copy(clone, locations)
+	return EvaluationContext{clone}
+}
+
+func (ctx EvaluationContext) Get(index int) Location {
+	if index < 0 || index >= len(ctx.locations) {
+		panic("index out of range in EvaluationContext")
+	}
+	return ctx.locations[index]
+}
+
 type Expression interface {
-	Evaluate(Continuation) (Evaluation, error)
+	Evaluate(EvaluationContext, Continuation) (Evaluation, error)
 }
 
 type Continuation interface {
@@ -20,6 +37,7 @@ type Evaluation interface {
 }
 
 type EvaluateExpression struct {
+	ctx          EvaluationContext
 	continuation Continuation
 	expression   Expression
 }
@@ -29,7 +47,7 @@ func (e EvaluateExpression) Escape(EscapeEvaluated) (Datum, bool) {
 }
 
 func (e EvaluateExpression) Do() (Evaluation, error) {
-	return e.expression.Evaluate(e.continuation)
+	return e.expression.Evaluate(e.ctx, e.continuation)
 }
 
 type CallContinuation struct {
@@ -49,8 +67,8 @@ func (e CallContinuation) Do() (Evaluation, error) {
 	return e.continuation.Call(e.value)
 }
 
-func EvalC(c Continuation, expression Expression) (Evaluation, error) {
-	return EvaluateExpression{c, expression}, nil
+func EvalC(ctx EvaluationContext, c Continuation, expression Expression) (Evaluation, error) {
+	return EvaluateExpression{ctx, c, expression}, nil
 }
 
 func CallC(c Continuation, value Datum) (Evaluation, error) {
@@ -62,9 +80,9 @@ func ErrorC(err error) (Evaluation, error) {
 }
 
 // Evaluate evaluates an expression with a continuation that will escape. If the continuation is called outside the escaping context, it will error.
-func Evaluate(expression Expression) (Datum, error) {
+func Evaluate(ctx EvaluationContext, expression Expression) (Datum, error) {
 	return WithEscape(func(escape Continuation) (Evaluation, error) {
-		return expression.Evaluate(escape)
+		return expression.Evaluate(ctx, escape)
 	})
 }
 

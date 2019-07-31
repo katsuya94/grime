@@ -51,6 +51,10 @@ func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Synta
 	assert.Fail(t, msg, msgAndArgs...)
 }
 
+func Evaluate(expression common.Expression) (common.Datum, error) {
+	return common.Evaluate(common.NewEvaluationContext(), expression)
+}
+
 // func WithLiteral(id common.Identifier, syntax common.Syntax) common.Syntax {
 // 	return WithBinding(id, &common.Literal{id}, syntax)
 // }
