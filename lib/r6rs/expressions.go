@@ -11,6 +11,10 @@ type Literal struct {
 	datum common.Datum
 }
 
+func NewLiteral(datum common.Datum) Literal {
+	return Literal{datum}
+}
+
 func (e Literal) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
 	return common.CallC(c, e.datum)
 }
