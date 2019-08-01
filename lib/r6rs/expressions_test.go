@@ -37,14 +37,14 @@ func TestLiteral_Evaluate(t *testing.T) {
 }
 
 func TestLambdaReference_Evaluate(t *testing.T) {
-	src := "(#%application (#%lambda () (#%literal #t)))"
-	boundIdNames := []string{}
+	src := "(#%application (#%lambda (id) (#%reference id)) (#%literal #t))"
+	boundIdNames := []string{"id"}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, boundIdNames, expected)
 }
 
 func TestApplication_Evaluate(t *testing.T) {
-	src := "(#%application (#%lambda (id) (#%reference id)) (#%literal #t))"
+	src := "(#%application (#%lambda () (#%literal #t)))"
 	boundIdNames := []string{"id"}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, boundIdNames, expected)

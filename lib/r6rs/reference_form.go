@@ -17,7 +17,7 @@ func (f ReferenceForm) Unexpand() common.Syntax {
 func (f ReferenceForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
 	binding, ok := f.Id.Binding()
 	if !ok {
-		panic(fmt.Sprintf("cps transform: unbound identifier %v at %v", f.Id.Name(), f.Id.SourceLocation()))
+		return nil, fmt.Errorf("cps transform: unbound identifier %v at %v", f.Id.Name(), f.Id.SourceLocation())
 	}
 	index := ctx.Index(binding)
 	return NewReference(index, f.Id), nil
