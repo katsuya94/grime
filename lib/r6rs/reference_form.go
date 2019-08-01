@@ -1,8 +1,6 @@
 package r6rs
 
 import (
-	"fmt"
-
 	"github.com/katsuya94/grime/common"
 )
 
@@ -15,10 +13,9 @@ func (f ReferenceForm) Unexpand() common.Syntax {
 }
 
 func (f ReferenceForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
-	binding, ok := f.Id.Binding()
-	if !ok {
-		return nil, fmt.Errorf("cps transform: unbound identifier %v at %v", f.Id.Name(), f.Id.SourceLocation())
+	index, err := ctx.Index(f.Id)
+	if err != nil {
+		return nil, err
 	}
-	index := ctx.Index(binding)
 	return NewReference(index, f.Id), nil
 }

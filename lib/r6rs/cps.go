@@ -1,29 +1,40 @@
 package r6rs
 
-import "github.com/katsuya94/grime/common"
+import (
+	"fmt"
+
+	"github.com/katsuya94/grime/common"
+)
 
 type CpsTransformContext struct {
-	indices map[common.Binding]int
+	ids []common.Identifier
 }
 
 func NewCpsTransformContext() CpsTransformContext {
-	return CpsTransformContext{map[common.Binding]int{}}
+	return CpsTransformContext{[]common.Identifier{}}
 }
 
-func (ctx CpsTransformContext) Add(binding common.Binding) {
-	i := len(ctx.indices)
-	ctx.indices[binding] = i
+func (ctx *CpsTransformContext) Add(id common.Identifier) {
+	ctx.ids = append(ctx.ids, id)
 }
 
-func (ctx CpsTransformContext) Index(binding common.Binding) int {
-	i, ok := ctx.indices[binding]
-	if !ok {
-		panic("binding not in context")
+func (ctx CpsTransformContext) Index(id common.Identifier) (int, error) {
+	for i, candidate := range ctx.ids {
+		if candidate.BoundEqual(id) {
+			return i, nil
+		}
+	}
+	return -1, fmt.Errorf("cps transform: %v not in context", id.Name())
+}
+
+func (ctx CpsTransformContext) IndexOrDie(id common.Identifier) int {
+	i, err := ctx.Index(id)
+	if err != nil {
+		panic(err.Error())
 	}
 	return i
 }
 
-// TODO: remove error from signature? transformation of coreForm programs should be error free
 func CpsTransform(coreForm CoreForm) (common.Expression, error) {
 	ctx := NewCpsTransformContext()
 	return coreForm.CpsTransform(ctx)

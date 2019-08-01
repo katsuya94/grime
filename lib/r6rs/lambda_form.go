@@ -1,8 +1,6 @@
 package r6rs
 
 import (
-	"fmt"
-
 	"github.com/katsuya94/grime/common"
 )
 
@@ -22,11 +20,7 @@ func (f LambdaForm) Unexpand() common.Syntax {
 func (f LambdaForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
 	ctx = NewCpsTransformContext()
 	for _, formal := range f.Formals {
-		binding, ok := formal.Binding()
-		if !ok {
-			panic(fmt.Sprintf("cps transform: unbound identifier %v at %v", formal.Name(), formal.SourceLocation()))
-		}
-		ctx.Add(binding)
+		ctx.Add(formal)
 	}
 	inner, err := f.Inner.CpsTransform(ctx)
 	if err != nil {

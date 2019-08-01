@@ -17,9 +17,9 @@ func TestReferenceForm_Unexpand(t *testing.T) {
 
 func TestReferenceForm_CpsTransform(t *testing.T) {
 	ctx := NewCpsTransformContext()
-	id, binding := test.IdentifierWithBinding("id")
-	ctx.Add(binding)
+	id := test.Identifier("id")
+	ctx.Add(id)
 	coreForm := ReferenceForm{Id: id}
-	expected := NewReference(ctx.Index(binding), id)
+	expected := NewReference(ctx.IndexOrDie(id), id)
 	testCpsTransform(t, ctx, coreForm, expected)
 }
