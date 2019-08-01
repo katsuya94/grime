@@ -40,13 +40,16 @@ func NewCoreExpander() CoreExpander {
 
 func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
 	for {
-		switch transformer := e.syntacticAbstraction(syntax, env).(type) {
-		case coreTransformer:
+		transformer := e.syntacticAbstraction(syntax, env)
+		if transformer == nil {
+			return nil, fmt.Errorf("unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+		}
+		if transformer, ok := transformer.(coreTransformer); ok {
 			ctx := ExpansionContext{Expander: e, Env: env}
 			return transformer.coreForm(ctx, syntax)
-		// partialTransformer
-		default:
-			panic("unhandled transformer")
+		}
+		if transformer != nil {
+
 		}
 	}
 }

@@ -18,6 +18,18 @@ func (f ApplicationForm) Unexpand() common.Syntax {
 	return common.NewSyntax(common.Pair{applicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
 }
 
-func (f ApplicationForm) CpsTransform(ctx CpsTransformContext) common.Expression {
-	return nil
+func (f ApplicationForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+	proc, err := f.Procedure.CpsTransform(ctx)
+	if err != nil {
+		return nil, err
+	}
+	args := make([]common.Expression, len(f.Arguments))
+	for i := range f.Arguments {
+		arg, err := f.Arguments[i].CpsTransform(ctx)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
+	}
+	return NewApplication(proc, args...), nil
 }

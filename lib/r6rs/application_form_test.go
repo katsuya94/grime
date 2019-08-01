@@ -18,3 +18,21 @@ func TestApplicationForm_Unexpand(t *testing.T) {
 	expected := Introduce(test.Syntax("(#%application (#%reference id) (#%literal #t))"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
+
+func TestApplicationForm_CpsTransform(t *testing.T) {
+	ctx := NewCpsTransformContext()
+	procExpression := test.NewVoidExpression()
+	argExpression := test.NewVoidExpression()
+	coreForm := ApplicationForm{
+		Procedure: spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+			return procExpression, nil
+		}},
+		Arguments: []CoreForm{
+			spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+				return argExpression, nil
+			}},
+		},
+	}
+	expected := NewApplication(procExpression, argExpression)
+	testCpsTransform(t, ctx, coreForm, expected)
+}

@@ -30,6 +30,16 @@ type Role interface {
 	Description() string
 }
 
+type Variable struct{}
+
+func NewVariable() Variable {
+	return Variable{}
+}
+
+func (r Variable) Description() string {
+	return "Variable{}"
+}
+
 type SyntacticAbstraction struct {
 	Transformer Procedure
 }

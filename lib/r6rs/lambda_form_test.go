@@ -6,6 +6,7 @@ import (
 	"github.com/katsuya94/grime/common"
 	. "github.com/katsuya94/grime/lib/r6rs"
 	"github.com/katsuya94/grime/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLambdaForm_Unexpand(t *testing.T) {
@@ -17,4 +18,19 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%lambda (id) (#%literal #t))"))
 	test.AssertSyntaxEqual(t, expected, actual)
+}
+
+func TestLambdaForm_CpsTransform(t *testing.T) {
+	ctx := NewCpsTransformContext()
+	id, binding := test.IdentifierWithBinding("id")
+	expression := test.NewVoidExpression()
+	coreForm := LambdaForm{
+		Formals: []common.Identifier{id},
+		Inner: spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+			assert.Equal(t, ctx.Index(binding), 0)
+			return expression, nil
+		}},
+	}
+	expected := NewLambda(expression, 1)
+	testCpsTransform(t, ctx, coreForm, expected)
 }

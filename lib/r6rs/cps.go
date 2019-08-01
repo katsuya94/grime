@@ -23,7 +23,8 @@ func (ctx CpsTransformContext) Index(binding common.Binding) int {
 	return i
 }
 
-func CpsTransform(coreForm CoreForm) common.Expression {
+// TODO: remove error from signature? transformation of coreForm programs should be error free
+func CpsTransform(coreForm CoreForm) (common.Expression, error) {
 	ctx := NewCpsTransformContext()
 	return coreForm.CpsTransform(ctx)
 }

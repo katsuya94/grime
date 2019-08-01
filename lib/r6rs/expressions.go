@@ -25,8 +25,12 @@ type Reference struct {
 	id    common.Identifier
 }
 
+func NewReference(index int, id common.Identifier) Reference {
+	return Reference{index, id}
+}
+
 func (e Reference) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
-	value := ctx.Get(e.index).(common.Variable).Get()
+	value := ctx.Get(e.index).Get()
 	if value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot reference identifier before its definition", e.id.Name(), e.id.SourceLocation()))
 	}
@@ -39,21 +43,29 @@ type Lambda struct {
 	argn  int
 }
 
+func NewLambda(inner common.Expression, argn int) Lambda {
+	return Lambda{inner, argn}
+}
+
 func (e Lambda) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
 	return common.CallC(c, common.NewFunction(e.inner, e.argn))
 }
 
 // Application evaluates the application of a procedure do its arguments.
 type Application struct {
-	Procedure common.Expression
-	Arguments []common.Expression
+	procedure common.Expression
+	arguments []common.Expression
+}
+
+func NewApplication(procedure common.Expression, arguments ...common.Expression) Application {
+	return Application{procedure, arguments}
 }
 
 func (e Application) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
 	return common.EvalC(
 		ctx,
-		applicationProcedureEvaluated{ctx, c, e.Arguments},
-		e.Procedure,
+		applicationProcedureEvaluated{ctx, c, e.arguments},
+		e.procedure,
 	)
 }
 

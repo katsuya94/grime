@@ -12,6 +12,6 @@ func (f LiteralForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(literalId.WrappedSyntax, introduce(f.Datum)))
 }
 
-func (f LiteralForm) CpsTransform(ctx CpsTransformContext) common.Expression {
-	return Literal{f.Datum}
+func (f LiteralForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+	return NewLiteral(f.Datum), nil
 }

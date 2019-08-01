@@ -215,9 +215,9 @@ func (d Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
 	}
 	locations := make([]Location, len(args))
 	for i, arg := range args {
-		variable := NewVariable()
-		variable.Set(arg)
-		locations[i] = variable
+		location := NewLocation()
+		location.Set(arg)
+		locations[i] = location
 	}
 	ctx := NewEvaluationContext(locations...)
 	return EvalC(ctx, c, d.inner)

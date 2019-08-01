@@ -1,28 +1,18 @@
 package common
 
-import "fmt"
-
-type Location interface {
-	String() string
-}
-
-type Variable struct {
+type Location struct {
 	value *Datum
 }
 
-func NewVariable() Variable {
+func NewLocation() Location {
 	value := Datum(nil)
-	return Variable{&value}
+	return Location{&value}
 }
 
-func (l Variable) Get() Datum {
+func (l Location) Get() Datum {
 	return *l.value
 }
 
-func (l Variable) Set(value Datum) {
+func (l Location) Set(value Datum) {
 	*l.value = value
-}
-
-func (l Variable) String() string {
-	return fmt.Sprintf("Variable{%p}", l.value)
 }
