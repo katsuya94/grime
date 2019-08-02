@@ -11,51 +11,21 @@ var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
 
 var (
-	LiteralId     = newCoreIdentifier(common.Symbol("#%literal"))
-	ReferenceId   = newCoreIdentifier(common.Symbol("#%reference"))
-	LambdaId      = newCoreIdentifier(common.Symbol("#%lambda"))
-	ApplicationId = newCoreIdentifier(common.Symbol("#%application"))
-	TopId         = newCoreIdentifier(common.Symbol("#%top"))
+	LiteralId     = coreDefinition(common.Symbol("#%literal"), NewCoreTransformer(transformLiteral))
+	ReferenceId   = coreDefinition(common.Symbol("#%reference"), NewCoreTransformer(transformReference))
+	LambdaId      = coreDefinition(common.Symbol("#%lambda"), NewCoreTransformer(transformLambda))
+	ApplicationId = coreDefinition(common.Symbol("#%application"), NewCoreTransformer(transformApplication))
+	TopId         = coreDefinition(common.Symbol("#%top"), NewCoreTransformer(transformTop))
 )
 
 func newCoreIdentifier(name common.Symbol) common.Identifier {
 	return Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
 }
 
-var coreDefinitions = []struct {
-	name        common.Symbol
-	transformer common.Procedure
-}{
-	{
-		common.Symbol("#%literal"),
-		NewCoreTransformer(transformLiteral),
-	},
-	{
-		common.Symbol("#%reference"),
-		NewCoreTransformer(transformReference),
-	},
-	{
-		common.Symbol("#%lambda"),
-		NewCoreTransformer(transformLambda),
-	},
-	{
-		common.Symbol("#%application"),
-		NewCoreTransformer(transformApplication),
-	},
-	{
-		common.Symbol("#%top"),
-		NewCoreTransformer(transformTop),
-	},
-}
-
-func init() {
-	for _, definition := range coreDefinitions {
-		_, binding := common.Bind(common.NewIdentifier(definition.name), CoreScope, 0)
-		(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(definition.transformer))
-	}
-	if LiteralId.Binding() == nil {
-		panic("HI")
-	}
+func coreDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
+	id, binding := common.Bind(common.NewIdentifier(name), CoreScope, 0)
+	(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+	return id
 }
 
 func Introduce(syntax common.Syntax) common.Syntax {
