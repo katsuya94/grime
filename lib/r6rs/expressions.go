@@ -19,7 +19,7 @@ func (e Literal) Evaluate(ctx common.EvaluationContext, c common.Continuation) (
 	return common.CallC(c, e.datum)
 }
 
-// Reference evaluates to the value of its variable.
+// Reference evaluates to the value of a Location in the local context.
 type Reference struct {
 	index int
 	id    common.Identifier
@@ -112,4 +112,21 @@ func partialEvaluationResult(ctx common.EvaluationContext, c common.Continuation
 		},
 		arguments[0],
 	)
+}
+
+// Top evaluates to the value of a location in the global context.
+type Top struct {
+	location common.Location
+}
+
+func NewTop(location common.Location) Top {
+	return Top{location}
+}
+
+func (e Top) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
+	value := e.location.Get()
+	if value == nil {
+		panic(fmt.Sprintf("undefined %v", e.location))
+	}
+	return common.CallC(c, value)
 }

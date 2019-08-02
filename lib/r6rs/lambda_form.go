@@ -14,11 +14,11 @@ func (f LambdaForm) Unexpand() common.Syntax {
 	for i := range f.Formals {
 		formals[i] = f.Formals[i].WrappedSyntax
 	}
-	return common.NewSyntax(list(lambdaId.WrappedSyntax, list(formals...), f.Inner.Unexpand().Datum()))
+	return common.NewSyntax(list(LambdaId.WrappedSyntax, list(formals...), f.Inner.Unexpand().Datum()))
 }
 
 func (f LambdaForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
-	ctx = NewCpsTransformContext()
+	ctx = ctx.New()
 	for _, formal := range f.Formals {
 		ctx.Add(formal)
 	}

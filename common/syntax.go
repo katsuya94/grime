@@ -56,7 +56,7 @@ func (id Identifier) Binds(other Identifier) bool {
 	if other.Name() != id.Name() {
 		return false
 	}
-	return id.marks.equal(other.marks)
+	return other.marks.contains(id.marks)
 }
 
 func DuplicateIdentifiers(ids ...Identifier) bool {

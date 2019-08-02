@@ -6,21 +6,31 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-type CpsTransformContext struct {
-	ids []common.Identifier
+type Global struct {
+	Id       common.Identifier
+	Location common.Location
 }
 
-func NewCpsTransformContext() CpsTransformContext {
-	return CpsTransformContext{[]common.Identifier{}}
+type CpsTransformContext struct {
+	localIds []common.Identifier
+	globals  []Global
+}
+
+func NewCpsTransformContext(globals []Global) CpsTransformContext {
+	return CpsTransformContext{[]common.Identifier{}, globals}
+}
+
+func (ctx CpsTransformContext) New() CpsTransformContext {
+	return CpsTransformContext{[]common.Identifier{}, ctx.globals}
 }
 
 func (ctx *CpsTransformContext) Add(id common.Identifier) {
-	ctx.ids = append(ctx.ids, id)
+	ctx.localIds = append(ctx.localIds, id)
 }
 
 func (ctx CpsTransformContext) Index(id common.Identifier) (int, error) {
-	for i, candidate := range ctx.ids {
-		if candidate.BoundEqual(id) {
+	for i, localId := range ctx.localIds {
+		if localId.BoundEqual(id) {
 			return i, nil
 		}
 	}
@@ -35,7 +45,11 @@ func (ctx CpsTransformContext) IndexOrDie(id common.Identifier) int {
 	return i
 }
 
-func CpsTransform(coreForm CoreForm) (common.Expression, error) {
-	ctx := NewCpsTransformContext()
-	return coreForm.CpsTransform(ctx)
+func (ctx CpsTransformContext) Top(id common.Identifier) (common.Location, error) {
+	for _, global := range ctx.globals {
+		if global.Id.BoundEqual(id) {
+			return global.Location, nil
+		}
+	}
+	return common.Location{}, fmt.Errorf("cps transform: %v not in context", id.Name())
 }

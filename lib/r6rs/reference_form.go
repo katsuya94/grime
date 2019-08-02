@@ -9,7 +9,7 @@ type ReferenceForm struct {
 }
 
 func (f ReferenceForm) Unexpand() common.Syntax {
-	return common.NewSyntax(list(referenceId.WrappedSyntax, f.Id.WrappedSyntax))
+	return common.NewSyntax(list(ReferenceId.WrappedSyntax, f.Id.WrappedSyntax))
 }
 
 func (f ReferenceForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {

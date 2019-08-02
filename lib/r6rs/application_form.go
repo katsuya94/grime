@@ -15,7 +15,7 @@ func (f ApplicationForm) Unexpand() common.Syntax {
 	for i := range f.Arguments {
 		args[i] = f.Arguments[i].Unexpand().Datum()
 	}
-	return common.NewSyntax(common.Pair{applicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
+	return common.NewSyntax(common.Pair{ApplicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
 }
 
 func (f ApplicationForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {

@@ -21,7 +21,7 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 }
 
 func TestLambdaForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext()
+	ctx := NewCpsTransformContext([]Global{})
 	id := test.Identifier("id")
 	expression := test.NewVoidExpression()
 	coreForm := LambdaForm{

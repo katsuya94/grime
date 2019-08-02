@@ -11,10 +11,11 @@ var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
 
 var (
-	literalId     = newCoreIdentifier(common.Symbol("#%literal"))
-	referenceId   = newCoreIdentifier(common.Symbol("#%reference"))
-	lambdaId      = newCoreIdentifier(common.Symbol("#%lambda"))
-	applicationId = newCoreIdentifier(common.Symbol("#%application"))
+	LiteralId     = newCoreIdentifier(common.Symbol("#%literal"))
+	ReferenceId   = newCoreIdentifier(common.Symbol("#%reference"))
+	LambdaId      = newCoreIdentifier(common.Symbol("#%lambda"))
+	ApplicationId = newCoreIdentifier(common.Symbol("#%application"))
+	TopId         = newCoreIdentifier(common.Symbol("#%top"))
 )
 
 func newCoreIdentifier(name common.Symbol) common.Identifier {
@@ -26,20 +27,24 @@ var coreDefinitions = []struct {
 	transformer common.Procedure
 }{
 	{
-		literalId,
-		coreTransformer{transformLiteral},
+		LiteralId,
+		NewCoreTransformer(transformLiteral),
 	},
 	{
-		referenceId,
-		coreTransformer{transformReference},
+		ReferenceId,
+		NewCoreTransformer(transformReference),
 	},
 	{
-		lambdaId,
-		coreTransformer{transformLambda},
+		LambdaId,
+		NewCoreTransformer(transformLambda),
 	},
 	{
-		applicationId,
-		coreTransformer{transformApplication},
+		ApplicationId,
+		NewCoreTransformer(transformApplication),
+	},
+	{
+		TopId,
+		NewCoreTransformer(transformTop),
 	},
 }
 
@@ -66,10 +71,10 @@ func transformLiteral(ctx ExpansionContext, syntax common.Syntax) (CoreForm, err
 	return LiteralForm{datum}, nil
 }
 
-var referenceLiteral = common.MustCompileSimplePattern(read.MustReadDatum("(#%reference id)"))
+var patternReference = common.MustCompileSimplePattern(read.MustReadDatum("(#%reference id)"))
 
 func transformReference(ctx ExpansionContext, syntax common.Syntax) (CoreForm, error) {
-	result, ok := referenceLiteral.Match(syntax)
+	result, ok := patternReference.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%reference: bad syntax")
 	}
@@ -125,4 +130,18 @@ func transformApplication(ctx ExpansionContext, syntax common.Syntax) (CoreForm,
 		}
 	}
 	return ApplicationForm{proc, args}, nil
+}
+
+var patternTop = common.MustCompileSimplePattern(read.MustReadDatum("(#%top id)"))
+
+func transformTop(ctx ExpansionContext, syntax common.Syntax) (CoreForm, error) {
+	result, ok := patternTop.Match(syntax)
+	if !ok {
+		return nil, fmt.Errorf("#%%top: bad syntax")
+	}
+	id, ok := result[common.Symbol("id")].(common.Syntax).Identifier()
+	if !ok {
+		return nil, fmt.Errorf("#%%top: bad syntax")
+	}
+	return TopForm{id}, nil
 }

@@ -27,3 +27,8 @@ func testCpsTransform(t *testing.T, ctx CpsTransformContext, coreForm CoreForm, 
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 }
+
+func testCpsTransformError(t *testing.T, ctx CpsTransformContext, coreForm CoreForm, expected string) {
+	_, err := coreForm.CpsTransform(ctx)
+	assert.EqualError(t, err, expected)
+}

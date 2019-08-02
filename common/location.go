@@ -1,5 +1,7 @@
 package common
 
+import "fmt"
+
 type Location struct {
 	value *Datum
 }
@@ -15,4 +17,8 @@ func (l Location) Get() Datum {
 
 func (l Location) Set(value Datum) {
 	*l.value = value
+}
+
+func (l Location) String() string {
+	return fmt.Sprintf("Location{%p}", l.value)
 }

@@ -9,7 +9,7 @@ type LiteralForm struct {
 }
 
 func (f LiteralForm) Unexpand() common.Syntax {
-	return common.NewSyntax(list(literalId.WrappedSyntax, introduce(f.Datum)))
+	return common.NewSyntax(list(LiteralId.WrappedSyntax, introduce(f.Datum)))
 }
 
 func (f LiteralForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {

@@ -16,7 +16,7 @@ func TestLiteralForm_Unexpand(t *testing.T) {
 }
 
 func TestLiteralForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext()
+	ctx := NewCpsTransformContext([]Global{})
 	coreForm := LiteralForm{Datum: common.Boolean(true)}
 	expected := NewLiteral(common.Boolean(true))
 	testCpsTransform(t, ctx, coreForm, expected)

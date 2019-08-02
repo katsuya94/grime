@@ -20,7 +20,7 @@ func TestApplicationForm_Unexpand(t *testing.T) {
 }
 
 func TestApplicationForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext()
+	ctx := NewCpsTransformContext([]Global{})
 	procExpression := test.NewVoidExpression()
 	argExpression := test.NewVoidExpression()
 	coreForm := ApplicationForm{
