@@ -19,7 +19,7 @@ func testEvaluate(t *testing.T, src string, globals []Global, boundIdNames []str
 		scope.Add(test.Identifier(boundIdName), binding)
 		(&env).Extend(binding, common.NewVariable())
 	}
-	expander := NewCoreExpander()
+	expander := NewSelfReferentialCoreExpander()
 	coreForm, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
 	ctx := NewCpsTransformContext(globals)

@@ -10,47 +10,50 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCoreLanguageLiteral(t *testing.T) {
-	syntax := Introduce(test.Syntax("(#%literal #t)"))
-	expander := NewCoreExpander()
+func testCoreLanguage(t *testing.T, src string, expected CoreForm) {
+	syntax := Introduce(test.Syntax(src))
+	expander := NewSelfReferentialCoreExpander()
 	actual, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
-	expected := LiteralForm{Datum: common.Boolean(true)}
 	assert.Equal(t, expected, actual)
+}
+
+func TestCoreLanguageLiteral(t *testing.T) {
+	src := "(#%literal #t)"
+	expected := LiteralForm{Datum: common.Boolean(true)}
+	testCoreLanguage(t, src, expected)
 }
 
 func TestCoreLanguageReference(t *testing.T) {
-	syntax := Introduce(test.Syntax("(#%reference id)"))
-	expander := NewCoreExpander()
-	actual, err := expander.Expand(syntax, CoreEnvironment)
-	require.NoError(t, err)
+	src := "(#%reference id)"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := ReferenceForm{Id: id}
-	assert.Equal(t, expected, actual)
+	testCoreLanguage(t, src, expected)
 }
 
 func TestCoreLanguageLambda(t *testing.T) {
-	syntax := Introduce(test.Syntax("(#%lambda (id) (#%literal #t))"))
-	expander := NewCoreExpander()
-	actual, err := expander.Expand(syntax, CoreEnvironment)
-	require.NoError(t, err)
+	src := "(#%lambda (id) (#%literal #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := LambdaForm{
 		Formals: []common.Identifier{id},
 		Inner:   LiteralForm{common.Boolean(true)},
 	}
-	assert.Equal(t, expected, actual)
+	testCoreLanguage(t, src, expected)
 }
 
 func TestCoreLanguageApplication(t *testing.T) {
-	syntax := Introduce(test.Syntax("(#%application (#%reference id) (#%literal #t))"))
-	expander := NewCoreExpander()
-	actual, err := expander.Expand(syntax, CoreEnvironment)
-	require.NoError(t, err)
+	src := "(#%application (#%reference id) (#%literal #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := ApplicationForm{
 		Procedure: ReferenceForm{Id: id},
 		Arguments: []CoreForm{LiteralForm{common.Boolean(true)}},
 	}
-	assert.Equal(t, expected, actual)
+	testCoreLanguage(t, src, expected)
+}
+
+func TestCoreLanguageTop(t *testing.T) {
+	src := "(#%top id)"
+	id := Introduce(test.Syntax("id")).IdentifierOrDie()
+	expected := TopForm{Id: id}
+	testCoreLanguage(t, src, expected)
 }

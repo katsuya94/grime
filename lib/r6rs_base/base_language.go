@@ -54,12 +54,17 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	if !ok {
 		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 	}
+	phase := result[common.Symbol("lambda")].(common.Syntax).IdentifierOrDie().Phase()
+	scope := common.NewScope()
 	var formals []common.Identifier
 	for _, syntax := range result[common.Symbol("formals")].([]interface{}) {
 		id, ok := syntax.(common.Syntax).Identifier()
 		if !ok {
 			return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 		}
+		binding := common.NewBinding()
+		scope.Add(id, binding)
+		id = id.Push(scope, phase).IdentifierOrDie()
 		formals = append(formals, id)
 	}
 	if common.DuplicateIdentifiers(formals...) {
@@ -67,7 +72,9 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 	}
 	var forms []common.Syntax
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, syntax.(common.Syntax))
+		form := syntax.(common.Syntax)
+		form = form.Push(scope, phase)
+		forms = append(forms, form)
 	}
 	output := common.Pair{r6rs.LambdaId.WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
 	return common.CallC(c, output)
@@ -82,7 +89,8 @@ func transformBegin(c common.Continuation, args ...common.Datum) (common.Evaluat
 	}
 	var forms []common.Syntax
 	for _, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms = append(forms, syntax.(common.Syntax))
+		form := syntax.(common.Syntax)
+		forms = append(forms, form)
 	}
 	if len(forms) != 1 {
 		panic("not implemented")

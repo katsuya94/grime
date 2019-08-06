@@ -22,11 +22,17 @@ func (CoreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 var patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 
 type CoreExpander struct {
-	Expander
+	inner Expander
 }
 
-func NewCoreExpander(expander Expander) CoreExpander {
-	return CoreExpander{expander}
+func NewSelfReferentialCoreExpander() *CoreExpander {
+	expander := &CoreExpander{}
+	expander.inner = expander
+	return expander
+}
+
+func NewCoreExpander(inner Expander) *CoreExpander {
+	return &CoreExpander{inner}
 }
 
 func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
@@ -74,7 +80,7 @@ func (e CoreExpander) MatchTransformer(syntax common.Syntax, env common.Environm
 
 func (e CoreExpander) HandleCoreTransformer(transformer common.Procedure, syntax common.Syntax, env common.Environment) (CoreForm, bool, error) {
 	if transformer, ok := transformer.(CoreTransformer); ok {
-		ctx := ExpansionContext{Expander: e, Env: env}
+		ctx := ExpansionContext{Expander: e.inner, Env: env}
 		coreForm, err := transformer.coreForm(ctx, syntax)
 		return coreForm, true, err
 	}

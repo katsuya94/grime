@@ -17,13 +17,13 @@ var (
 )
 
 type BaseExpander struct {
-	r6rs.CoreExpander
+	core *r6rs.CoreExpander
 }
 
-func NewBaseExpander() BaseExpander {
-	// TODO: need better modeling between expanders
-	expander := BaseExpander{}
-	expander.CoreExpander = r6rs.NewCoreExpander(expander)
+// TODO: need better modeling between expanders, maybe an expander struct that implements common methods and gets unique behavior through DI?
+func NewBaseExpander() *BaseExpander {
+	expander := &BaseExpander{}
+	expander.core = r6rs.NewCoreExpander(expander)
 	return expander
 }
 
@@ -49,16 +49,17 @@ func (e BaseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs
 				switch wrappedSyntax.Datum().(type) {
 				case common.Boolean, common.Number, common.Character, common.String:
 					syntax = common.NewSyntax(list(r6rs.LiteralId.WrappedSyntax, syntax.Datum()))
+					continue
 				}
 			}
 			return nil, fmt.Errorf("unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 		}
-		if coreForm, ok, err := e.HandleCoreTransformer(transformer, syntax, env); err != nil {
+		if coreForm, ok, err := e.core.HandleCoreTransformer(transformer, syntax, env); err != nil {
 			return nil, err
 		} else if ok {
 			return coreForm, nil
 		}
-		syntax, err = e.ApplyTransformer(transformer, syntax)
+		syntax, err = e.core.ApplyTransformer(transformer, syntax)
 		if err != nil {
 			return nil, err
 		}
@@ -67,19 +68,19 @@ func (e BaseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs
 
 func (e BaseExpander) syntacticAbstraction(syntax common.Syntax, env common.Environment) common.Procedure {
 	var transformer common.Procedure
-	transformer = e.MatchTransformer(syntax, env, patternMacroUseSet)
+	transformer = e.core.MatchTransformer(syntax, env, patternMacroUseSet)
 	if transformer != nil {
 		return transformer
 	}
-	transformer = e.MatchTransformer(syntax, env, patternMacroUseList)
+	transformer = e.core.MatchTransformer(syntax, env, patternMacroUseList)
 	if transformer != nil {
 		return transformer
 	}
-	transformer = e.MatchTransformer(syntax, env, patternMacroUseImproperList)
+	transformer = e.core.MatchTransformer(syntax, env, patternMacroUseImproperList)
 	if transformer != nil {
 		return transformer
 	}
-	transformer = e.MatchTransformer(syntax, env, patternMacroUseSingletonIdentifier)
+	transformer = e.core.MatchTransformer(syntax, env, patternMacroUseSingletonIdentifier)
 	if transformer != nil {
 		return transformer
 	}

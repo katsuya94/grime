@@ -106,6 +106,7 @@ func (s Syntax) Equal(other Syntax) bool {
 	}
 	if id, ok := s.Identifier(); ok {
 		if otherId, otherOk := other.Identifier(); ok && otherOk {
+			fmt.Printf("comparing identifiers\nid: %v\notherId: %v\n", Syntax{id.WrappedSyntax}.PrettyPrint(0), Syntax{otherId.WrappedSyntax}.PrettyPrint(0))
 			return id.FreeEqual(otherId)
 		} else if ok != otherOk {
 			return false

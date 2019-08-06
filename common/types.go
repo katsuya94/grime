@@ -178,6 +178,14 @@ func (d WrappedSyntax) Identifier() (Identifier, bool) {
 	return Identifier{d}, true
 }
 
+func (d WrappedSyntax) IdentifierOrDie() Identifier {
+	id, ok := d.Identifier()
+	if !ok {
+		panic("not an identifier")
+	}
+	return id
+}
+
 func (d WrappedSyntax) SourceLocation() SourceLocation {
 	if d.sourceLocationTree == nil {
 		return SourceLocation{}
@@ -193,6 +201,10 @@ func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationT
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree
 	return d
+}
+
+func (d WrappedSyntax) Phase() int {
+	return d.phase
 }
 
 // Function represents a Grime function.
