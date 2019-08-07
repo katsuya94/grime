@@ -64,7 +64,11 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 		}
 		binding := common.NewBinding()
 		scope.Add(id, binding)
+		b, _ := id.Binding()
+		fmt.Printf("about to add scope:\n%#v\n%v\n", id.WrappedSyntax, b)
 		id = id.Push(scope, phase).IdentifierOrDie()
+		b, _ = id.Binding()
+		fmt.Printf("added scope:\n%#v\n%v\n", id.WrappedSyntax, b)
 		formals = append(formals, id)
 	}
 	if common.DuplicateIdentifiers(formals...) {
