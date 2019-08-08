@@ -10,15 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testEvaluate(t *testing.T, src string, globals []Global, boundIdNames []string, expected common.Datum) {
+func testEvaluate(t *testing.T, src string, globals []Global, expected common.Datum) {
 	scope := common.NewScope()
 	syntax := Introduce(test.Syntax(src)).Push(scope, 0)
-	env := CoreEnvironment
-	for _, boundIdName := range boundIdNames {
-		binding := common.NewBinding()
-		scope.Add(test.Identifier(boundIdName), binding)
-		(&env).Extend(binding, common.NewVariable())
-	}
 	expander := NewSelfReferentialCoreExpander()
 	coreForm, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
@@ -33,25 +27,22 @@ func testEvaluate(t *testing.T, src string, globals []Global, boundIdNames []str
 func TestLiteral_Evaluate(t *testing.T) {
 	src := "(#%literal #t)"
 	globals := []Global{}
-	boundIdNames := []string{}
 	expected := common.Boolean(true)
-	testEvaluate(t, src, globals, boundIdNames, expected)
+	testEvaluate(t, src, globals, expected)
 }
 
 func TestLambdaReference_Evaluate(t *testing.T) {
 	src := "(#%application (#%lambda (id) (#%reference id)) (#%literal #t))"
 	globals := []Global{}
-	boundIdNames := []string{"id"}
 	expected := common.Boolean(true)
-	testEvaluate(t, src, globals, boundIdNames, expected)
+	testEvaluate(t, src, globals, expected)
 }
 
 func TestApplication_Evaluate(t *testing.T) {
 	src := "(#%application (#%lambda () (#%literal #t)))"
 	globals := []Global{}
-	boundIdNames := []string{"id"}
 	expected := common.Boolean(true)
-	testEvaluate(t, src, globals, boundIdNames, expected)
+	testEvaluate(t, src, globals, expected)
 }
 
 func TestTop_Evaluate(t *testing.T) {
@@ -65,7 +56,6 @@ func TestTop_Evaluate(t *testing.T) {
 			Location: location,
 		},
 	}
-	boundIdNames := []string{"id"}
 	expected := common.Boolean(true)
-	testEvaluate(t, src, globals, boundIdNames, expected)
+	testEvaluate(t, src, globals, expected)
 }

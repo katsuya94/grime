@@ -63,8 +63,8 @@ func (e CoreExpander) MatchTransformer(syntax common.Syntax, env common.Environm
 	if !ok {
 		return nil
 	}
-	binding, ok := id.Binding()
-	if !ok {
+	binding := id.Binding()
+	if binding == nil {
 		return nil
 	}
 	role := env.Lookup(binding)

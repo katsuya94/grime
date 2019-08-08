@@ -20,14 +20,14 @@ var (
 )
 
 type Pattern interface {
-	Match(Syntax) (map[Binding]interface{}, bool)
+	Match(Syntax) (map[*Binding]interface{}, bool)
 }
 
 type patternLiteral struct {
 	id Identifier
 }
 
-func (p patternLiteral) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+func (p patternLiteral) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
 	id, ok := syntax.Identifier()
 	if !ok {
 		return nil, false
@@ -35,33 +35,33 @@ func (p patternLiteral) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	if !id.FreeEqual(p.id) {
 		return nil, false
 	}
-	return map[Binding]interface{}{}, true
+	return map[*Binding]interface{}{}, true
 }
 
 type patternUnderscore struct{}
 
-func (p patternUnderscore) Match(syntax Syntax) (map[Binding]interface{}, bool) {
-	return map[Binding]interface{}{}, true
+func (p patternUnderscore) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
+	return map[*Binding]interface{}{}, true
 }
 
 type patternPatternVariable struct {
-	patternVariable Binding
+	patternVariable *Binding
 }
 
-func (p patternPatternVariable) Match(syntax Syntax) (map[Binding]interface{}, bool) {
-	return map[Binding]interface{}{p.patternVariable: syntax}, true
+func (p patternPatternVariable) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
+	return map[*Binding]interface{}{p.patternVariable: syntax}, true
 }
 
 type patternEllipsis struct {
 	subPattern          Pattern
-	subPatternVariables []Binding
+	subPatternVariables []*Binding
 	restPattern         Pattern
 }
 
-func (p patternEllipsis) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+func (p patternEllipsis) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
 	var (
-		result     map[Binding]interface{}
-		subResults []map[Binding]interface{}
+		result     map[*Binding]interface{}
+		subResults []map[*Binding]interface{}
 	)
 	for {
 		if pair, ok := syntax.Pair(); ok {
@@ -109,7 +109,7 @@ type patternPair struct {
 	rest  Pattern
 }
 
-func (p patternPair) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+func (p patternPair) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
 	pair, ok := syntax.Pair()
 	if !ok {
 		return nil, false
@@ -122,7 +122,7 @@ func (p patternPair) Match(syntax Syntax) (map[Binding]interface{}, bool) {
 	if !ok {
 		return nil, false
 	}
-	result := map[Binding]interface{}{}
+	result := map[*Binding]interface{}{}
 	for patternVariable, match := range firstResult {
 		result[patternVariable] = match
 	}
@@ -136,16 +136,16 @@ type patternDatum struct {
 	datum Datum
 }
 
-func (p patternDatum) Match(syntax Syntax) (map[Binding]interface{}, bool) {
+func (p patternDatum) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
 	if syntax.Unwrap() != p.datum {
 		return nil, false
 	}
-	return map[Binding]interface{}{}, true
+	return map[*Binding]interface{}{}, true
 }
 
 type PatternVariableInfo struct {
 	Id      Identifier
-	Binding Binding
+	Binding *Binding
 	Nesting int
 }
 
@@ -165,7 +165,8 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 				}
 			}
 		}
-		patternVariableBinding := NewBinding()
+		// TODO: we probably need to pass the scope all the way down
+		patternVariableBinding := newBinding(syntax)
 		return patternPatternVariable{patternVariableBinding}, []PatternVariableInfo{{syntax, patternVariableBinding, 0}}, nil
 	}
 	if syntax, ok := syntax.Pair(); ok {
@@ -179,7 +180,7 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 							if err != nil {
 								return nil, nil, err
 							}
-							subPatternVariables := []Binding{}
+							subPatternVariables := []*Binding{}
 							for _, subPatternVariableInfo := range subPatternVariableInfos {
 								subPatternVariableInfo.Nesting++
 								subPatternVariables = append(subPatternVariables, subPatternVariableInfo.Binding)

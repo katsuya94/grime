@@ -23,36 +23,38 @@ func newCoreIdentifier(name common.Symbol) common.Identifier {
 }
 
 var coreDefinitions = []struct {
-	id          common.Identifier
+	name        common.Symbol
 	transformer common.Procedure
 }{
 	{
-		LiteralId,
+		common.Symbol("#%literal"),
 		NewCoreTransformer(transformLiteral),
 	},
 	{
-		ReferenceId,
+		common.Symbol("#%reference"),
 		NewCoreTransformer(transformReference),
 	},
 	{
-		LambdaId,
+		common.Symbol("#%lambda"),
 		NewCoreTransformer(transformLambda),
 	},
 	{
-		ApplicationId,
+		common.Symbol("#%application"),
 		NewCoreTransformer(transformApplication),
 	},
 	{
-		TopId,
+		common.Symbol("#%top"),
 		NewCoreTransformer(transformTop),
 	},
 }
 
 func init() {
 	for _, definition := range coreDefinitions {
-		binding := common.NewBinding()
-		CoreScope.Add(definition.id, binding)
+		_, binding := common.Bind(common.NewIdentifier(definition.name), CoreScope, 0)
 		(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(definition.transformer))
+	}
+	if LiteralId.Binding() == nil {
+		panic("HI")
 	}
 }
 
@@ -82,7 +84,16 @@ func transformReference(ctx ExpansionContext, syntax common.Syntax) (CoreForm, e
 	if !ok {
 		return nil, fmt.Errorf("#%%reference: bad syntax")
 	}
-	return ReferenceForm{id}, nil
+	binding := id.Binding()
+	if binding == nil {
+		return nil, fmt.Errorf("unbound identifier: %v at %v", id.Name(), id.SourceLocation())
+	}
+	if role := id.Role(ctx.Env); role == nil {
+		return nil, fmt.Errorf("out of context: %v at %v", id.Name(), id.SourceLocation())
+	} else if _, ok := role.(common.Variable); !ok {
+		return nil, fmt.Errorf("not a variable: %v at %v", id.Name(), id.SourceLocation())
+	}
+	return ReferenceForm{binding.Identifier()}, nil
 }
 
 var patternLambda = common.MustCompileSimplePattern(read.MustReadDatum("(#%lambda (formals ...) inner)"))
@@ -92,18 +103,24 @@ func transformLambda(ctx ExpansionContext, syntax common.Syntax) (CoreForm, erro
 	if !ok {
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
 	}
+	phase := result[common.Symbol("#%lambda")].(common.Syntax).IdentifierOrDie().Phase()
+	scope := common.NewScope()
 	var formals []common.Identifier
 	for _, formal := range result[common.Symbol("formals")].([]interface{}) {
 		id, ok := formal.(common.Syntax).Identifier()
 		if !ok {
 			return nil, fmt.Errorf("#%%lambda: bad syntax")
 		}
+		id, binding := common.Bind(id, scope, phase)
+		(&ctx.Env).Extend(binding, common.NewVariable())
 		formals = append(formals, id)
 	}
 	if common.DuplicateIdentifiers(formals...) {
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
 	}
-	inner, err := ctx.Expand(result[common.Symbol("inner")].(common.Syntax))
+	innerSyntax := result[common.Symbol("inner")].(common.Syntax)
+	innerSyntax = innerSyntax.Push(scope, phase)
+	inner, err := ctx.Expand(innerSyntax)
 	if err != nil {
 		return nil, err
 	}

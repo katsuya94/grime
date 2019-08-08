@@ -4,16 +4,25 @@ import (
 	"fmt"
 )
 
-type Binding int
-
-var nextBinding = Binding(0)
-
-func NewBinding() Binding {
-	binding := nextBinding
-	nextBinding++
-	return binding
+type Binding struct {
+	id Identifier
 }
 
-func (b Binding) String() string {
-	return fmt.Sprintf("%#08x", int(b))
+func newBinding(id Identifier) *Binding {
+	return &Binding{id}
+}
+
+func Bind(id Identifier, scope *Scope, phase int) (Identifier, *Binding) {
+	id = id.Push(scope, phase).IdentifierOrDie()
+	binding := newBinding(id)
+	scope.add(id, binding)
+	return id, binding
+}
+
+func (b *Binding) Identifier() Identifier {
+	return b.id
+}
+
+func (b *Binding) String() string {
+	return fmt.Sprintf("%p", b)
 }

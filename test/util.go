@@ -28,14 +28,6 @@ func Identifier(s string) common.Identifier {
 	return Syntax(s).IdentifierOrDie()
 }
 
-func IdentifierWithBinding(s string) (common.Identifier, common.Binding) {
-	scope := common.NewScope()
-	id := Syntax(s).Push(scope, 0).IdentifierOrDie()
-	binding := common.NewBinding()
-	scope.Add(id, binding)
-	return id, binding
-}
-
 func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
 	equal := actual.Equal(expected)
 	if equal {

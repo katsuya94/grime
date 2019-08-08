@@ -19,13 +19,13 @@ func (id Identifier) Name() Symbol {
 	return id.datum.(Symbol)
 }
 
-func (id Identifier) Binding() (Binding, bool) {
+func (id Identifier) Binding() *Binding {
 	return id.scopeList.lookup(id, id.phase)
 }
 
 func (id Identifier) Role(env Environment) Role {
-	binding, ok := id.Binding()
-	if !ok {
+	binding := id.Binding()
+	if binding == nil {
 		return nil
 	}
 	return env.Lookup(binding)
@@ -41,12 +41,12 @@ func (id Identifier) BoundEqual(other Identifier) bool {
 
 func (id Identifier) FreeEqual(other Identifier) bool {
 	// TODO: what's the phase for free-equal?
-	idBinding, idOk := id.Binding()
-	otherBinding, otherOk := other.Binding()
-	if !idOk && !otherOk {
+	binding := id.Binding()
+	otherBinding := other.Binding()
+	if binding == nil && otherBinding == nil {
 		return id.Name() == other.Name()
-	} else if idOk && otherOk {
-		return idBinding == otherBinding
+	} else if binding != nil && otherBinding != nil {
+		return binding == otherBinding
 	} else {
 		return false
 	}
@@ -106,10 +106,6 @@ func (s Syntax) Equal(other Syntax) bool {
 	}
 	if id, ok := s.Identifier(); ok {
 		if otherId, otherOk := other.Identifier(); ok && otherOk {
-			b, _ := id.Binding()
-			otherB, _ := otherId.Binding()
-			fmt.Printf("comparison id:\n%#v\n%v\n", id.WrappedSyntax, b)
-			fmt.Printf("comparison otherId:\n%#v\n%v\n", otherId.WrappedSyntax, otherB)
 			return id.FreeEqual(otherId)
 		} else if ok != otherOk {
 			return false
@@ -251,7 +247,7 @@ func (s Syntax) PrettyPrint(indent int) string {
 		return fmt.Sprintf("(%v%v", Syntax{pair.First}.PrettyPrint(indent), Syntax{pair.Rest}.prettyPrintRest(indent+1))
 	}
 	if id, ok := s.Identifier(); ok {
-		if binding, ok := id.Binding(); ok {
+		if binding := id.Binding(); binding != nil {
 			return fmt.Sprintf("%v #;%v", PrettyPrint(id.Datum(), indent), binding)
 		}
 

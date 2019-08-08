@@ -5,15 +5,15 @@ import (
 )
 
 type Environment struct {
-	roles map[Binding]Role
+	roles map[*Binding]Role
 }
 
 func NewEnvironment() Environment {
-	return Environment{map[Binding]Role{}}
+	return Environment{map[*Binding]Role{}}
 }
 
-func (env *Environment) Extend(binding Binding, role Role) {
-	extended := make(map[Binding]Role, len(env.roles))
+func (env *Environment) Extend(binding *Binding, role Role) {
+	extended := make(map[*Binding]Role, len(env.roles))
 	for b, r := range env.roles {
 		extended[b] = r
 	}
@@ -21,7 +21,7 @@ func (env *Environment) Extend(binding Binding, role Role) {
 	env.roles = extended
 }
 
-func (env Environment) Lookup(binding Binding) Role {
+func (env Environment) Lookup(binding *Binding) Role {
 	role, _ := env.roles[binding]
 	return role
 }
