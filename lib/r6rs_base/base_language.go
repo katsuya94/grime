@@ -61,6 +61,10 @@ func transformLambda(c common.Continuation, args ...common.Datum) (common.Evalua
 			return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
 		}
 		formals = append(formals, id)
+		// If identifiers were to be bound here, they would be added along with a mark which would ultimately be cancelled. We can either:
+		// 1. Add bindings in the core expander, which operates on unmarked forms
+		// 2. Figure out a way to remove the mark from the scopes after transformation.
+		// A naive approach would cause all previously bound identifiers, not to be referenceable
 	}
 	if common.DuplicateIdentifiers(formals...) {
 		return common.ErrorC(fmt.Errorf("lambda: bad syntax"))
