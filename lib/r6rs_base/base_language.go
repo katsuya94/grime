@@ -41,6 +41,7 @@ func transformApplication(syntax common.Syntax, mark *common.M) (common.Syntax, 
 	for i, syntax := range result[common.Symbol("args")].([]interface{}) {
 		arguments[i] = syntax.(common.Syntax)
 	}
+	// TODO: mark inserted identifier
 	output := common.Pair{r6rs.ApplicationId.WrappedSyntax, common.Pair{procedure.Datum(), syntaxDatumSlice(arguments)}}
 	return common.NewSyntax(output), nil
 }
@@ -52,8 +53,10 @@ func transformId(syntax common.Syntax, mark *common.M) (common.Syntax, error) {
 	}
 	var output common.Datum
 	if binding := id.Binding(); binding != nil {
+		// TODO: replace with binding identifier, mark inserted identifier
 		output = list(r6rs.LoadId.WrappedSyntax, syntax.Datum())
 	} else {
+		// TODO: check environment, mark inserted identifier
 		output = list(r6rs.TopId.WrappedSyntax, syntax.Datum())
 	}
 	return common.NewSyntax(output), nil
@@ -66,6 +69,7 @@ func transformLiteral(syntax common.Syntax, mark *common.M) (common.Syntax, erro
 	}
 	switch wrappedSyntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
+		// TODO: mark inserted identifier
 		output := list(r6rs.LiteralId.WrappedSyntax, syntax.Datum())
 		return common.NewSyntax(output), nil
 	}
@@ -75,6 +79,7 @@ func transformLiteral(syntax common.Syntax, mark *common.M) (common.Syntax, erro
 var patternSet = common.MustCompileSimplePattern(read.MustReadDatum("(set! id value)"))
 
 func transformSet(syntax common.Syntax, mark *common.M) (common.Syntax, error) {
+	// TODO: implement
 	panic("not implemented")
 }
 
@@ -91,6 +96,7 @@ func transformLambda(syntax common.Syntax, mark *common.M) (common.Syntax, error
 		if !ok {
 			return common.Syntax{}, fmt.Errorf("lambda: bad syntax")
 		}
+		// TODO: bind identifier, push scopes
 		formals[i] = id
 	}
 	if common.DuplicateIdentifiers(formals...) {
@@ -100,6 +106,7 @@ func transformLambda(syntax common.Syntax, mark *common.M) (common.Syntax, error
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
 		forms[i] = syntax.(common.Syntax)
 	}
+	// TODO: mark inserted identifiers
 	output := common.Pair{r6rs.LambdaId.WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
 	return common.NewSyntax(output), nil
 }
@@ -115,6 +122,7 @@ func transformBegin(syntax common.Syntax, mark *common.M) (common.Syntax, error)
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
 		forms[i] = syntax.(common.Syntax)
 	}
+	// TODO: mark inserted identifier
 	output := common.Pair{r6rs.SequenceId.WrappedSyntax, list(syntaxDatumSlice(forms)...)}
 	return common.NewSyntax(output), nil
 }
