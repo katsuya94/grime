@@ -7,6 +7,7 @@ import (
 type LambdaForm struct {
 	Formals []common.Identifier
 	Inner   CoreForm
+	Mark    *common.M
 }
 
 func (f LambdaForm) Unexpand() common.Syntax {

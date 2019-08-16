@@ -8,11 +8,7 @@ import (
 )
 
 type CoreTransformer struct {
-	coreForm func(ExpansionContext, common.Syntax) (CoreForm, error)
-}
-
-func NewCoreTransformer(coreForm func(ExpansionContext, common.Syntax) (CoreForm, error)) CoreTransformer {
-	return CoreTransformer{coreForm}
+	transform func(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)
 }
 
 func (CoreTransformer) Call(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
@@ -22,39 +18,48 @@ func (CoreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 var patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 
 type CoreExpander struct {
-	inner Expander
+	newMark func() *common.M
 }
 
-func NewSelfReferentialCoreExpander() *CoreExpander {
-	expander := &CoreExpander{}
-	expander.inner = expander
-	return expander
+func NewCoreExpander() CoreExpander {
+	return CoreExpander{func() *common.M {
+		return common.NewMark()
+	}}
 }
 
-func NewCoreExpander(inner Expander) *CoreExpander {
-	return &CoreExpander{inner}
+func NewCoreExpanderWithMarks(marks []common.M) CoreExpander {
+	i := 0
+	return CoreExpander{func() *common.M {
+		m := &marks[i]
+		i++
+		return m
+	}}
 }
 
 func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
-	var err error
-	for {
-		transformer := e.MatchTransformer(syntax, env, patternMacroUseList)
+	transformer := MatchTransformer(syntax, env, patternMacroUseList)
+	if transformer == nil {
+		return nil, fmt.Errorf("unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+	}
+	switch transformer := MatchTransformer(syntax, env, patternMacroUseList).(type) {
+	case CoreTransformer:
+		ctx := ExpansionContext{Expander: e, Env: env}
+		// TODO: marks should record information about their introducing macro
+		mark := e.newMark()
+		return ExpandCoreTransformer(ctx, transformer, syntax, mark)
+	default:
 		if transformer == nil {
-			return nil, fmt.Errorf("unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+			return nil, fmt.Errorf("expand: unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 		}
-		if coreForm, ok, err := e.HandleCoreTransformer(transformer, syntax, env); err != nil {
-			return nil, err
-		} else if ok {
-			return coreForm, nil
-		}
-		syntax, err = e.ApplyTransformer(transformer, syntax)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("expand: encountered non-core transformer %v", common.Write(transformer))
 	}
 }
 
-func (e CoreExpander) MatchTransformer(syntax common.Syntax, env common.Environment, pattern common.SimplePattern) common.Procedure {
+func ExpandCoreTransformer(ctx ExpansionContext, transformer CoreTransformer, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+	return transformer.transform(ctx, syntax, mark)
+}
+
+func MatchTransformer(syntax common.Syntax, env common.Environment, pattern common.SimplePattern) common.Procedure {
 	result, ok := pattern.Match(syntax)
 	if !ok {
 		return nil
@@ -76,25 +81,4 @@ func (e CoreExpander) MatchTransformer(syntax common.Syntax, env common.Environm
 		return nil
 	}
 	return syntacticAbstraction.Transformer
-}
-
-func (e CoreExpander) HandleCoreTransformer(transformer common.Procedure, syntax common.Syntax, env common.Environment) (CoreForm, bool, error) {
-	if transformer, ok := transformer.(CoreTransformer); ok {
-		ctx := ExpansionContext{Expander: e.inner, Env: env}
-		coreForm, err := transformer.coreForm(ctx, syntax)
-		return coreForm, true, err
-	}
-	return nil, false, nil
-}
-
-func (e CoreExpander) ApplyTransformer(transformer common.Procedure, syntax common.Syntax) (common.Syntax, error) {
-	mark := common.NewMark()
-	input := syntax.Mark(mark)
-	output, err := common.WithEscape(func(escape common.Continuation) (common.Evaluation, error) {
-		return transformer.Call(escape, input.Datum())
-	})
-	if err != nil {
-		return common.Syntax{}, err
-	}
-	return common.NewSyntax(output).Mark(mark), nil
 }

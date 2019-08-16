@@ -9,7 +9,7 @@ import (
 )
 
 func TestLiteralForm_Unexpand(t *testing.T) {
-	coreForm := LiteralForm{Datum: common.Boolean(true)}
+	coreForm := LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%literal #t)"))
 	test.AssertSyntaxEqual(t, expected, actual)
@@ -17,7 +17,7 @@ func TestLiteralForm_Unexpand(t *testing.T) {
 
 func TestLiteralForm_CpsTransform(t *testing.T) {
 	ctx := NewCpsTransformContext([]Global{})
-	coreForm := LiteralForm{Datum: common.Boolean(true)}
+	coreForm := LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}
 	expected := NewLiteral(common.Boolean(true))
 	testCpsTransform(t, ctx, coreForm, expected)
 }

@@ -19,17 +19,17 @@ func (e Literal) Evaluate(ctx common.EvaluationContext, c common.Continuation) (
 	return common.CallC(c, e.datum)
 }
 
-// Reference evaluates to the value of a Location in the local context.
-type Reference struct {
+// Load evaluates to the value of a Location in the local context.
+type Load struct {
 	index int
 	id    common.Identifier
 }
 
-func NewReference(index int, id common.Identifier) Reference {
-	return Reference{index, id}
+func NewLoad(index int, id common.Identifier) Load {
+	return Load{index, id}
 }
 
-func (e Reference) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
+func (e Load) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
 	value := ctx.Get(e.index).Get()
 	if value == nil {
 		return common.ErrorC(fmt.Errorf("evaluate: %v at %v: cannot reference identifier before its definition", e.id.Name(), e.id.SourceLocation()))
@@ -129,4 +129,38 @@ func (e Top) Evaluate(ctx common.EvaluationContext, c common.Continuation) (comm
 		panic(fmt.Sprintf("undefined %v", e.location))
 	}
 	return common.CallC(c, value)
+}
+
+// Sequence evaluates all of its subexpressions, returning the last.
+type Sequence struct {
+	expressions []common.Expression
+}
+
+func NewSequence(expressions []common.Expression) Sequence {
+	return Sequence{expressions}
+}
+
+func (e Sequence) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
+	return common.EvalC(
+		ctx,
+		sequenceFirstEvaluated{ctx, c, e.expressions[1:]},
+		e.expressions[0],
+	)
+}
+
+type sequenceFirstEvaluated struct {
+	ctx          common.EvaluationContext
+	continuation common.Continuation
+	expressions  []common.Expression
+}
+
+func (c sequenceFirstEvaluated) Call(d common.Datum) (common.Evaluation, error) {
+	if len(c.expressions) == 0 {
+		return common.CallC(c.continuation, d)
+	}
+	return common.EvalC(
+		c.ctx,
+		sequenceFirstEvaluated{c.ctx, c.continuation, c.expressions[1:]},
+		c.expressions[0],
+	)
 }

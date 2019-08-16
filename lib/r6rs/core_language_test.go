@@ -10,50 +10,70 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testCoreLanguage(t *testing.T, src string, expected CoreForm) {
+func testCoreLanguage(t *testing.T, marks []common.M, src string, expected CoreForm) {
 	syntax := Introduce(test.Syntax(src))
-	expander := NewSelfReferentialCoreExpander()
+	expander := NewCoreExpanderWithMarks(marks)
 	actual, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 }
 
 func TestCoreLanguageLiteral(t *testing.T) {
+	marks := make([]common.M, 1)
 	src := "(#%literal #t)"
-	expected := LiteralForm{Datum: common.Boolean(true)}
-	testCoreLanguage(t, src, expected)
+	expected := LiteralForm{Datum: common.Boolean(true), Mark: &marks[0]}
+	testCoreLanguage(t, marks, src, expected)
 }
 
-func TestCoreLanguageReference(t *testing.T) {
-	src := "(#%reference id)"
+func TestCoreLanguageLoad(t *testing.T) {
+	marks := make([]common.M, 1)
+	src := "(#%load id)"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
-	expected := ReferenceForm{Id: id}
-	testCoreLanguage(t, src, expected)
+	expected := LoadForm{Id: id, Mark: &marks[0]}
+	testCoreLanguage(t, marks, src, expected)
 }
 
 func TestCoreLanguageLambda(t *testing.T) {
+	marks := make([]common.M, 2)
 	src := "(#%lambda (id) (#%literal #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner:   LiteralForm{common.Boolean(true)},
+		Inner:   LiteralForm{Datum: common.Boolean(true), Mark: &marks[1]},
+		Mark:    &marks[0],
 	}
-	testCoreLanguage(t, src, expected)
+	testCoreLanguage(t, marks, src, expected)
 }
 
 func TestCoreLanguageApplication(t *testing.T) {
-	src := "(#%application (#%reference id) (#%literal #t))"
+	marks := make([]common.M, 3)
+	src := "(#%application (#%load id) (#%literal #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := ApplicationForm{
-		Procedure: ReferenceForm{Id: id},
-		Arguments: []CoreForm{LiteralForm{common.Boolean(true)}},
+		Procedure: LoadForm{Id: id, Mark: &marks[1]},
+		Arguments: []CoreForm{LiteralForm{Datum: common.Boolean(true), Mark: &marks[2]}},
+		Mark:      &marks[0],
 	}
-	testCoreLanguage(t, src, expected)
+	testCoreLanguage(t, marks, src, expected)
 }
 
 func TestCoreLanguageTop(t *testing.T) {
+	marks := make([]common.M, 1)
 	src := "(#%top id)"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
-	expected := TopForm{Id: id}
-	testCoreLanguage(t, src, expected)
+	expected := TopForm{Id: id, Mark: &marks[0]}
+	testCoreLanguage(t, marks, src, expected)
+}
+
+func TestCoreLanguageSequence(t *testing.T) {
+	marks := make([]common.M, 3)
+	src := "(#%sequence (#%literal #t) (#%literal #f))"
+	expected := SequenceForm{
+		Forms: []CoreForm{
+			LiteralForm{Datum: common.Boolean(true), Mark: &marks[1]},
+			LiteralForm{Datum: common.Boolean(false), Mark: &marks[2]},
+		},
+		Mark: &marks[0],
+	}
+	testCoreLanguage(t, marks, src, expected)
 }

@@ -10,7 +10,7 @@ import (
 
 func TestTopForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
-	coreForm := TopForm{Id: id}
+	coreForm := TopForm{Id: id, Mark: common.NewMark()}
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%top id)"))
 	test.AssertSyntaxEqual(t, expected, actual)
@@ -21,7 +21,7 @@ func TestTopForm_CpsTransform(t *testing.T) {
 	location := common.NewLocation()
 	ctx := NewCpsTransformContext([]Global{{id, location}})
 	ctx.Add(id)
-	coreForm := TopForm{Id: id}
+	coreForm := TopForm{Id: id, Mark: common.NewMark()}
 	expected := NewTop(location)
 	testCpsTransform(t, ctx, coreForm, expected)
 }
@@ -29,6 +29,6 @@ func TestTopForm_CpsTransform(t *testing.T) {
 func TestTopForm_CpsTransformOutOfContext(t *testing.T) {
 	ctx := NewCpsTransformContext([]Global{})
 	id := test.Identifier("id")
-	coreForm := ReferenceForm{Id: id}
+	coreForm := TopForm{Id: id, Mark: common.NewMark()}
 	testCpsTransformError(t, ctx, coreForm, "cps transform: id not in context")
 }

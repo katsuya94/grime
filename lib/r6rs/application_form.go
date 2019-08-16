@@ -7,6 +7,7 @@ import (
 type ApplicationForm struct {
 	Procedure CoreForm
 	Arguments []CoreForm
+	Mark      *common.M
 }
 
 func (f ApplicationForm) Unexpand() common.Syntax {

@@ -5,7 +5,8 @@ import (
 )
 
 type TopForm struct {
-	Id common.Identifier
+	Id   common.Identifier
+	Mark *common.M
 }
 
 func (f TopForm) Unexpand() common.Syntax {

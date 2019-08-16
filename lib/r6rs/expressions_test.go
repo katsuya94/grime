@@ -13,7 +13,7 @@ import (
 func testEvaluate(t *testing.T, src string, globals []Global, expected common.Datum) {
 	scope := common.NewScope()
 	syntax := Introduce(test.Syntax(src)).Push(scope, 0)
-	expander := NewSelfReferentialCoreExpander()
+	expander := NewCoreExpander()
 	coreForm, err := expander.Expand(syntax, CoreEnvironment)
 	require.NoError(t, err)
 	ctx := NewCpsTransformContext(globals)
@@ -31,8 +31,8 @@ func TestLiteral_Evaluate(t *testing.T) {
 	testEvaluate(t, src, globals, expected)
 }
 
-func TestLambdaReference_Evaluate(t *testing.T) {
-	src := "(#%application (#%lambda (id) (#%reference id)) (#%literal #t))"
+func TestLambdaLoad_Evaluate(t *testing.T) {
+	src := "(#%application (#%lambda (id) (#%load id)) (#%literal #t))"
 	globals := []Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
@@ -57,5 +57,12 @@ func TestTop_Evaluate(t *testing.T) {
 		},
 	}
 	expected := common.Boolean(true)
+	testEvaluate(t, src, globals, expected)
+}
+
+func TestSequence_Evaluate(t *testing.T) {
+	src := "(#%sequence (#%literal #t) (#%literal #f))"
+	globals := []Global{}
+	expected := common.Boolean(false)
 	testEvaluate(t, src, globals, expected)
 }

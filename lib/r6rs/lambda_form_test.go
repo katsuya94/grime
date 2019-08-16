@@ -13,7 +13,8 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner:   LiteralForm{Datum: common.Boolean(true)},
+		Inner:   LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()},
+		Mark:    common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
 	expected := Introduce(test.Syntax("(#%lambda (id) (#%literal #t))"))
@@ -30,6 +31,7 @@ func TestLambdaForm_CpsTransform(t *testing.T) {
 			assert.Equal(t, ctx.IndexOrDie(id), 0)
 			return expression, nil
 		}},
+		Mark: common.NewMark(),
 	}
 	expected := NewLambda(expression, 1)
 	testCpsTransform(t, ctx, coreForm, expected)

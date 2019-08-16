@@ -11,11 +11,12 @@ import (
 func TestApplicationForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := ApplicationForm{
-		Procedure: ReferenceForm{Id: id},
-		Arguments: []CoreForm{LiteralForm{common.Boolean(true)}},
+		Procedure: LoadForm{Id: id},
+		Arguments: []CoreForm{LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}},
+		Mark:      common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
-	expected := Introduce(test.Syntax("(#%application (#%reference id) (#%literal #t))"))
+	expected := Introduce(test.Syntax("(#%application (#%load id) (#%literal #t))"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 
@@ -32,6 +33,7 @@ func TestApplicationForm_CpsTransform(t *testing.T) {
 				return argExpression, nil
 			}},
 		},
+		Mark: common.NewMark(),
 	}
 	expected := NewApplication(procExpression, argExpression)
 	testCpsTransform(t, ctx, coreForm, expected)

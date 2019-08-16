@@ -6,6 +6,7 @@ import (
 
 type LiteralForm struct {
 	Datum common.Datum
+	Mark  *common.M
 }
 
 func (f LiteralForm) Unexpand() common.Syntax {
