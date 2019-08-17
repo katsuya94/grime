@@ -37,10 +37,6 @@ func NewCoreExpanderWithMarks(marks []common.M) CoreExpander {
 }
 
 func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
-	transformer := MatchTransformer(syntax, env, patternMacroUseList)
-	if transformer == nil {
-		return nil, fmt.Errorf("unhandled syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
-	}
 	switch transformer := MatchTransformer(syntax, env, patternMacroUseList).(type) {
 	case CoreTransformer:
 		ctx := ExpansionContext{Expander: e, Env: env}
