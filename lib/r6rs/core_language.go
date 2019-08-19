@@ -19,9 +19,12 @@ var (
 	SequenceId    = coreDefinition(common.Symbol("#%sequence"), CoreTransformer{transformSequence})
 )
 
+var coreBindings []*common.Binding
+
 func coreDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
 	id, binding := common.Bind(common.NewIdentifier(name), CoreScope, 0)
 	(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+	coreBindings = append(coreBindings, binding)
 	return id
 }
 
