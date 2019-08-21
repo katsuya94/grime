@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/katsuya94/grime/common"
+	"github.com/katsuya94/grime/lib/r6rs"
 	"github.com/katsuya94/grime/read"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +29,8 @@ func Identifier(s string) common.Identifier {
 	return Syntax(s).IdentifierOrDie()
 }
 
-func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
-	equal := actual.Equal(expected)
+func AssertCoreSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
+	equal := r6rs.Equal(actual, expected)
 	if equal {
 		return
 	}
