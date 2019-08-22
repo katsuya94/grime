@@ -74,7 +74,7 @@ func TestBaseLanguageLambda(t *testing.T) {
 	test.AssertCoreSyntaxEqual(t, expected, actual.Unexpand())
 }
 
-func TestBaseLanguageBegin(t *testing.T) {
+func TestBaseLanguageBeginSimple(t *testing.T) {
 	syntax := Introduce(test.Syntax("(begin #t #f)"))
 	expander := BaseExpander{}
 	actual, err := expander.Expand(syntax, BaseEnvironment)

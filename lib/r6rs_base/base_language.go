@@ -28,6 +28,7 @@ func Introduce(syntax common.Syntax) common.Syntax {
 }
 
 // TODO: create a SimpleTemplate construct to easily build syntax from simple match results
+// it should also support easy marking of transformer introduced syntax, since its hard to enforce otherwise
 
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(proc args ...)"))
 
@@ -125,6 +126,5 @@ func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *commo
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
 		forms[i] = syntax.(common.Syntax)
 	}
-	output := common.Pair{r6rs.SequenceId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)}
-	return ctx.Expand(common.NewSyntax(output))
+	return expandBody(ctx, forms, mark)
 }
