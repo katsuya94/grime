@@ -49,7 +49,7 @@ func TestBaseLanguageIdBoundNonVariable(t *testing.T) {
 	env := BaseEnvironment
 	(&env).Extend(binding, common.NewSyntacticAbstraction(nil))
 	syntax := common.NewSyntax(id.WrappedSyntax)
-	errMsg := "non-variable identifier in value context: id is SyntacticAbstraction{<nil>} at (unknown)"
+	errMsg := "non-variable identifier in expression context: id is SyntacticAbstraction{<nil>} at (unknown)"
 	testBaseLanguageError(t, syntax, env, errMsg)
 }
 

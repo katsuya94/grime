@@ -12,9 +12,10 @@ var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
 var (
-	setId    = baseDefinition(common.Symbol("set!"), BaseTransformer{transformSet})
-	lambdaId = baseDefinition(common.Symbol("lambda"), BaseTransformer{transformLambda})
-	beginId  = baseDefinition(common.Symbol("begin"), BaseTransformer{transformBegin})
+	setId          = baseDefinition(common.Symbol("set!"), BaseTransformer{transformSet})
+	lambdaId       = baseDefinition(common.Symbol("lambda"), BaseTransformer{transformLambda})
+	beginId        = baseDefinition(common.Symbol("begin"), BaseTransformer{transformBegin})
+	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), transformDefineSyntax)
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
@@ -56,7 +57,7 @@ func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M
 		if role := ctx.Env.Lookup(binding); role == nil {
 			return nil, fmt.Errorf("out of context: %v at %v", id.Name(), id.SourceLocation())
 		} else if _, ok := role.(common.Variable); !ok {
-			return nil, fmt.Errorf("non-variable identifier in value context: %v is %v at %v", id.Name(), role.Description(), id.SourceLocation())
+			return nil, fmt.Errorf("non-variable identifier in expression context: %v is %v at %v", id.Name(), role.Description(), id.SourceLocation())
 		}
 		output = list(r6rs.LoadId.Mark(mark).WrappedSyntax, binding.Identifier().WrappedSyntax)
 	} else {
