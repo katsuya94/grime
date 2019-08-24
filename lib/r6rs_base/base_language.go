@@ -12,10 +12,10 @@ var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
 var (
-	setId          = baseDefinition(common.Symbol("set!"), BaseTransformer{transformSet})
-	lambdaId       = baseDefinition(common.Symbol("lambda"), BaseTransformer{transformLambda})
-	beginId        = baseDefinition(common.Symbol("begin"), BaseTransformer{transformBegin})
-	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), transformDefineSyntax)
+	setId          = baseDefinition(common.Symbol("set!"), &BaseTransformer{transformSet})
+	lambdaId       = baseDefinition(common.Symbol("lambda"), &BaseTransformer{transformLambda})
+	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
+	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {

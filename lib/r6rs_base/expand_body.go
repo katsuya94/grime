@@ -7,16 +7,15 @@ import (
 	"github.com/katsuya94/grime/lib/r6rs"
 )
 
-type bodyTransformer struct {
-	name string
-}
-
-func (t bodyTransformer) Call(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
-	return common.ErrorC(fmt.Errorf("%v in expression context", t.name))
+func bodyTransformer(name string) *BaseTransformer {
+	return &BaseTransformer{func(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+		return nil, fmt.Errorf("%v in expression context", name)
+	}}
 }
 
 var (
-	transformDefineSyntax = &bodyTransformer{"define-syntax"}
+	beginTransformer        = &BaseTransformer{transformBegin}
+	defineSyntaxTransformer = bodyTransformer("define-syntax")
 )
 
 func expandBody(ctx r6rs.ExpansionContext, forms []common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
