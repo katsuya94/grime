@@ -13,11 +13,11 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner:   LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()},
+		Inner:   QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()},
 		Mark:    common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
-	expected := Introduce(test.Syntax("(#%lambda (id) (#%literal #t))"))
+	expected := Introduce(test.Syntax("(#%lambda (id) (quote #t))"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 

@@ -8,16 +8,16 @@ import (
 	"github.com/katsuya94/grime/test"
 )
 
-func TestLiteralForm_Unexpand(t *testing.T) {
-	coreForm := LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}
+func TestQuoteForm_Unexpand(t *testing.T) {
+	coreForm := QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}
 	actual := coreForm.Unexpand()
-	expected := Introduce(test.Syntax("(#%literal #t)"))
+	expected := Introduce(test.Syntax("(quote #t)"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 
-func TestLiteralForm_CpsTransform(t *testing.T) {
+func TestQuoteForm_CpsTransform(t *testing.T) {
 	ctx := NewCpsTransformContext([]Global{})
-	coreForm := LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}
+	coreForm := QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}
 	expected := NewLiteral(common.Boolean(true))
 	testCpsTransform(t, ctx, coreForm, expected)
 }

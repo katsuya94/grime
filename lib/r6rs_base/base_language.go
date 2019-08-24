@@ -17,6 +17,7 @@ var (
 	lambdaId       = baseDefinition(common.Symbol("lambda"), lambdaTransformer)
 	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
+	quoteId        = coreDefinition(common.Symbol("quote"))
 	syntaxId       = coreDefinition(common.Symbol("syntax"))
 )
 
@@ -89,7 +90,7 @@ func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *com
 	}
 	switch wrappedSyntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
-		output := list(r6rs.LiteralId.Mark(mark).WrappedSyntax, syntax.Datum())
+		output := list(quoteId.Mark(mark).WrappedSyntax, syntax.Datum())
 		return ctx.Expand(common.NewSyntax(output))
 	}
 	return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())

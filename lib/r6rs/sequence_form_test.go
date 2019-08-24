@@ -11,13 +11,13 @@ import (
 func TestSequenceForm_Unexpand(t *testing.T) {
 	coreForm := SequenceForm{
 		Forms: []CoreForm{
-			LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()},
-			LiteralForm{Datum: common.Boolean(false), Mark: common.NewMark()},
+			QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()},
+			QuoteForm{Datum: common.Boolean(false), Mark: common.NewMark()},
 		},
 		Mark: common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
-	expected := Introduce(test.Syntax("(#%sequence (#%literal #t) (#%literal #f))"))
+	expected := Introduce(test.Syntax("(#%sequence (quote #t) (quote #f))"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 
@@ -28,8 +28,8 @@ func TestSequenceForm_CpsTransform(t *testing.T) {
 	ctx.Add(id)
 	coreForm := SequenceForm{
 		Forms: []CoreForm{
-			LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()},
-			LiteralForm{Datum: common.Boolean(false), Mark: common.NewMark()},
+			QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()},
+			QuoteForm{Datum: common.Boolean(false), Mark: common.NewMark()},
 		},
 		Mark: common.NewMark(),
 	}

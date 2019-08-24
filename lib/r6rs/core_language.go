@@ -11,7 +11,7 @@ var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
 
 var (
-	LiteralId     = coreDefinition(common.Symbol("#%literal"), CoreTransformer{transformLiteral})
+	QuoteId       = coreDefinition(common.Symbol("quote"), CoreTransformer{transformQuote})
 	LoadId        = coreDefinition(common.Symbol("#%load"), CoreTransformer{transformLoad})
 	LambdaId      = coreDefinition(common.Symbol("#%lambda"), CoreTransformer{transformLambda})
 	ApplicationId = coreDefinition(common.Symbol("#%application"), CoreTransformer{transformApplication})
@@ -33,15 +33,15 @@ func Introduce(syntax common.Syntax) common.Syntax {
 	return syntax.Push(CoreScope, 0)
 }
 
-var patternLiteral = common.MustCompileSimplePattern(read.MustReadDatum("(#%literal datum)"))
+var patternQuote = common.MustCompileSimplePattern(read.MustReadDatum("(quote datum)"))
 
-func transformLiteral(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
-	result, ok := patternLiteral.Match(syntax)
+func transformQuote(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+	result, ok := patternQuote.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("#%%literal: bad syntax")
+		return nil, fmt.Errorf("quote: bad syntax")
 	}
 	datum := result[common.Symbol("datum")].(common.Syntax).Unwrap()
-	return LiteralForm{datum, mark}, nil
+	return QuoteForm{datum, mark}, nil
 }
 
 var patternLoad = common.MustCompileSimplePattern(read.MustReadDatum("(#%load id)"))

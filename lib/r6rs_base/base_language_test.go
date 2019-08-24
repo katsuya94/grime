@@ -26,7 +26,7 @@ func testBaseLanguageError(t *testing.T, syntax common.Syntax, env common.Enviro
 func TestBaseLanguageLiteral(t *testing.T) {
 	syntax := Introduce(test.Syntax("#t"))
 	env := BaseEnvironment
-	expectedSrc := "(#%literal #t)"
+	expectedSrc := "(quote #t)"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
 
@@ -72,14 +72,14 @@ func TestBaseLanguageIdUnbound(t *testing.T) {
 func TestBaseLanguageLambda(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(lambda (id) #t)"))
-	expectedSrc := "(#%lambda (id) (#%sequence (#%literal #t)))"
+	expectedSrc := "(#%lambda (id) (#%sequence (quote #t)))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
 
 func TestBaseLanguageBegin(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin #t #f)"))
-	expectedSrc := "(#%sequence (#%literal #t) (#%literal #f))"
+	expectedSrc := "(#%sequence (quote #t) (quote #f))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
 
@@ -93,7 +93,7 @@ func TestBaseLanguageBeginEmpty(t *testing.T) {
 func TestBaseLanguageBeginNested(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin (begin #t #f))"))
-	expectedSrc := "(#%sequence (#%literal #t) (#%literal #f))"
+	expectedSrc := "(#%sequence (quote #t) (quote #f))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
 
@@ -115,6 +115,6 @@ func TestBaseLanguageDefineSyntax(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin (define-syntax id (lambda (stx) (syntax #t))) (id))"))
 	syntax = syntax.Push(BaseScope, 1)
-	expectedSrc := "(#%sequence (#%literal #t))"
+	expectedSrc := "(#%sequence (quote #t))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }

@@ -23,22 +23,22 @@ func testEvaluate(t *testing.T, src string, globals []Global, expected common.Da
 	assert.Equal(t, expected, actual)
 }
 
-func TestLiteral_Evaluate(t *testing.T) {
-	src := "(#%literal #t)"
+func TestQuote_Evaluate(t *testing.T) {
+	src := "(quote #t)"
 	globals := []Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
 }
 
 func TestLambdaLoad_Evaluate(t *testing.T) {
-	src := "(#%application (#%lambda (id) (#%load id)) (#%literal #t))"
+	src := "(#%application (#%lambda (id) (#%load id)) (quote #t))"
 	globals := []Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
 }
 
 func TestApplication_Evaluate(t *testing.T) {
-	src := "(#%application (#%lambda () (#%literal #t)))"
+	src := "(#%application (#%lambda () (quote #t)))"
 	globals := []Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
@@ -60,7 +60,7 @@ func TestTop_Evaluate(t *testing.T) {
 }
 
 func TestSequence_Evaluate(t *testing.T) {
-	src := "(#%sequence (#%literal #t) (#%literal #f))"
+	src := "(#%sequence (quote #t) (quote #f))"
 	globals := []Global{}
 	expected := common.Boolean(false)
 	testEvaluate(t, src, globals, expected)

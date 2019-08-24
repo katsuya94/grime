@@ -12,11 +12,11 @@ func TestApplicationForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := ApplicationForm{
 		Procedure: LoadForm{Id: id},
-		Arguments: []CoreForm{LiteralForm{Datum: common.Boolean(true), Mark: common.NewMark()}},
+		Arguments: []CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}},
 		Mark:      common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
-	expected := Introduce(test.Syntax("(#%application (#%load id) (#%literal #t))"))
+	expected := Introduce(test.Syntax("(#%application (#%load id) (quote #t))"))
 	test.AssertSyntaxEqual(t, expected, actual)
 }
 

@@ -17,10 +17,10 @@ func testCoreLanguage(t *testing.T, marks []common.M, src string, expected CoreF
 	assert.Equal(t, expected, actual)
 }
 
-func TestCoreLanguageLiteral(t *testing.T) {
+func TestCoreLanguageQuote(t *testing.T) {
 	marks := make([]common.M, 1)
-	src := "(#%literal #t)"
-	expected := LiteralForm{Datum: common.Boolean(true), Mark: &marks[0]}
+	src := "(quote #t)"
+	expected := QuoteForm{Datum: common.Boolean(true), Mark: &marks[0]}
 	testCoreLanguage(t, marks, src, expected)
 }
 
@@ -34,11 +34,11 @@ func TestCoreLanguageLoad(t *testing.T) {
 
 func TestCoreLanguageLambda(t *testing.T) {
 	marks := make([]common.M, 2)
-	src := "(#%lambda (id) (#%literal #t))"
+	src := "(#%lambda (id) (quote #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner:   LiteralForm{Datum: common.Boolean(true), Mark: &marks[1]},
+		Inner:   QuoteForm{Datum: common.Boolean(true), Mark: &marks[1]},
 		Mark:    &marks[0],
 	}
 	testCoreLanguage(t, marks, src, expected)
@@ -46,11 +46,11 @@ func TestCoreLanguageLambda(t *testing.T) {
 
 func TestCoreLanguageApplication(t *testing.T) {
 	marks := make([]common.M, 3)
-	src := "(#%application (#%load id) (#%literal #t))"
+	src := "(#%application (#%load id) (quote #t))"
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := ApplicationForm{
 		Procedure: LoadForm{Id: id, Mark: &marks[1]},
-		Arguments: []CoreForm{LiteralForm{Datum: common.Boolean(true), Mark: &marks[2]}},
+		Arguments: []CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: &marks[2]}},
 		Mark:      &marks[0],
 	}
 	testCoreLanguage(t, marks, src, expected)
@@ -66,11 +66,11 @@ func TestCoreLanguageTop(t *testing.T) {
 
 func TestCoreLanguageSequence(t *testing.T) {
 	marks := make([]common.M, 3)
-	src := "(#%sequence (#%literal #t) (#%literal #f))"
+	src := "(#%sequence (quote #t) (quote #f))"
 	expected := SequenceForm{
 		Forms: []CoreForm{
-			LiteralForm{Datum: common.Boolean(true), Mark: &marks[1]},
-			LiteralForm{Datum: common.Boolean(false), Mark: &marks[2]},
+			QuoteForm{Datum: common.Boolean(true), Mark: &marks[1]},
+			QuoteForm{Datum: common.Boolean(false), Mark: &marks[2]},
 		},
 		Mark: &marks[0],
 	}
