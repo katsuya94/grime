@@ -11,16 +11,27 @@ import (
 var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
+// TODO: quote should be used directly from core
 var (
 	setId          = baseDefinition(common.Symbol("set!"), setTransformer)
 	lambdaId       = baseDefinition(common.Symbol("lambda"), lambdaTransformer)
 	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
+	syntaxId       = coreDefinition(common.Symbol("syntax"))
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
 	id, binding := common.Bind(common.NewIdentifier(name), BaseScope, 0)
 	(&BaseEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+	return id
+}
+
+func coreDefinition(name common.Symbol) common.Identifier {
+	coreId := r6rs.Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
+	binding := coreId.Binding()
+	role := r6rs.CoreEnvironment.Lookup(binding)
+	id := common.Rebind(common.NewIdentifier(name), binding, BaseScope, 0)
+	(&BaseEnvironment).Extend(binding, role)
 	return id
 }
 

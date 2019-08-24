@@ -12,16 +12,14 @@ import (
 )
 
 func testBaseLanguage(t *testing.T, syntax common.Syntax, env common.Environment, expectedSrc string) {
-	expander := BaseExpander{}
-	actual, err := expander.Expand(syntax, env)
+	actual, err := Expand(syntax, env)
 	require.NoError(t, err)
 	expected := r6rs.Introduce(test.Syntax(expectedSrc))
 	test.AssertCoreSyntaxEqual(t, expected, actual.Unexpand())
 }
 
 func testBaseLanguageError(t *testing.T, syntax common.Syntax, env common.Environment, errMsg string) {
-	expander := BaseExpander{}
-	_, err := expander.Expand(syntax, env)
+	_, err := Expand(syntax, env)
 	assert.EqualError(t, err, errMsg)
 }
 
@@ -116,6 +114,7 @@ func TestBaseLanguageDefineSyntaxExpressionContext(t *testing.T) {
 func TestBaseLanguageDefineSyntax(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin (define-syntax id (lambda (stx) (syntax #t))) (id))"))
+	syntax = syntax.Push(BaseScope, 1)
 	expectedSrc := "(#%sequence (#%literal #t))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }

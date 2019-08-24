@@ -17,26 +17,26 @@ func (CoreTransformer) Call(c common.Continuation, args ...common.Datum) (common
 
 var patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 
-type CoreExpander struct {
+type coreExpander struct {
 	newMark func() *common.M
 }
 
-func NewCoreExpander() CoreExpander {
-	return CoreExpander{func() *common.M {
+func Expand(syntax common.Syntax) (CoreForm, error) {
+	return coreExpander{func() *common.M {
 		return common.NewMark()
-	}}
+	}}.Expand(syntax, CoreEnvironment)
 }
 
-func NewCoreExpanderWithMarks(marks []common.M) CoreExpander {
+func ExpandWithMarks(syntax common.Syntax, marks []common.M) (CoreForm, error) {
 	i := 0
-	return CoreExpander{func() *common.M {
+	return coreExpander{func() *common.M {
 		m := &marks[i]
 		i++
 		return m
-	}}
+	}}.Expand(syntax, CoreEnvironment)
 }
 
-func (e CoreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
+func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
 	switch transformer := MatchTransformer(syntax, env, patternMacroUseList).(type) {
 	case CoreTransformer:
 		ctx := ExpansionContext{Expander: e, Env: env}

@@ -8,7 +8,7 @@ import (
 )
 
 var CoreScope = common.NewScope()
-var CoreEnvironment = common.NewEnvironment(nil)
+var CoreEnvironment = common.NewEnvironment()
 
 var (
 	LiteralId     = coreDefinition(common.Symbol("#%literal"), CoreTransformer{transformLiteral})
@@ -17,6 +17,7 @@ var (
 	ApplicationId = coreDefinition(common.Symbol("#%application"), CoreTransformer{transformApplication})
 	TopId         = coreDefinition(common.Symbol("#%top"), CoreTransformer{transformTop})
 	SequenceId    = coreDefinition(common.Symbol("#%sequence"), CoreTransformer{transformSequence})
+	SyntaxId      = coreDefinition(common.Symbol("syntax"), CoreTransformer{transformSyntax})
 )
 
 var coreBindings []*common.Binding
@@ -136,4 +137,15 @@ func transformSequence(ctx ExpansionContext, syntax common.Syntax, mark *common.
 		}
 	}
 	return SequenceForm{forms, mark}, nil
+}
+
+var patternSyntax = common.MustCompileSimplePattern(read.MustReadDatum("(syntax template)"))
+
+func transformSyntax(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+	result, ok := patternSyntax.Match(syntax)
+	if !ok {
+		return nil, fmt.Errorf("syntax: bad syntax")
+	}
+	template := result[common.Symbol("template")].(common.Syntax)
+	return SyntaxForm{template, mark}, nil
 }

@@ -36,9 +36,15 @@ func newBaseTransformer(transform func(r6rs.ExpansionContext, common.Syntax, *co
 	return baseTransformerImpl{transform}
 }
 
-type BaseExpander struct{}
+func Expand(syntax common.Syntax, env common.Environment) (r6rs.CoreForm, error) {
+	return baseExpander{env}.Expand(syntax, env)
+}
 
-func (e BaseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs.CoreForm, error) {
+type baseExpander struct {
+	globalEnv common.Environment
+}
+
+func (e baseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs.CoreForm, error) {
 	ctx := r6rs.ExpansionContext{Expander: e, Env: env}
 	mark := common.NewMark()
 	switch transformer := matchTransformer(syntax, env).(type) {

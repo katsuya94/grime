@@ -80,11 +80,12 @@ func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *commo
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
+	phase := result[common.Symbol("begin")].(common.Syntax).IdentifierOrDie().Phase()
+	scope := common.NewScope()
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms[i] = syntax.(common.Syntax)
+		forms[i] = syntax.(common.Syntax).Push(scope, phase)
 	}
-	scope := common.NewScope()
 	return expandBody(ctx, forms, mark, scope)
 }
 
@@ -115,7 +116,7 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	syntax = result[common.Symbol("transformer")].(common.Syntax).Next()
-	coreForm, err := ctx.Next().Expand(syntax)
+	coreForm, err := ctx.Expand(syntax)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +132,8 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 	if !ok {
 		return nil, fmt.Errorf("%v: transformer is not a procedure", syntaxKeywordForErrMsg(syntax))
 	}
-	phase := result[common.Symbol("lambda")].(common.Syntax).IdentifierOrDie().Phase()
-	id, binding := common.Bind(id, scope, phase)
+	phase := result[common.Symbol("define-syntax")].(common.Syntax).IdentifierOrDie().Phase()
+	_, binding := common.Bind(id, scope, phase)
 	(&ctx.Env).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	return expandBody(ctx.ExpansionContext, ctx.Rest, mark, scope)
 }
