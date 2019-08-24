@@ -15,12 +15,25 @@ var (
 	patternMacroUseSingletonIdentifier = common.MustCompileSimplePattern(read.MustReadDatum("keyword"))
 )
 
-type BaseTransformer struct {
+type BaseTransformer interface {
+	common.Procedure
+	Transform(r6rs.ExpansionContext, common.Syntax, *common.M) (r6rs.CoreForm, error)
+}
+
+type baseTransformerImpl struct {
 	transform func(r6rs.ExpansionContext, common.Syntax, *common.M) (r6rs.CoreForm, error)
 }
 
-func (BaseTransformer) Call(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
+func (baseTransformerImpl) Call(common.Continuation, ...common.Datum) (common.Evaluation, error) {
 	return common.ErrorC(fmt.Errorf("base transformer called"))
+}
+
+func (t baseTransformerImpl) Transform(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+	return t.transform(ctx, syntax, mark)
+}
+
+func newBaseTransformer(transform func(r6rs.ExpansionContext, common.Syntax, *common.M) (r6rs.CoreForm, error)) BaseTransformer {
+	return baseTransformerImpl{transform}
 }
 
 type BaseExpander struct{}
@@ -31,17 +44,17 @@ func (e BaseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs
 	switch transformer := matchTransformer(syntax, env).(type) {
 	case r6rs.CoreTransformer:
 		return r6rs.ExpandCoreTransformer(ctx, transformer, syntax, mark)
-	case *BaseTransformer:
+	case BaseTransformer:
 		return ExpandBaseTransformer(ctx, transformer, syntax, mark)
 	default:
 		if transformer == nil {
 			if _, ok := patternApplication.Match(syntax); ok {
-				return ExpandBaseTransformer(ctx, &BaseTransformer{transformApplication}, syntax, mark)
+				return ExpandBaseTransformer(ctx, applicationTransformer, syntax, mark)
 			}
 			if _, ok := syntax.Identifier(); ok {
-				return ExpandBaseTransformer(ctx, &BaseTransformer{transformId}, syntax, mark)
+				return ExpandBaseTransformer(ctx, idTransformer, syntax, mark)
 			}
-			return ExpandBaseTransformer(ctx, &BaseTransformer{transformLiteral}, syntax, mark)
+			return ExpandBaseTransformer(ctx, literalTransformer, syntax, mark)
 		}
 		syntax, err := applyTransformer(transformer, syntax, mark)
 		if err != nil {
@@ -51,8 +64,8 @@ func (e BaseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs
 	}
 }
 
-func ExpandBaseTransformer(ctx r6rs.ExpansionContext, transformer *BaseTransformer, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
-	return transformer.transform(ctx, syntax, mark)
+func ExpandBaseTransformer(ctx r6rs.ExpansionContext, transformer BaseTransformer, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+	return transformer.Transform(ctx, syntax, mark)
 }
 
 func matchTransformer(syntax common.Syntax, env common.Environment) common.Procedure {

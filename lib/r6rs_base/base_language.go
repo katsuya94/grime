@@ -12,8 +12,8 @@ var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
 var (
-	setId          = baseDefinition(common.Symbol("set!"), &BaseTransformer{transformSet})
-	lambdaId       = baseDefinition(common.Symbol("lambda"), &BaseTransformer{transformLambda})
+	setId          = baseDefinition(common.Symbol("set!"), setTransformer)
+	lambdaId       = baseDefinition(common.Symbol("lambda"), lambdaTransformer)
 	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
 )
@@ -31,26 +31,29 @@ func Introduce(syntax common.Syntax) common.Syntax {
 // TODO: create a SimpleTemplate construct to easily build syntax from simple match results
 // it should also support easy marking of transformer introduced syntax, since its hard to enforce otherwise
 
+var applicationTransformer = newBaseTransformer(transformApplication)
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(proc args ...)"))
 
 func transformApplication(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	result, ok := patternApplication.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("(application): bad syntax")
+		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
 	procedure := result[common.Symbol("proc")].(common.Syntax)
 	arguments := make([]common.Syntax, len(result[common.Symbol("args")].([]interface{})))
 	for i, syntax := range result[common.Symbol("args")].([]interface{}) {
 		arguments[i] = syntax.(common.Syntax)
 	}
-	output := common.Pair{r6rs.ApplicationId.Mark(mark).WrappedSyntax, common.Pair{procedure.Datum(), syntaxDatumSlice(arguments)}}
+	output := common.Pair{r6rs.ApplicationId.Mark(mark).WrappedSyntax, common.Pair{procedure.Datum(), list(syntaxDatumSlice(arguments)...)}}
 	return ctx.Expand(common.NewSyntax(output))
 }
+
+var idTransformer = newBaseTransformer(transformId)
 
 func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	id, ok := syntax.Identifier()
 	if !ok {
-		return nil, fmt.Errorf("(id): bad syntax")
+		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
 	var output common.Datum
 	if binding := id.Binding(); binding != nil {
@@ -66,19 +69,22 @@ func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M
 	return ctx.Expand(common.NewSyntax(output))
 }
 
+var literalTransformer = newBaseTransformer(transformLiteral)
+
 func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	wrappedSyntax, ok := syntax.Datum().(common.WrappedSyntax)
 	if !ok {
-		return nil, fmt.Errorf("(literal): bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
 	switch wrappedSyntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
 		output := list(r6rs.LiteralId.Mark(mark).WrappedSyntax, syntax.Datum())
 		return ctx.Expand(common.NewSyntax(output))
 	}
-	return nil, fmt.Errorf("(literal): bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+	return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 }
 
+var setTransformer = newBaseTransformer(transformSet)
 var patternSet = common.MustCompileSimplePattern(read.MustReadDatum("(set! id value)"))
 
 func transformSet(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
@@ -86,46 +92,33 @@ func transformSet(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.
 	panic("not implemented")
 }
 
+var lambdaTransformer = newBaseTransformer(transformLambda)
 var patternLambda = common.MustCompileSimplePattern(read.MustReadDatum("(lambda (formals ...) body ...)"))
 
 func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	result, ok := patternLambda.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("lambda: bad syntax")
+		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	scope := common.NewScope()
 	phase := result[common.Symbol("lambda")].(common.Syntax).IdentifierOrDie().Phase()
 	formals := make([]common.Identifier, len(result[common.Symbol("formals")].([]interface{})))
-	for i, syntax := range result[common.Symbol("formals")].([]interface{}) {
-		id, ok := syntax.(common.Syntax).Identifier()
+	for i, formal := range result[common.Symbol("formals")].([]interface{}) {
+		id, ok := formal.(common.Syntax).Identifier()
 		if !ok {
-			return nil, fmt.Errorf("lambda: bad syntax")
+			return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 		}
 		id, binding := common.Bind(id, scope, phase)
 		formals[i] = id
 		(&ctx.Env).Extend(binding, common.NewVariable())
 	}
 	if common.DuplicateIdentifiers(formals...) {
-		return nil, fmt.Errorf("lambda: bad syntax")
+		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
-	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms[i] = syntax.(common.Syntax).Push(scope, phase)
+	for i, form := range result[common.Symbol("body")].([]interface{}) {
+		forms[i] = form.(common.Syntax).Push(scope, phase)
 	}
 	output := common.Pair{r6rs.LambdaId.Mark(mark).WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
 	return ctx.Expand(common.NewSyntax(output))
-}
-
-var patternBegin = common.MustCompileSimplePattern(read.MustReadDatum("(begin body ...)"))
-
-func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
-	result, ok := patternBegin.Match(syntax)
-	if !ok {
-		return nil, fmt.Errorf("begin: bad syntax")
-	}
-	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
-	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms[i] = syntax.(common.Syntax)
-	}
-	return expandBody(ctx, forms, mark)
 }

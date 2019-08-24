@@ -5,25 +5,35 @@ import (
 )
 
 type Environment struct {
-	roles map[*Binding]Role
+	roles    map[int]map[*Binding]Role
+	defaults map[*Binding]Role
 }
 
-func NewEnvironment() Environment {
-	return Environment{map[*Binding]Role{}}
+func NewEnvironment(defaults map[*Binding]Role) Environment {
+	return Environment{map[int]map[*Binding]Role{}, defaults}
 }
 
-func (env *Environment) Extend(binding *Binding, role Role) {
-	extended := make(map[*Binding]Role, len(env.roles))
-	for b, r := range env.roles {
-		extended[b] = r
+func (env *Environment) Extend(binding *Binding, phase int, role Role) {
+	extended := make(map[int]map[*Binding]Role, len(env.roles))
+	for p, rs := range env.roles {
+		extended[p] = make(map[*Binding]Role, len(rs))
+		for b, r := range rs {
+			extended[p][b] = r
+		}
 	}
-	extended[binding] = role
+	if _, ok := extended[phase]; !ok {
+		extended[phase] = make(map[*Binding]Role, 1)
+	}
+	extended[phase][binding] = role
 	env.roles = extended
 }
 
-func (env Environment) Lookup(binding *Binding) Role {
-	role, _ := env.roles[binding]
-	return role
+func (env Environment) Lookup(binding *Binding, phase int) Role {
+	role, _ := env.roles[phase][binding]
+	if role != nil {
+		return role
+	}
+	return env.defaults[binding]
 }
 
 type Role interface {

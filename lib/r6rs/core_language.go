@@ -8,7 +8,7 @@ import (
 )
 
 var CoreScope = common.NewScope()
-var CoreEnvironment = common.NewEnvironment()
+var CoreEnvironment = common.NewEnvironment(nil)
 
 var (
 	LiteralId     = coreDefinition(common.Symbol("#%literal"), CoreTransformer{transformLiteral})
@@ -88,7 +88,7 @@ var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(#%
 func transformApplication(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
 	result, ok := patternApplication.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("#%%application: bad syntax")
+		return nil, fmt.Errorf("#%%application: bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
 	proc, err := ctx.Expand(result[common.Symbol("proc")].(common.Syntax))
 	if err != nil {

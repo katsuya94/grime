@@ -78,9 +78,44 @@ func TestBaseLanguageLambda(t *testing.T) {
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
 
-func TestBaseLanguageBeginSimple(t *testing.T) {
+func TestBaseLanguageBegin(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin #t #f)"))
 	expectedSrc := "(#%sequence (#%literal #t) (#%literal #f))"
+	testBaseLanguage(t, syntax, env, expectedSrc)
+}
+
+func TestBaseLanguageBeginEmpty(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax("(begin)"))
+	errMsg := "unexpected final form"
+	testBaseLanguageError(t, syntax, env, errMsg)
+}
+
+func TestBaseLanguageBeginNested(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax("(begin (begin #t #f))"))
+	expectedSrc := "(#%sequence (#%literal #t) (#%literal #f))"
+	testBaseLanguage(t, syntax, env, expectedSrc)
+}
+
+func TestBaseLanguageBeginNestedEmpty(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax("(begin (begin))"))
+	errMsg := "unexpected final form"
+	testBaseLanguageError(t, syntax, env, errMsg)
+}
+
+func TestBaseLanguageDefineSyntaxExpressionContext(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax("(define-syntax id (lambda (stx) stx))"))
+	errMsg := "body form in expression context: define-syntax at (unknown)"
+	testBaseLanguageError(t, syntax, env, errMsg)
+}
+
+func TestBaseLanguageDefineSyntax(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax("(begin (define-syntax id (lambda (stx) (syntax #t))) (id))"))
+	expectedSrc := "(#%sequence (#%literal #t))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }

@@ -1,7 +1,7 @@
 package common
 
 var simplePatternScope = NewScope()
-var simplePatternEnvironment = NewEnvironment()
+var simplePatternEnvironment = NewEnvironment(nil)
 
 func init() {
 	underscoreId := NewIdentifier(Symbol("_"))

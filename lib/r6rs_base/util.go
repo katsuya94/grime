@@ -31,3 +31,15 @@ func list(data ...common.Datum) common.Datum {
 		return common.Pair{data[0], list(data[1:]...)}
 	}
 }
+
+func syntaxKeywordForErrMsg(syntax common.Syntax) string {
+	pair, ok := syntax.Pair()
+	if !ok {
+		return "(unknown)"
+	}
+	id, ok := common.NewSyntax(pair.First).Identifier()
+	if !ok {
+		return "(unknown)"
+	}
+	return string(id.Name())
+}

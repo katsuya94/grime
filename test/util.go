@@ -29,11 +29,21 @@ func Identifier(s string) common.Identifier {
 	return Syntax(s).IdentifierOrDie()
 }
 
-func AssertCoreSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
-	equal := r6rs.Equal(actual, expected)
-	if equal {
+func AssertSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
+	if actual.Equal(expected) {
 		return
 	}
+	diffSyntax(t, expected, actual, msgAndArgs...)
+}
+
+func AssertCoreSyntaxEqual(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
+	if r6rs.Equal(actual, expected) {
+		return
+	}
+	diffSyntax(t, expected, actual, msgAndArgs...)
+}
+
+func diffSyntax(t *testing.T, expected common.Syntax, actual common.Syntax, msgAndArgs ...interface{}) {
 	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
 		A:        difflib.SplitLines(strings.Replace(expected.PrettyPrint(0), "%", "%%", -1)),
 		B:        difflib.SplitLines(strings.Replace(actual.PrettyPrint(0), "%", "%%", -1)),
