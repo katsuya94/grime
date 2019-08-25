@@ -6,14 +6,22 @@ import (
 
 var ErrUnexpectedFinalForm = fmt.Errorf("unexpected final form")
 
+type EvaluationContextTemplate int
+
+func (ect EvaluationContextTemplate) New() EvaluationContext {
+	locations := make([]Location, ect)
+	for i := range locations {
+		locations[i] = NewLocation()
+	}
+	return EvaluationContext{locations}
+}
+
 type EvaluationContext struct {
 	locations []Location
 }
 
-func NewEvaluationContext(locations ...Location) EvaluationContext {
-	clone := make([]Location, len(locations))
-	copy(clone, locations)
-	return EvaluationContext{clone}
+func NewEvaluationContext() EvaluationContext {
+	return EvaluationContext{[]Location{}}
 }
 
 func (ctx EvaluationContext) Get(index int) Location {

@@ -7,12 +7,25 @@ import (
 	"github.com/katsuya94/grime/read"
 )
 
-type CoreTransformer struct {
+type CoreTransformer interface {
+	common.Procedure
+	Transform(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)
+}
+
+func NewCoreTransformer(transform func(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)) CoreTransformer {
+	return coreTransformerImpl{transform}
+}
+
+type coreTransformerImpl struct {
 	transform func(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)
 }
 
-func (CoreTransformer) Call(c common.Continuation, args ...common.Datum) (common.Evaluation, error) {
+func (coreTransformerImpl) Call(common.Continuation, ...common.Datum) (common.Evaluation, error) {
 	return common.ErrorC(fmt.Errorf("core transformer called"))
+}
+
+func (t coreTransformerImpl) Transform(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+	return t.transform(ctx, syntax, mark)
 }
 
 var patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
@@ -52,7 +65,7 @@ func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (Core
 }
 
 func ExpandCoreTransformer(ctx ExpansionContext, transformer CoreTransformer, syntax common.Syntax, mark *common.M) (CoreForm, error) {
-	return transformer.transform(ctx, syntax, mark)
+	return transformer.Transform(ctx, syntax, mark)
 }
 
 func MatchTransformer(syntax common.Syntax, env common.Environment, pattern common.SimplePattern) common.Procedure {

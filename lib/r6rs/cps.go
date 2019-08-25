@@ -24,8 +24,10 @@ func (ctx CpsTransformContext) New() CpsTransformContext {
 	return CpsTransformContext{[]common.Identifier{}, ctx.globals}
 }
 
-func (ctx *CpsTransformContext) Add(id common.Identifier) {
+func (ctx *CpsTransformContext) Add(id common.Identifier) int {
+	i := len(ctx.localIds)
 	ctx.localIds = append(ctx.localIds, id)
+	return i
 }
 
 func (ctx CpsTransformContext) Index(id common.Identifier) (int, error) {
@@ -35,6 +37,10 @@ func (ctx CpsTransformContext) Index(id common.Identifier) (int, error) {
 		}
 	}
 	return -1, fmt.Errorf("cps transform: %v not in context", id.Name())
+}
+
+func (ctx CpsTransformContext) EvaluationContextTemplate() common.EvaluationContextTemplate {
+	return common.EvaluationContextTemplate(len(ctx.localIds))
 }
 
 func (ctx CpsTransformContext) IndexOrDie(id common.Identifier) int {

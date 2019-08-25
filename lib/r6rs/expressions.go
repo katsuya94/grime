@@ -39,16 +39,17 @@ func (e Load) Evaluate(ctx common.EvaluationContext, c common.Continuation) (com
 
 // Lambda evaluates to a closure.
 type Lambda struct {
-	inner common.Expression
-	argn  int
+	inner           common.Expression
+	argIndexes      []int
+	evalCtxTemplate common.EvaluationContextTemplate
 }
 
-func NewLambda(inner common.Expression, argn int) Lambda {
-	return Lambda{inner, argn}
+func NewLambda(inner common.Expression, indexes []int, evalCtxTemplate common.EvaluationContextTemplate) Lambda {
+	return Lambda{inner, indexes, evalCtxTemplate}
 }
 
 func (e Lambda) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
-	return common.CallC(c, common.NewFunction(e.inner, e.argn))
+	return common.CallC(c, common.NewFunction(e.inner, e.argIndexes, e.evalCtxTemplate))
 }
 
 // Application evaluates the application of a procedure do its arguments.
@@ -175,5 +176,5 @@ func NewSyntax(template common.Syntax) Syntax {
 }
 
 func (e Syntax) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
-	panic("not implemented")
+	return common.CallC(c, e.template.Datum())
 }

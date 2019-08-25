@@ -47,7 +47,8 @@ func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identif
 		}
 		syntax = syntax.Push(literalScope, 0)
 	}
-	pattern, patternVariableInfos, err := CompilePattern(syntax, env)
+	scope := NewScope()
+	pattern, patternVariableInfos, err := CompilePattern(syntax, scope, 0, env)
 	if err != nil {
 		return SimplePattern{}, err
 	}
@@ -70,7 +71,7 @@ func (sp SimplePattern) Match(syntax Syntax) (map[Symbol]interface{}, bool) {
 	simpleResult := map[Symbol]interface{}{}
 	for _, patternVariableInfo := range sp.patternVariableInfos {
 		match := result[patternVariableInfo.Binding]
-		simpleResult[patternVariableInfo.Id.Name()] = match
+		simpleResult[patternVariableInfo.Binding.Identifier().Name()] = match
 	}
 	return simpleResult, true
 }

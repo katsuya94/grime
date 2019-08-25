@@ -15,17 +15,18 @@ func (f LambdaForm) Unexpand() common.Syntax {
 	for i := range f.Formals {
 		formals[i] = f.Formals[i].WrappedSyntax
 	}
-	return common.NewSyntax(list(LambdaId.WrappedSyntax, list(formals...), f.Inner.Unexpand().Datum()))
+	return common.NewSyntax(list(LambdaId.WrappedSyntax, list(formals...), f.Inner.(Unexpander).Unexpand().Datum()))
 }
 
 func (f LambdaForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
 	ctx = ctx.New()
-	for _, formal := range f.Formals {
-		ctx.Add(formal)
+	indexes := make([]int, len(f.Formals))
+	for i, formal := range f.Formals {
+		indexes[i] = ctx.Add(formal)
 	}
 	inner, err := f.Inner.CpsTransform(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return NewLambda(inner, len(f.Formals)), nil
+	return NewLambda(inner, indexes, ctx.EvaluationContextTemplate()), nil
 }

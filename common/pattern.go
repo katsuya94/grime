@@ -144,12 +144,11 @@ func (p patternDatum) Match(syntax Syntax) (map[*Binding]interface{}, bool) {
 }
 
 type PatternVariableInfo struct {
-	Id      Identifier
 	Binding *Binding
 	Nesting int
 }
 
-func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableInfo, error) {
+func CompilePattern(syntax Syntax, scope *Scope, phase int, env Environment) (Pattern, []PatternVariableInfo, error) {
 	if syntax, ok := syntax.Identifier(); ok {
 		role := syntax.Role(env)
 		if role != nil {
@@ -165,9 +164,8 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 				}
 			}
 		}
-		// TODO: we probably need to pass the scope all the way down
-		patternVariableBinding := newBinding(syntax)
-		return patternPatternVariable{patternVariableBinding}, []PatternVariableInfo{{syntax, patternVariableBinding, 0}}, nil
+		_, patternVariableBinding := Bind(syntax, scope, phase)
+		return patternPatternVariable{patternVariableBinding}, []PatternVariableInfo{{patternVariableBinding, 0}}, nil
 	}
 	if syntax, ok := syntax.Pair(); ok {
 		if cdr, ok := NewSyntax(syntax.Rest).Pair(); ok {
@@ -176,7 +174,7 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 				if role != nil {
 					if role, ok := role.(SyntacticAbstraction); ok {
 						if role.Transformer == EllipsisTransformer {
-							subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), env)
+							subPattern, subPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), scope, phase, env)
 							if err != nil {
 								return nil, nil, err
 							}
@@ -186,7 +184,7 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 								subPatternVariables = append(subPatternVariables, subPatternVariableInfo.Binding)
 							}
 							cddr := NewSyntax(cdr.Rest)
-							restPattern, restPatternVariableInfos, err := CompilePattern(cddr, env)
+							restPattern, restPatternVariableInfos, err := CompilePattern(cddr, scope, phase, env)
 							if err != nil {
 								return nil, nil, err
 							}
@@ -197,11 +195,11 @@ func CompilePattern(syntax Syntax, env Environment) (Pattern, []PatternVariableI
 				}
 			}
 		}
-		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), env)
+		firstPattern, firstPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.First), scope, phase, env)
 		if err != nil {
 			return nil, nil, err
 		}
-		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest), env)
+		restPattern, restPatternVariableInfos, err := CompilePattern(NewSyntax(syntax.Rest), scope, phase, env)
 		if err != nil {
 			return nil, nil, err
 		}

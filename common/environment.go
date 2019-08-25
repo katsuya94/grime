@@ -63,3 +63,13 @@ func NewPatternLiteral(id Identifier) PatternLiteral {
 func (r PatternLiteral) Description() string {
 	return fmt.Sprintf("PatternLiteral{%#v}", r.Id)
 }
+
+type PatternVariable struct{}
+
+func NewPatternVariable() PatternVariable {
+	return PatternVariable{}
+}
+
+func (r PatternVariable) Description() string {
+	return "PatternVariable{}"
+}

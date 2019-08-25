@@ -12,7 +12,7 @@ type SequenceForm struct {
 func (f SequenceForm) Unexpand() common.Syntax {
 	forms := make([]common.Datum, len(f.Forms))
 	for i := range forms {
-		forms[i] = f.Forms[i].Unexpand().Datum()
+		forms[i] = f.Forms[i].(Unexpander).Unexpand().Datum()
 	}
 	return common.NewSyntax(common.Pair{SequenceId.WrappedSyntax, list(forms...)})
 }

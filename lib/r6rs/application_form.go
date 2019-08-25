@@ -11,10 +11,10 @@ type ApplicationForm struct {
 }
 
 func (f ApplicationForm) Unexpand() common.Syntax {
-	proc := f.Procedure.Unexpand().Datum()
+	proc := f.Procedure.(Unexpander).Unexpand().Datum()
 	args := make([]common.Datum, len(f.Arguments))
 	for i := range f.Arguments {
-		args[i] = f.Arguments[i].Unexpand().Datum()
+		args[i] = f.Arguments[i].(Unexpander).Unexpand().Datum()
 	}
 	return common.NewSyntax(common.Pair{ApplicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
 }

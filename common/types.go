@@ -209,12 +209,13 @@ func (d WrappedSyntax) Phase() int {
 
 // Function represents a Grime function.
 type Function struct {
-	inner Expression
-	argn  int
+	inner           Expression
+	argIndexes      []int
+	evalCtxTemplate EvaluationContextTemplate
 }
 
-func NewFunction(inner Expression, argn int) Function {
-	return Function{inner, argn}
+func NewFunction(inner Expression, argIndexes []int, evalCtxTemplate EvaluationContextTemplate) Function {
+	return Function{inner, argIndexes, evalCtxTemplate}
 }
 
 func (d Function) Write() string {
@@ -222,16 +223,13 @@ func (d Function) Write() string {
 }
 
 func (d Function) Call(c Continuation, args ...Datum) (Evaluation, error) {
-	if len(args) != d.argn {
-		return ErrorC(fmt.Errorf("evaluate: received %d arguments for procedure expecting %d", len(args), d.argn))
+	if len(args) != len(d.argIndexes) {
+		return ErrorC(fmt.Errorf("evaluate: received %d arguments for procedure expecting %d", len(args), len(d.argIndexes)))
 	}
-	locations := make([]Location, len(args))
-	for i, arg := range args {
-		location := NewLocation()
-		location.Set(arg)
-		locations[i] = location
+	ctx := d.evalCtxTemplate.New()
+	for i := range args {
+		ctx.Get(d.argIndexes[i]).Set(args[i])
 	}
-	ctx := NewEvaluationContext(locations...)
 	return EvalC(ctx, c, d.inner)
 }
 

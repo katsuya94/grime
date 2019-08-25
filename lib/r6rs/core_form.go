@@ -5,6 +5,10 @@ import (
 )
 
 type CoreForm interface {
-	Unexpand() common.Syntax
 	CpsTransform(CpsTransformContext) (common.Expression, error)
+}
+
+type Unexpander interface {
+	CoreForm
+	Unexpand() common.Syntax
 }

@@ -11,13 +11,13 @@ var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
 
 var (
-	QuoteId       = coreDefinition(common.Symbol("quote"), CoreTransformer{transformQuote})
-	LoadId        = coreDefinition(common.Symbol("#%load"), CoreTransformer{transformLoad})
-	LambdaId      = coreDefinition(common.Symbol("#%lambda"), CoreTransformer{transformLambda})
-	ApplicationId = coreDefinition(common.Symbol("#%application"), CoreTransformer{transformApplication})
-	TopId         = coreDefinition(common.Symbol("#%top"), CoreTransformer{transformTop})
-	SequenceId    = coreDefinition(common.Symbol("#%sequence"), CoreTransformer{transformSequence})
-	SyntaxId      = coreDefinition(common.Symbol("syntax"), CoreTransformer{transformSyntax})
+	QuoteId       = coreDefinition(common.Symbol("quote"), NewCoreTransformer(transformQuote))
+	LoadId        = coreDefinition(common.Symbol("#%load"), NewCoreTransformer(transformLoad))
+	LambdaId      = coreDefinition(common.Symbol("#%lambda"), NewCoreTransformer(transformLambda))
+	ApplicationId = coreDefinition(common.Symbol("#%application"), NewCoreTransformer(transformApplication))
+	TopId         = coreDefinition(common.Symbol("#%top"), NewCoreTransformer(transformTop))
+	SequenceId    = coreDefinition(common.Symbol("#%sequence"), NewCoreTransformer(transformSequence))
+	SyntaxId      = coreDefinition(common.Symbol("syntax"), NewCoreTransformer(transformSyntax))
 )
 
 var coreBindings []*common.Binding

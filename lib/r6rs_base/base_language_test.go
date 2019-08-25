@@ -15,7 +15,7 @@ func testBaseLanguage(t *testing.T, syntax common.Syntax, env common.Environment
 	actual, err := Expand(syntax, env)
 	require.NoError(t, err)
 	expected := r6rs.Introduce(test.Syntax(expectedSrc))
-	test.AssertCoreSyntaxEqual(t, expected, actual.Unexpand())
+	test.AssertCoreSyntaxEqual(t, expected, actual.(r6rs.Unexpander).Unexpand())
 }
 
 func testBaseLanguageError(t *testing.T, syntax common.Syntax, env common.Environment, errMsg string) {

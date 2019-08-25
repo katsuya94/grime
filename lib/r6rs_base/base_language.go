@@ -19,6 +19,7 @@ var (
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
 	quoteId        = coreDefinition(common.Symbol("quote"))
 	syntaxId       = coreDefinition(common.Symbol("syntax"))
+	syntaxCaseId   = baseDefinition(common.Symbol("syntax-case"), syntaxCaseTransformer)
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
@@ -43,7 +44,7 @@ func Introduce(syntax common.Syntax) common.Syntax {
 // TODO: create a SimpleTemplate construct to easily build syntax from simple match results
 // it should also support easy marking of transformer introduced syntax, since its hard to enforce otherwise
 
-var applicationTransformer = newBaseTransformer(transformApplication)
+var applicationTransformer = r6rs.NewCoreTransformer(transformApplication)
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(proc args ...)"))
 
 func transformApplication(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
@@ -60,7 +61,7 @@ func transformApplication(ctx r6rs.ExpansionContext, syntax common.Syntax, mark 
 	return ctx.Expand(common.NewSyntax(output))
 }
 
-var idTransformer = newBaseTransformer(transformId)
+var idTransformer = r6rs.NewCoreTransformer(transformId)
 
 func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	id, ok := syntax.Identifier()
@@ -81,7 +82,7 @@ func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M
 	return ctx.Expand(common.NewSyntax(output))
 }
 
-var literalTransformer = newBaseTransformer(transformLiteral)
+var literalTransformer = r6rs.NewCoreTransformer(transformLiteral)
 
 func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
 	wrappedSyntax, ok := syntax.Datum().(common.WrappedSyntax)
@@ -96,15 +97,14 @@ func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *com
 	return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 }
 
-var setTransformer = newBaseTransformer(transformSet)
+var setTransformer = r6rs.NewCoreTransformer(transformSet)
 var patternSet = common.MustCompileSimplePattern(read.MustReadDatum("(set! id value)"))
 
 func transformSet(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
-	// TODO: implement
 	panic("not implemented")
 }
 
-var lambdaTransformer = newBaseTransformer(transformLambda)
+var lambdaTransformer = r6rs.NewCoreTransformer(transformLambda)
 var patternLambda = common.MustCompileSimplePattern(read.MustReadDatum("(lambda (formals ...) body ...)"))
 
 func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
@@ -125,7 +125,7 @@ func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *comm
 		(&ctx.Env).Extend(binding, common.NewVariable())
 	}
 	if common.DuplicateIdentifiers(formals...) {
-		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
+		return nil, fmt.Errorf("%v: duplicate formals", syntaxKeywordForErrMsg(syntax))
 	}
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
 	for i, form := range result[common.Symbol("body")].([]interface{}) {

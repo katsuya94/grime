@@ -3,19 +3,19 @@ package common
 import "fmt"
 
 type Location struct {
-	value *Datum
+	value *interface{}
 }
 
 func NewLocation() Location {
-	value := Datum(nil)
+	value := interface{}(nil)
 	return Location{&value}
 }
 
-func (l Location) Get() Datum {
+func (l Location) Get() interface{} {
 	return *l.value
 }
 
-func (l Location) Set(value Datum) {
+func (l Location) Set(value interface{}) {
 	*l.value = value
 }
 
