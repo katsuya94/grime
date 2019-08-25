@@ -17,6 +17,7 @@ var (
 	ApplicationId = coreDefinition(common.Symbol("#%application"), NewCoreTransformer(transformApplication))
 	TopId         = coreDefinition(common.Symbol("#%top"), NewCoreTransformer(transformTop))
 	SequenceId    = coreDefinition(common.Symbol("#%sequence"), NewCoreTransformer(transformSequence))
+	IfId          = coreDefinition(common.Symbol("if"), NewCoreTransformer(transformIf))
 )
 
 var coreBindings []*common.Binding
@@ -136,4 +137,27 @@ func transformSequence(ctx ExpansionContext, syntax common.Syntax, mark *common.
 		}
 	}
 	return SequenceForm{forms, mark}, nil
+}
+
+var patternIf = common.MustCompileSimplePattern(read.MustReadDatum("(if condition then otherwise)"))
+
+func transformIf(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+	var err error
+	result, ok := patternIf.Match(syntax)
+	if !ok {
+		return nil, fmt.Errorf("if")
+	}
+	condition, err := ctx.Expand(result[common.Symbol("condition")].(common.Syntax))
+	if err != nil {
+		return nil, err
+	}
+	then, err := ctx.Expand(result[common.Symbol("then")].(common.Syntax))
+	if err != nil {
+		return nil, err
+	}
+	otherwise, err := ctx.Expand(result[common.Symbol("otherwise")].(common.Syntax))
+	if err != nil {
+		return nil, err
+	}
+	return IfForm{condition, then, otherwise, mark}, nil
 }

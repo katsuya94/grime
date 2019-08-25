@@ -16,12 +16,12 @@ type CpsTransformContext struct {
 	globals  []Global
 }
 
-func NewCpsTransformContext(globals []Global) CpsTransformContext {
-	return CpsTransformContext{[]common.Identifier{}, globals}
+func NewCpsTransformContext(globals []Global) *CpsTransformContext {
+	return &CpsTransformContext{[]common.Identifier{}, globals}
 }
 
-func (ctx CpsTransformContext) New() CpsTransformContext {
-	return CpsTransformContext{[]common.Identifier{}, ctx.globals}
+func (ctx CpsTransformContext) New() *CpsTransformContext {
+	return &CpsTransformContext{[]common.Identifier{}, ctx.globals}
 }
 
 func (ctx *CpsTransformContext) Add(id common.Identifier) int {

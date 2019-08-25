@@ -5,13 +5,13 @@ import "fmt"
 type underscoreTransformer struct{}
 
 func (underscoreTransformer) Call(c Continuation, args ...Datum) (Evaluation, error) {
-	return ErrorC(fmt.Errorf("cannot expand underscore"))
+	return ErrorC(fmt.Errorf("_: bad syntax"))
 }
 
 type ellipsisTransformer struct{}
 
 func (ellipsisTransformer) Call(c Continuation, args ...Datum) (Evaluation, error) {
-	return ErrorC(fmt.Errorf("cannot expand ellipsis"))
+	return ErrorC(fmt.Errorf("...: bad syntax"))
 }
 
 var (

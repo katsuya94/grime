@@ -25,11 +25,11 @@ func TestApplicationForm_CpsTransform(t *testing.T) {
 	procExpression := test.NewVoidExpression()
 	argExpression := test.NewVoidExpression()
 	coreForm := ApplicationForm{
-		Procedure: spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+		Procedure: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
 			return procExpression, nil
 		}},
 		Arguments: []CoreForm{
-			spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+			spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
 				return argExpression, nil
 			}},
 		},

@@ -27,7 +27,7 @@ func TestLambdaForm_CpsTransform(t *testing.T) {
 	expression := test.NewVoidExpression()
 	coreForm := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner: spyForm{cpsTransform: func(ctx CpsTransformContext) (common.Expression, error) {
+		Inner: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
 			assert.Equal(t, ctx.IndexOrDie(id), 0)
 			return expression, nil
 		}},

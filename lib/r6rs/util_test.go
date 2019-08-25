@@ -11,24 +11,24 @@ import (
 
 type spyForm struct {
 	unexpand     func() common.Syntax
-	cpsTransform func(CpsTransformContext) (common.Expression, error)
+	cpsTransform func(*CpsTransformContext) (common.Expression, error)
 }
 
 func (f spyForm) Unexpand() common.Syntax {
 	return f.unexpand()
 }
 
-func (f spyForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+func (f spyForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
 	return f.cpsTransform(ctx)
 }
 
-func testCpsTransform(t *testing.T, ctx CpsTransformContext, coreForm CoreForm, expected common.Expression) {
+func testCpsTransform(t *testing.T, ctx *CpsTransformContext, coreForm CoreForm, expected common.Expression) {
 	actual, err := coreForm.CpsTransform(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 }
 
-func testCpsTransformError(t *testing.T, ctx CpsTransformContext, coreForm CoreForm, expected string) {
+func testCpsTransformError(t *testing.T, ctx *CpsTransformContext, coreForm CoreForm, expected string) {
 	_, err := coreForm.CpsTransform(ctx)
 	assert.EqualError(t, err, expected)
 }

@@ -99,13 +99,14 @@ type syntaxCaseForm struct {
 	clauses []syntaxCaseFormClause
 }
 
-func (f syntaxCaseForm) CpsTransform(ctx r6rs.CpsTransformContext) (common.Expression, error) {
+func (f syntaxCaseForm) CpsTransform(ctx *r6rs.CpsTransformContext) (common.Expression, error) {
 	input, err := f.input.CpsTransform(ctx)
 	if err != nil {
 		return nil, err
 	}
 	clauses := make([]syntaxCaseClause, len(f.clauses))
 	for i, clause := range f.clauses {
+		// TODO: should each clause have its own evaluation context?
 		patternVariableIndexes := make([]bindingIndex, len(clause.patternVariableIds))
 		for i, patternVariableId := range clause.patternVariableIds {
 			patternVariableIndexes[i] = bindingIndex{patternVariableId.Binding(), ctx.Add(patternVariableId)}
@@ -194,5 +195,5 @@ func syntaxCaseMatch(ctx common.EvaluationContext, c common.Continuation, input 
 			)
 		}
 	}
-	return nil, fmt.Errorf("bad syntax at %v", syntax.SourceLocation())
+	return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 }

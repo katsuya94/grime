@@ -6,16 +6,16 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-// Literal evaluates to a literal value.
-type Literal struct {
+// Quote evaluates to a literal value.
+type Quote struct {
 	datum common.Datum
 }
 
-func NewLiteral(datum common.Datum) Literal {
-	return Literal{datum}
+func NewQuote(datum common.Datum) Quote {
+	return Quote{datum}
 }
 
-func (e Literal) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
+func (e Quote) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
 	return common.CallC(c, e.datum)
 }
 
@@ -164,4 +164,38 @@ func (c sequenceFirstEvaluated) Call(d common.Datum) (common.Evaluation, error) 
 		sequenceFirstEvaluated{c.ctx, c.continuation, c.expressions[1:]},
 		c.expressions[0],
 	)
+}
+
+// If evaluates its condition, then evaluates its then or else branches accordingly.
+type If struct {
+	condition common.Expression
+	then      common.Expression
+	otherwise common.Expression
+}
+
+func NewIf(condition common.Expression, then common.Expression, otherwise common.Expression) If {
+	return If{condition, then, otherwise}
+}
+
+func (e If) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
+	return common.EvalC(
+		ctx,
+		ifConditionEvaluated{ctx, c, e.then, e.otherwise},
+		e.condition,
+	)
+}
+
+type ifConditionEvaluated struct {
+	ctx          common.EvaluationContext
+	continuation common.Continuation
+	then         common.Expression
+	otherwise    common.Expression
+}
+
+func (c ifConditionEvaluated) Call(d common.Datum) (common.Evaluation, error) {
+	if d == common.Boolean(false) {
+		return common.EvalC(c.ctx, c.continuation, c.otherwise)
+	} else {
+		return common.EvalC(c.ctx, c.continuation, c.then)
+	}
 }

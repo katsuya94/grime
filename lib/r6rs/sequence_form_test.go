@@ -34,8 +34,8 @@ func TestSequenceForm_CpsTransform(t *testing.T) {
 		Mark: common.NewMark(),
 	}
 	expected := NewSequence([]common.Expression{
-		NewLiteral(common.Boolean(true)),
-		NewLiteral(common.Boolean(false)),
+		NewQuote(common.Boolean(true)),
+		NewQuote(common.Boolean(false)),
 	})
 	testCpsTransform(t, ctx, coreForm, expected)
 }

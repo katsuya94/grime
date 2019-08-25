@@ -18,8 +18,11 @@ var (
 	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
 	quoteId        = coreDefinition(common.Symbol("quote"))
+	ifId           = coreDefinition(common.Symbol("if"))
 	syntaxId       = baseDefinition(common.Symbol("syntax"), syntaxTransformer)
 	syntaxCaseId   = baseDefinition(common.Symbol("syntax-case"), syntaxCaseTransformer)
+	underscoreId   = baseDefinition(common.Symbol("_"), common.UnderscoreTransformer)
+	ellipsisId     = baseDefinition(common.Symbol("..."), common.EllipsisTransformer)
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {

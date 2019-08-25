@@ -5,7 +5,7 @@ import (
 )
 
 type CoreForm interface {
-	CpsTransform(CpsTransformContext) (common.Expression, error)
+	CpsTransform(*CpsTransformContext) (common.Expression, error)
 }
 
 type Unexpander interface {

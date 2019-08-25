@@ -19,7 +19,7 @@ func (f ApplicationForm) Unexpand() common.Syntax {
 	return common.NewSyntax(common.Pair{ApplicationId.WrappedSyntax, common.Pair{proc, list(args...)}})
 }
 
-func (f ApplicationForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+func (f ApplicationForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
 	proc, err := f.Procedure.CpsTransform(ctx)
 	if err != nil {
 		return nil, err

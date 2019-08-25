@@ -13,7 +13,7 @@ func (f LoadForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(LoadId.WrappedSyntax, f.Id.WrappedSyntax))
 }
 
-func (f LoadForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+func (f LoadForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
 	index, err := ctx.Index(f.Id)
 	if err != nil {
 		return nil, err

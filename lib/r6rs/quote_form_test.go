@@ -18,6 +18,6 @@ func TestQuoteForm_Unexpand(t *testing.T) {
 func TestQuoteForm_CpsTransform(t *testing.T) {
 	ctx := NewCpsTransformContext([]Global{})
 	coreForm := QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}
-	expected := NewLiteral(common.Boolean(true))
+	expected := NewQuote(common.Boolean(true))
 	testCpsTransform(t, ctx, coreForm, expected)
 }

@@ -25,7 +25,7 @@ type syntaxForm struct {
 	mark     *common.M
 }
 
-func (f syntaxForm) CpsTransform(ctx r6rs.CpsTransformContext) (common.Expression, error) {
+func (f syntaxForm) CpsTransform(ctx *r6rs.CpsTransformContext) (common.Expression, error) {
 	return syntax{f.template}, nil
 }
 

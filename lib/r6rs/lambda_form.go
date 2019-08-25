@@ -18,7 +18,7 @@ func (f LambdaForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(LambdaId.WrappedSyntax, list(formals...), f.Inner.(Unexpander).Unexpand().Datum()))
 }
 
-func (f LambdaForm) CpsTransform(ctx CpsTransformContext) (common.Expression, error) {
+func (f LambdaForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
 	ctx = ctx.New()
 	indexes := make([]int, len(f.Formals))
 	for i, formal := range f.Formals {

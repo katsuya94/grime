@@ -118,3 +118,19 @@ func TestBaseLanguageDefineSyntax(t *testing.T) {
 	expectedSrc := "(#%sequence (quote #t))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
+
+func TestBaseLanguageSyntaxCase(t *testing.T) {
+	env := BaseEnvironment
+	syntax := Introduce(test.Syntax(`
+(begin
+ 	(define-syntax or
+		(lambda (stx)
+			(syntax-case stx ()
+				((_) (syntax #f))
+				((_ e) (syntax e))
+				((_ e1 e2 e3 ...) (syntax ((lambda (t) (if t t (or e2 e3 ...))) e1))))))
+	(or #f (quote id)))`))
+	syntax = syntax.Push(BaseScope, 1)
+	expectedSrc := "(#%sequence (#%application (#%lambda (t) (if t t (quote id))) (quote #f)))"
+	testBaseLanguage(t, syntax, env, expectedSrc)
+}
