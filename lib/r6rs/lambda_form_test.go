@@ -33,6 +33,6 @@ func TestLambdaForm_CpsTransform(t *testing.T) {
 		}},
 		Mark: common.NewMark(),
 	}
-	expected := NewLambda(expression, 1)
+	expected := NewLambda(expression, []int{0}, common.EvaluationContextTemplate(1))
 	testCpsTransform(t, ctx, coreForm, expected)
 }

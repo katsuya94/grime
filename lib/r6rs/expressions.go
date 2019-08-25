@@ -165,16 +165,3 @@ func (c sequenceFirstEvaluated) Call(d common.Datum) (common.Evaluation, error) 
 		c.expressions[0],
 	)
 }
-
-// Syntax evaluates to syntax based on its template.
-type Syntax struct {
-	template common.Syntax
-}
-
-func NewSyntax(template common.Syntax) Syntax {
-	return Syntax{template}
-}
-
-func (e Syntax) Evaluate(ctx common.EvaluationContext, c common.Continuation) (common.Evaluation, error) {
-	return common.CallC(c, e.template.Datum())
-}

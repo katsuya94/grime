@@ -76,11 +76,3 @@ func TestCoreLanguageSequence(t *testing.T) {
 	}
 	testCoreLanguage(t, marks, src, expected)
 }
-
-func TestCoreLanguageSyntax(t *testing.T) {
-	marks := make([]common.M, 1)
-	src := "(syntax #t)"
-	template := Introduce(test.Syntax("#t"))
-	expected := SyntaxForm{Template: template, Mark: &marks[0]}
-	testCoreLanguage(t, marks, src, expected)
-}

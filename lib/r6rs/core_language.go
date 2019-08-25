@@ -17,7 +17,6 @@ var (
 	ApplicationId = coreDefinition(common.Symbol("#%application"), NewCoreTransformer(transformApplication))
 	TopId         = coreDefinition(common.Symbol("#%top"), NewCoreTransformer(transformTop))
 	SequenceId    = coreDefinition(common.Symbol("#%sequence"), NewCoreTransformer(transformSequence))
-	SyntaxId      = coreDefinition(common.Symbol("syntax"), NewCoreTransformer(transformSyntax))
 )
 
 var coreBindings []*common.Binding
@@ -137,15 +136,4 @@ func transformSequence(ctx ExpansionContext, syntax common.Syntax, mark *common.
 		}
 	}
 	return SequenceForm{forms, mark}, nil
-}
-
-var patternSyntax = common.MustCompileSimplePattern(read.MustReadDatum("(syntax template)"))
-
-func transformSyntax(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
-	result, ok := patternSyntax.Match(syntax)
-	if !ok {
-		return nil, fmt.Errorf("syntax: bad syntax")
-	}
-	template := result[common.Symbol("template")].(common.Syntax)
-	return SyntaxForm{template, mark}, nil
 }

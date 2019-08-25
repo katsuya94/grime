@@ -18,7 +18,7 @@ var (
 	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
 	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
 	quoteId        = coreDefinition(common.Symbol("quote"))
-	syntaxId       = coreDefinition(common.Symbol("syntax"))
+	syntaxId       = baseDefinition(common.Symbol("syntax"), syntaxTransformer)
 	syntaxCaseId   = baseDefinition(common.Symbol("syntax-case"), syntaxCaseTransformer)
 )
 
