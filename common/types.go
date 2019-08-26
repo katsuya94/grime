@@ -137,6 +137,8 @@ type WrappedSyntax struct {
 	scopeList scopeList
 	marks     markSet
 	// TODO: phase cannot be a property of syntax since syntax introduced by transformers would not be able to expand unless bound in the higher phase
+	// in fact it appears that bindings are resolved entirely independent of phase since bindings are merely a construct of the syntax itself
+	// environment may be different depending on phase. a single binding may have different roles in different phases
 	// phase              int
 	sourceLocationTree *SourceLocationTree
 }
