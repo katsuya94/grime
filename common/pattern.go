@@ -178,10 +178,10 @@ func CompilePattern(syntax Syntax, scope *Scope, phase int, env Environment) (Pa
 							if err != nil {
 								return nil, nil, err
 							}
-							subPatternVariables := []*Binding{}
-							for _, subPatternVariableInfo := range subPatternVariableInfos {
-								subPatternVariableInfo.Nesting++
-								subPatternVariables = append(subPatternVariables, subPatternVariableInfo.Binding)
+							subPatternVariables := make([]*Binding, len(subPatternVariableInfos))
+							for i := range subPatternVariableInfos {
+								subPatternVariableInfos[i].Nesting++
+								subPatternVariables[i] = subPatternVariableInfos[i].Binding
 							}
 							cddr := NewSyntax(cdr.Rest)
 							restPattern, restPatternVariableInfos, err := CompilePattern(cddr, scope, phase, env)

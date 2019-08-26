@@ -109,10 +109,12 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
+	phase := result[common.Symbol("define-syntax")].(common.Syntax).IdentifierOrDie().Phase()
 	id, ok := result[common.Symbol("id")].(common.Syntax).Identifier()
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
+	_, binding := common.Bind(id, scope, phase)
 	syntax = result[common.Symbol("transformer")].(common.Syntax).Next()
 	coreForm, err := ctx.Expander.(baseExpander).globalCtx().Expand(syntax)
 	if err != nil {
@@ -130,8 +132,6 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 	if !ok {
 		return nil, fmt.Errorf("%v: transformer is not a procedure", syntaxKeywordForErrMsg(syntax))
 	}
-	phase := result[common.Symbol("define-syntax")].(common.Syntax).IdentifierOrDie().Phase()
-	_, binding := common.Bind(id, scope, phase)
 	(&ctx.Env).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	return expandBody(ctx.ExpansionContext, ctx.Rest, mark, scope)
 }

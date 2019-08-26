@@ -74,10 +74,12 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 			patternVariableIds[i] = patternVariableInfo.Binding.Identifier()
 			(&clauseCtx.Env).Extend(patternVariableInfo.Binding, common.NewPatternVariable(patternVariableInfo.Nesting))
 		}
+		fender = fender.Push(clauseScope, phase)
 		fenderCoreForm, err := clauseCtx.Expand(fender)
 		if err != nil {
 			return nil, err
 		}
+		output = output.Push(clauseScope, phase)
 		outputCoreForm, err := clauseCtx.Expand(output)
 		if err != nil {
 			return nil, err

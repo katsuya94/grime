@@ -82,10 +82,10 @@ func expandTemplate(syntax common.Syntax, env common.Environment) (common.Datum,
 			role := env.Lookup(binding)
 			if role == nil {
 				break
-			} else if role, ok := role.(common.SyntacticAbstraction); ok {
-				if role.Transformer != common.EllipsisTransformer {
-					break
-				}
+			} else if role, ok := role.(common.SyntacticAbstraction); !ok {
+				break
+			} else if role.Transformer != common.EllipsisTransformer {
+				break
 			}
 			ellipsis++
 			rest = common.NewSyntax(pair.Rest)

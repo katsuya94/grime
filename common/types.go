@@ -133,10 +133,11 @@ func (d Pair) Mark(m *M) Marker {
 
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
-	datum              Datum
-	scopeList          scopeList
-	marks              markSet
-	phase              int
+	datum     Datum
+	scopeList scopeList
+	marks     markSet
+	// TODO: phase cannot be a property of syntax since syntax introduced by transformers would not be able to expand unless bound in the higher phase
+	// phase              int
 	sourceLocationTree *SourceLocationTree
 }
 
