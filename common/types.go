@@ -133,13 +133,9 @@ func (d Pair) Mark(m *M) Marker {
 
 // WrappedSyntax represents syntax along with its lexical context.
 type WrappedSyntax struct {
-	datum     Datum
-	scopeList scopeList
-	marks     markSet
-	// TODO: phase cannot be a property of syntax since syntax introduced by transformers would not be able to expand unless bound in the higher phase
-	// in fact it appears that bindings are resolved entirely independent of phase since bindings are merely a construct of the syntax itself
-	// environment may be different depending on phase. a single binding may have different roles in different phases
-	// phase              int
+	datum              Datum
+	scopeList          scopeList
+	marks              markSet
 	sourceLocationTree *SourceLocationTree
 }
 
@@ -159,13 +155,8 @@ func (d WrappedSyntax) Datum() Datum {
 	return d.datum
 }
 
-func (d WrappedSyntax) Push(scope *Scope, phase int) WrappedSyntax {
-	d.scopeList = d.scopeList.push(scope, phase)
-	return d
-}
-
-func (d WrappedSyntax) Next() WrappedSyntax {
-	d.phase++
+func (d WrappedSyntax) Push(scope *Scope) WrappedSyntax {
+	d.scopeList = d.scopeList.push(scope)
 	return d
 }
 
@@ -204,10 +195,6 @@ func (d WrappedSyntax) PushOnto(datum Datum, sourceLocationTree *SourceLocationT
 	d.datum = datum
 	d.sourceLocationTree = sourceLocationTree
 	return d
-}
-
-func (d WrappedSyntax) Phase() int {
-	return d.phase
 }
 
 // Function represents a Grime function.

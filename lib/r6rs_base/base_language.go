@@ -26,7 +26,7 @@ var (
 )
 
 func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
-	id, binding := common.Bind(common.NewIdentifier(name), BaseScope, 0)
+	id, binding := common.Bind(common.NewIdentifier(name), BaseScope)
 	(&BaseEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	return id
 }
@@ -41,7 +41,7 @@ func coreDefinition(name common.Symbol) common.Identifier {
 }
 
 func Introduce(syntax common.Syntax) common.Syntax {
-	return syntax.Push(BaseScope, 0)
+	return syntax.Push(BaseScope)
 }
 
 // TODO: create a SimpleTemplate construct to easily build syntax from simple match results
@@ -116,14 +116,13 @@ func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *comm
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	scope := common.NewScope()
-	phase := result[common.Symbol("lambda")].(common.Syntax).IdentifierOrDie().Phase()
 	formals := make([]common.Identifier, len(result[common.Symbol("formals")].([]interface{})))
 	for i, formal := range result[common.Symbol("formals")].([]interface{}) {
 		id, ok := formal.(common.Syntax).Identifier()
 		if !ok {
 			return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 		}
-		id, binding := common.Bind(id, scope, phase)
+		id, binding := common.Bind(id, scope)
 		formals[i] = id
 		(&ctx.Env).Extend(binding, common.NewVariable())
 	}
@@ -132,7 +131,7 @@ func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *comm
 	}
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
 	for i, form := range result[common.Symbol("body")].([]interface{}) {
-		forms[i] = form.(common.Syntax).Push(scope, phase)
+		forms[i] = form.(common.Syntax).Push(scope)
 	}
 	output := common.Pair{r6rs.LambdaId.Mark(mark).WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
 	return ctx.Expand(common.NewSyntax(output))

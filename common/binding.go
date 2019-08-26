@@ -12,15 +12,15 @@ func newBinding(id Identifier) *Binding {
 	return &Binding{id}
 }
 
-func Bind(id Identifier, scope *Scope, phase int) (Identifier, *Binding) {
-	id = id.Push(scope, phase).IdentifierOrDie()
+func Bind(id Identifier, scope *Scope) (Identifier, *Binding) {
+	id = id.Push(scope).IdentifierOrDie()
 	binding := newBinding(id)
 	scope.add(id, binding)
 	return id, binding
 }
 
 func Rebind(id Identifier, binding *Binding, scope *Scope, phase int) Identifier {
-	id = id.Push(scope, phase).IdentifierOrDie()
+	id = id.Push(scope).IdentifierOrDie()
 	scope.add(id, binding)
 	return id
 }

@@ -23,14 +23,14 @@ var (
 var coreBindings []*common.Binding
 
 func coreDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
-	id, binding := common.Bind(common.NewIdentifier(name), CoreScope, 0)
+	id, binding := common.Bind(common.NewIdentifier(name), CoreScope)
 	(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	coreBindings = append(coreBindings, binding)
 	return id
 }
 
 func Introduce(syntax common.Syntax) common.Syntax {
-	return syntax.Push(CoreScope, 0)
+	return syntax.Push(CoreScope)
 }
 
 var patternQuote = common.MustCompileSimplePattern(read.MustReadDatum("(quote datum)"))

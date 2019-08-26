@@ -5,10 +5,10 @@ var simplePatternEnvironment = NewEnvironment()
 
 func init() {
 	underscoreId := NewIdentifier(Symbol("_"))
-	_, underscoreBinding := Bind(underscoreId, simplePatternScope, 0)
+	_, underscoreBinding := Bind(underscoreId, simplePatternScope)
 	(&simplePatternEnvironment).Extend(underscoreBinding, NewSyntacticAbstraction(UnderscoreTransformer))
-	ellipsisId := NewSyntax(NewIdentifier(Symbol("...")).Push(simplePatternScope, 0)).IdentifierOrDie()
-	_, ellipsisBinding := Bind(ellipsisId, simplePatternScope, 0)
+	ellipsisId := NewSyntax(NewIdentifier(Symbol("...")).Push(simplePatternScope)).IdentifierOrDie()
+	_, ellipsisBinding := Bind(ellipsisId, simplePatternScope)
 	(&simplePatternEnvironment).Extend(ellipsisBinding, NewSyntacticAbstraction(EllipsisTransformer))
 }
 
@@ -35,20 +35,20 @@ func MustCompileSimplePattern(datum Datum, literals ...Symbol) SimplePattern {
 
 func CompileSimplePatternWithIdentifierLiterals(datum Datum, literals ...Identifier) (SimplePattern, error) {
 	syntax := NewSyntax(NewWrappedSyntax(datum, nil))
-	syntax = syntax.Push(simplePatternScope, 0)
+	syntax = syntax.Push(simplePatternScope)
 	env := simplePatternEnvironment
 	if len(literals) > 0 {
 		literalScope := NewScope()
 		for _, literal := range literals {
 			// when compiling, treat an identifier with the same name as a literal for the provided identifier
 			id := NewIdentifier(literal.Name())
-			_, binding := Bind(id, literalScope, 0)
+			_, binding := Bind(id, literalScope)
 			(&env).Extend(binding, NewPatternLiteral(literal))
 		}
-		syntax = syntax.Push(literalScope, 0)
+		syntax = syntax.Push(literalScope)
 	}
 	scope := NewScope()
-	pattern, patternVariableInfos, err := CompilePattern(syntax, scope, 0, env)
+	pattern, patternVariableInfos, err := CompilePattern(syntax, scope, env)
 	if err != nil {
 		return SimplePattern{}, err
 	}

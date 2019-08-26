@@ -11,8 +11,7 @@ import (
 )
 
 func testEvaluate(t *testing.T, src string, globals []Global, expected common.Datum) {
-	scope := common.NewScope()
-	syntax := Introduce(test.Syntax(src)).Push(scope, 0)
+	syntax := Introduce(test.Syntax(src))
 	coreForm, err := Expand(syntax)
 	require.NoError(t, err)
 	ctx := NewCpsTransformContext(globals)

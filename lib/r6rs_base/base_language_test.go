@@ -33,7 +33,7 @@ func TestBaseLanguageLiteral(t *testing.T) {
 func TestBaseLanguageIdBoundOutOfContext(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	scope := common.NewScope()
-	id, _ = common.Bind(id, scope, 0)
+	id, _ = common.Bind(id, scope)
 	env := BaseEnvironment
 	syntax := common.NewSyntax(id.WrappedSyntax)
 	errMsg := "out of context: id at (unknown)"
@@ -43,7 +43,7 @@ func TestBaseLanguageIdBoundOutOfContext(t *testing.T) {
 func TestBaseLanguageIdBoundNonVariable(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	scope := common.NewScope()
-	id, binding := common.Bind(id, scope, 0)
+	id, binding := common.Bind(id, scope)
 	env := BaseEnvironment
 	(&env).Extend(binding, common.NewSyntacticAbstraction(nil))
 	syntax := common.NewSyntax(id.WrappedSyntax)
@@ -54,7 +54,7 @@ func TestBaseLanguageIdBoundNonVariable(t *testing.T) {
 func TestBaseLanguageIdBoundInContext(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	scope := common.NewScope()
-	id, binding := common.Bind(id, scope, 0)
+	id, binding := common.Bind(id, scope)
 	env := BaseEnvironment
 	(&env).Extend(binding, common.NewVariable())
 	syntax := common.NewSyntax(id.WrappedSyntax)
@@ -114,7 +114,6 @@ func TestBaseLanguageDefineSyntaxExpressionContext(t *testing.T) {
 func TestBaseLanguageDefineSyntax(t *testing.T) {
 	env := BaseEnvironment
 	syntax := Introduce(test.Syntax("(begin (define-syntax id (lambda (stx) (syntax #t))) (id))"))
-	syntax = syntax.Push(BaseScope, 1)
 	expectedSrc := "(#%sequence (quote #t))"
 	testBaseLanguage(t, syntax, env, expectedSrc)
 }
@@ -133,7 +132,6 @@ func TestBaseLanguageSyntaxCase(t *testing.T) {
 				((_ e1 e2 e3 ...)
 					(syntax ((lambda (t) (if t t (or e2 e3 ...))) e1))))))
 	(or #f (quote id)))`))
-	syntax = syntax.Push(BaseScope, 1)
 	expectedSrc := `
 (#%sequence
 	(#%application

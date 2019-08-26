@@ -20,7 +20,7 @@ func (id Identifier) Name() Symbol {
 }
 
 func (id Identifier) Binding() *Binding {
-	return id.scopeList.lookup(id, id.phase)
+	return id.scopeList.lookup(id)
 }
 
 func (id Identifier) Role(env Environment) Role {
@@ -40,7 +40,6 @@ func (id Identifier) BoundEqual(other Identifier) bool {
 }
 
 func (id Identifier) FreeEqual(other Identifier) bool {
-	// TODO: what's the phase for free-equal?
 	binding := id.Binding()
 	otherBinding := other.Binding()
 	if binding == nil && otherBinding == nil {
@@ -122,38 +121,19 @@ func (s Syntax) Equal(other Syntax) bool {
 	return reflect.DeepEqual(wrapped.Datum(), otherWrapped.Datum())
 }
 
-func (s Syntax) Push(scope *Scope, phase int) Syntax {
+func (s Syntax) Push(scope *Scope) Syntax {
 	switch d := s.datum.(type) {
 	case WrappedSyntax:
-		return Syntax{d.Push(scope, phase)}
+		return Syntax{d.Push(scope)}
 	case Pair:
 		return Syntax{
 			Pair{
-				Syntax{d.First}.Push(scope, phase).datum,
-				Syntax{d.Rest}.Push(scope, phase).datum,
+				Syntax{d.First}.Push(scope).datum,
+				Syntax{d.Rest}.Push(scope).datum,
 			},
 		}
 	default:
 		// TODO: is the Null case necessary if list endings are usually wrapped?
-		if d == Null {
-			return Syntax{Null}
-		}
-		panic(fmt.Sprintf("unhandled syntax: %v", Write(d)))
-	}
-}
-
-func (s Syntax) Next() Syntax {
-	switch d := s.datum.(type) {
-	case WrappedSyntax:
-		return Syntax{d.Next()}
-	case Pair:
-		return Syntax{
-			Pair{
-				Syntax{d.First}.Next().datum,
-				Syntax{d.Rest}.Next().datum,
-			},
-		}
-	default:
 		if d == Null {
 			return Syntax{Null}
 		}

@@ -78,11 +78,10 @@ func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *commo
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
-	phase := result[common.Symbol("begin")].(common.Syntax).IdentifierOrDie().Phase()
 	scope := common.NewScope()
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
-		forms[i] = syntax.(common.Syntax).Push(scope, phase)
+		forms[i] = syntax.(common.Syntax).Push(scope)
 	}
 	return expandBody(ctx, forms, mark, scope)
 }
@@ -109,13 +108,12 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
-	phase := result[common.Symbol("define-syntax")].(common.Syntax).IdentifierOrDie().Phase()
 	id, ok := result[common.Symbol("id")].(common.Syntax).Identifier()
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
-	_, binding := common.Bind(id, scope, phase)
-	syntax = result[common.Symbol("transformer")].(common.Syntax).Next()
+	_, binding := common.Bind(id, scope)
+	syntax = result[common.Symbol("transformer")].(common.Syntax)
 	coreForm, err := ctx.Expander.(baseExpander).globalCtx().Expand(syntax)
 	if err != nil {
 		return nil, err

@@ -22,7 +22,6 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
-	phase := result[common.Symbol("syntax-case")].(common.Syntax).IdentifierOrDie().Phase()
 	input := result[common.Symbol("input")].(common.Syntax)
 	inputCoreForm, err := ctx.Expand(input)
 	if err != nil {
@@ -39,7 +38,7 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 	literalScope := common.NewScope()
 	patternEnv := ctx.Env
 	for _, literal := range literals {
-		_, binding := common.Bind(literal, literalScope, phase)
+		_, binding := common.Bind(literal, literalScope)
 		(&patternEnv).Extend(binding, common.NewPatternLiteral(literal))
 	}
 	if common.DuplicateIdentifiers(literals...) {
@@ -64,7 +63,7 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 			return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 		}
 		clauseScope := common.NewScope()
-		compiledPattern, patternVariableInfos, err := common.CompilePattern(pattern, clauseScope, phase, patternEnv)
+		compiledPattern, patternVariableInfos, err := common.CompilePattern(pattern, clauseScope, patternEnv)
 		if err != nil {
 			return nil, err
 		}
@@ -74,12 +73,12 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 			patternVariableIds[i] = patternVariableInfo.Binding.Identifier()
 			(&clauseCtx.Env).Extend(patternVariableInfo.Binding, common.NewPatternVariable(patternVariableInfo.Nesting))
 		}
-		fender = fender.Push(clauseScope, phase)
+		fender = fender.Push(clauseScope)
 		fenderCoreForm, err := clauseCtx.Expand(fender)
 		if err != nil {
 			return nil, err
 		}
-		output = output.Push(clauseScope, phase)
+		output = output.Push(clauseScope)
 		outputCoreForm, err := clauseCtx.Expand(output)
 		if err != nil {
 			return nil, err
