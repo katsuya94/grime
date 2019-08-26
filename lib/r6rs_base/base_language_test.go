@@ -126,9 +126,12 @@ func TestBaseLanguageSyntaxCase(t *testing.T) {
  	(define-syntax or
 		(lambda (stx)
 			(syntax-case stx ()
-				((_) (syntax #f))
-				((_ e) (syntax e))
-				((_ e1 e2 e3 ...) (syntax ((lambda (t) (if t t (or e2 e3 ...))) e1))))))
+				((_)
+					(syntax #f))
+				((_ e)
+					(syntax e))
+				((_ e1 e2 e3 ...)
+					(syntax ((lambda (t) (if t t (or e2 e3 ...))) e1))))))
 	(or #f (quote id)))`))
 	syntax = syntax.Push(BaseScope, 1)
 	expectedSrc := "(#%sequence (#%application (#%lambda (t) (if t t (quote id))) (quote #f)))"

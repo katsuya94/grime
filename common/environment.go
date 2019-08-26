@@ -64,12 +64,14 @@ func (r PatternLiteral) Description() string {
 	return fmt.Sprintf("PatternLiteral{%#v}", r.Id)
 }
 
-type PatternVariable struct{}
+type PatternVariable struct {
+	Nesting int
+}
 
-func NewPatternVariable() PatternVariable {
-	return PatternVariable{}
+func NewPatternVariable(nesting int) PatternVariable {
+	return PatternVariable{nesting}
 }
 
 func (r PatternVariable) Description() string {
-	return "PatternVariable{}"
+	return fmt.Sprintf("PatternVariable{%#v}", r.Nesting)
 }
