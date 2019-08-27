@@ -17,7 +17,7 @@ func TestLoadForm_Unexpand(t *testing.T) {
 }
 
 func TestLoadForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	id := test.Identifier("id")
 	ctx.Add(id)
 	coreForm := LoadForm{Id: id, Mark: common.NewMark()}
@@ -26,7 +26,7 @@ func TestLoadForm_CpsTransform(t *testing.T) {
 }
 
 func TestLoadForm_CpsTransformOutOfContext(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	id := test.Identifier("id")
 	coreForm := LoadForm{Id: id, Mark: common.NewMark()}
 	testCpsTransformError(t, ctx, coreForm, "cps transform: id not in context")

@@ -12,7 +12,7 @@ func TestApplicationForm_Unexpand(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	coreForm := ApplicationForm{
 		Procedure: LoadForm{Id: id},
-		Arguments: []CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}},
+		Arguments: []common.CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()}},
 		Mark:      common.NewMark(),
 	}
 	actual := coreForm.Unexpand()
@@ -21,15 +21,15 @@ func TestApplicationForm_Unexpand(t *testing.T) {
 }
 
 func TestApplicationForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	procExpression := test.NewVoidExpression()
 	argExpression := test.NewVoidExpression()
 	coreForm := ApplicationForm{
-		Procedure: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Procedure: spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 			return procExpression, nil
 		}},
-		Arguments: []CoreForm{
-			spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Arguments: []common.CoreForm{
+			spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 				return argExpression, nil
 			}},
 		},

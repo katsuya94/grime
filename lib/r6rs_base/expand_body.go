@@ -9,34 +9,34 @@ import (
 )
 
 type BodyExpansionContext struct {
-	r6rs.ExpansionContext
+	common.ExpansionContext
 	Rest []common.Syntax
 }
 
 type BodyTransformer interface {
 	r6rs.CoreTransformer
-	TransformBody(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (r6rs.CoreForm, error)
+	TransformBody(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)
 }
 
 type bodyTransformerImpl struct {
 	r6rs.CoreTransformer
-	transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (r6rs.CoreForm, error)
+	transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)
 }
 
-func (t bodyTransformerImpl) TransformBody(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (r6rs.CoreForm, error) {
+func (t bodyTransformerImpl) TransformBody(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
 	return t.transformBody(ctx, syntax, mark, scope)
 }
 
-func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (r6rs.CoreForm, error)) BodyTransformer {
+func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)) BodyTransformer {
 	return bodyTransformerImpl{
-		r6rs.NewCoreTransformer(func(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+		r6rs.NewCoreTransformer(func(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 			return nil, fmt.Errorf("body form in expression context: %v at %v", syntaxKeywordForErrMsg(syntax), syntax.SourceLocation())
 		}),
 		transformBody,
 	}
 }
 
-func expandBody(ctx r6rs.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (r6rs.CoreForm, error) {
+func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
 	if len(forms) == 0 {
 		return nil, fmt.Errorf("unexpected final form")
 	}
@@ -53,7 +53,7 @@ func expandBody(ctx r6rs.ExpansionContext, forms []common.Syntax, mark *common.M
 	return ctx.Expand(common.NewSyntax(output))
 }
 
-func partiallyExpand(ctx r6rs.ExpansionContext, syntax common.Syntax) (common.Procedure, common.Syntax, error) {
+func partiallyExpand(ctx common.ExpansionContext, syntax common.Syntax) (common.Procedure, common.Syntax, error) {
 	mark := common.NewMark()
 	switch transformer := matchTransformer(syntax, ctx.Env).(type) {
 	case r6rs.CoreTransformer:
@@ -73,7 +73,7 @@ func partiallyExpand(ctx r6rs.ExpansionContext, syntax common.Syntax) (common.Pr
 var beginTransformer = bodyTransformerImpl{r6rs.NewCoreTransformer(transformBegin), transformBodyBegin}
 var patternBegin = common.MustCompileSimplePattern(read.MustReadDatum("(begin body ...)"))
 
-func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformBegin(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternBegin.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
@@ -86,7 +86,7 @@ func transformBegin(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *commo
 	return expandBody(ctx, forms, mark, scope)
 }
 
-func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (r6rs.CoreForm, error) {
+func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
 	result, ok := patternBegin.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
@@ -103,7 +103,7 @@ func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *co
 var defineSyntaxTransformer = newBodyTransformer(transformBodyDefineSyntax)
 var patternDefineSyntax = common.MustCompileSimplePattern(read.MustReadDatum("(define-syntax id transformer)"))
 
-func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (r6rs.CoreForm, error) {
+func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
 	result, ok := patternDefineSyntax.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
@@ -118,7 +118,7 @@ func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, m
 	if err != nil {
 		return nil, err
 	}
-	expression, err := coreForm.CpsTransform(r6rs.NewCpsTransformContext([]r6rs.Global{}))
+	expression, err := coreForm.CpsTransform(common.NewCpsTransformContext([]common.Global{}))
 	if err != nil {
 		return nil, err
 	}

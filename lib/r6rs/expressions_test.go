@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testEvaluate(t *testing.T, src string, globals []Global, expected common.Datum) {
+func testEvaluate(t *testing.T, src string, globals []common.Global, expected common.Datum) {
 	syntax := Introduce(test.Syntax(src))
 	coreForm, err := Expand(syntax)
 	require.NoError(t, err)
-	ctx := NewCpsTransformContext(globals)
+	ctx := common.NewCpsTransformContext(globals)
 	expression, err := coreForm.CpsTransform(ctx)
 	require.NoError(t, err)
 	actual, err := test.Evaluate(expression)
@@ -22,23 +22,25 @@ func testEvaluate(t *testing.T, src string, globals []Global, expected common.Da
 	assert.Equal(t, expected, actual)
 }
 
+// TODO: move evaluation tests into individual form files
+
 func TestQuote_Evaluate(t *testing.T) {
 	src := "(quote #t)"
-	globals := []Global{}
+	globals := []common.Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
 }
 
 func TestLambdaLoad_Evaluate(t *testing.T) {
 	src := "(#%application (#%lambda (id) (#%load id)) (quote #t))"
-	globals := []Global{}
+	globals := []common.Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
 }
 
 func TestApplication_Evaluate(t *testing.T) {
 	src := "(#%application (#%lambda () (quote #t)))"
-	globals := []Global{}
+	globals := []common.Global{}
 	expected := common.Boolean(true)
 	testEvaluate(t, src, globals, expected)
 }
@@ -48,7 +50,7 @@ func TestTop_Evaluate(t *testing.T) {
 	id := Introduce(common.NewSyntax(test.Identifier("id").WrappedSyntax)).IdentifierOrDie()
 	location := common.NewLocation()
 	location.Set(common.Boolean(true))
-	globals := []Global{
+	globals := []common.Global{
 		{
 			Id:       id,
 			Location: location,
@@ -60,7 +62,7 @@ func TestTop_Evaluate(t *testing.T) {
 
 func TestSequence_Evaluate(t *testing.T) {
 	src := "(#%sequence (quote #t) (quote #f))"
-	globals := []Global{}
+	globals := []common.Global{}
 	expected := common.Boolean(false)
 	testEvaluate(t, src, globals, expected)
 }

@@ -47,10 +47,12 @@ func Introduce(syntax common.Syntax) common.Syntax {
 // TODO: create a SimpleTemplate construct to easily build syntax from simple match results
 // it should also support easy marking of transformer introduced syntax, since its hard to enforce otherwise
 
+// TODO: move transformers and specs into individual files
+
 var applicationTransformer = r6rs.NewCoreTransformer(transformApplication)
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(proc args ...)"))
 
-func transformApplication(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformApplication(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternApplication.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
@@ -66,7 +68,7 @@ func transformApplication(ctx r6rs.ExpansionContext, syntax common.Syntax, mark 
 
 var idTransformer = r6rs.NewCoreTransformer(transformId)
 
-func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformId(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	id, ok := syntax.Identifier()
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
@@ -87,7 +89,7 @@ func transformId(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M
 
 var literalTransformer = r6rs.NewCoreTransformer(transformLiteral)
 
-func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformLiteral(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	wrappedSyntax, ok := syntax.Datum().(common.WrappedSyntax)
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
@@ -103,14 +105,14 @@ func transformLiteral(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *com
 var setTransformer = r6rs.NewCoreTransformer(transformSet)
 var patternSet = common.MustCompileSimplePattern(read.MustReadDatum("(set! id value)"))
 
-func transformSet(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformSet(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	panic("not implemented")
 }
 
 var lambdaTransformer = r6rs.NewCoreTransformer(transformLambda)
 var patternLambda = common.MustCompileSimplePattern(read.MustReadDatum("(lambda (formals ...) body ...)"))
 
-func transformLambda(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternLambda.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))

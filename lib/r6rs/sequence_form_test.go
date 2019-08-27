@@ -10,7 +10,7 @@ import (
 
 func TestSequenceForm_Unexpand(t *testing.T) {
 	coreForm := SequenceForm{
-		Forms: []CoreForm{
+		Forms: []common.CoreForm{
 			QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()},
 			QuoteForm{Datum: common.Boolean(false), Mark: common.NewMark()},
 		},
@@ -24,10 +24,10 @@ func TestSequenceForm_Unexpand(t *testing.T) {
 func TestSequenceForm_CpsTransform(t *testing.T) {
 	id := test.Identifier("id")
 	location := common.NewLocation()
-	ctx := NewCpsTransformContext([]Global{{id, location}})
+	ctx := common.NewCpsTransformContext([]common.Global{{id, location}})
 	ctx.Add(id)
 	coreForm := SequenceForm{
-		Forms: []CoreForm{
+		Forms: []common.CoreForm{
 			QuoteForm{Datum: common.Boolean(true), Mark: common.NewMark()},
 			QuoteForm{Datum: common.Boolean(false), Mark: common.NewMark()},
 		},

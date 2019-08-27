@@ -9,22 +9,22 @@ import (
 
 type CoreTransformer interface {
 	common.Procedure
-	Transform(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)
+	Transform(common.ExpansionContext, common.Syntax, *common.M) (common.CoreForm, error)
 }
 
-func NewCoreTransformer(transform func(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)) CoreTransformer {
+func NewCoreTransformer(transform func(common.ExpansionContext, common.Syntax, *common.M) (common.CoreForm, error)) CoreTransformer {
 	return coreTransformerImpl{transform}
 }
 
 type coreTransformerImpl struct {
-	transform func(ExpansionContext, common.Syntax, *common.M) (CoreForm, error)
+	transform func(common.ExpansionContext, common.Syntax, *common.M) (common.CoreForm, error)
 }
 
 func (coreTransformerImpl) Call(common.Continuation, ...common.Datum) (common.Evaluation, error) {
 	return common.ErrorC(fmt.Errorf("core transformer called"))
 }
 
-func (t coreTransformerImpl) Transform(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func (t coreTransformerImpl) Transform(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	return t.transform(ctx, syntax, mark)
 }
 
@@ -34,13 +34,13 @@ type coreExpander struct {
 	newMark func() *common.M
 }
 
-func Expand(syntax common.Syntax) (CoreForm, error) {
+func Expand(syntax common.Syntax) (common.CoreForm, error) {
 	return coreExpander{func() *common.M {
 		return common.NewMark()
 	}}.Expand(syntax, CoreEnvironment)
 }
 
-func ExpandWithMarks(syntax common.Syntax, marks []common.M) (CoreForm, error) {
+func ExpandWithMarks(syntax common.Syntax, marks []common.M) (common.CoreForm, error) {
 	i := 0
 	return coreExpander{func() *common.M {
 		m := &marks[i]
@@ -49,10 +49,10 @@ func ExpandWithMarks(syntax common.Syntax, marks []common.M) (CoreForm, error) {
 	}}.Expand(syntax, CoreEnvironment)
 }
 
-func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (CoreForm, error) {
+func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {
 	switch transformer := MatchTransformer(syntax, env, patternMacroUseList).(type) {
 	case CoreTransformer:
-		ctx := ExpansionContext{Expander: e, Env: env}
+		ctx := common.ExpansionContext{Expander: e, Env: env}
 		// TODO: marks should record information about their introducing macro
 		mark := e.newMark()
 		return ExpandCoreTransformer(ctx, transformer, syntax, mark)
@@ -64,7 +64,7 @@ func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (Core
 	}
 }
 
-func ExpandCoreTransformer(ctx ExpansionContext, transformer CoreTransformer, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func ExpandCoreTransformer(ctx common.ExpansionContext, transformer CoreTransformer, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	return transformer.Transform(ctx, syntax, mark)
 }
 

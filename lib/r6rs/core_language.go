@@ -35,7 +35,7 @@ func Introduce(syntax common.Syntax) common.Syntax {
 
 var patternQuote = common.MustCompileSimplePattern(read.MustReadDatum("(quote datum)"))
 
-func transformQuote(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformQuote(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternQuote.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("quote: bad syntax")
@@ -46,7 +46,7 @@ func transformQuote(ctx ExpansionContext, syntax common.Syntax, mark *common.M) 
 
 var patternLoad = common.MustCompileSimplePattern(read.MustReadDatum("(#%load id)"))
 
-func transformLoad(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformLoad(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternLoad.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%load: bad syntax")
@@ -60,7 +60,7 @@ func transformLoad(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (
 
 var patternLambda = common.MustCompileSimplePattern(read.MustReadDatum("(#%lambda (formals ...) inner)"))
 
-func transformLambda(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternLambda.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
@@ -86,7 +86,7 @@ func transformLambda(ctx ExpansionContext, syntax common.Syntax, mark *common.M)
 
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(#%application proc args ...)"))
 
-func transformApplication(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformApplication(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternApplication.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%application: bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
@@ -96,7 +96,7 @@ func transformApplication(ctx ExpansionContext, syntax common.Syntax, mark *comm
 		return nil, err
 	}
 	argsResults := result[common.Symbol("args")].([]interface{})
-	args := make([]CoreForm, len(argsResults))
+	args := make([]common.CoreForm, len(argsResults))
 	for i := range argsResults {
 		args[i], err = ctx.Expand(argsResults[i].(common.Syntax))
 		if err != nil {
@@ -108,7 +108,7 @@ func transformApplication(ctx ExpansionContext, syntax common.Syntax, mark *comm
 
 var patternTop = common.MustCompileSimplePattern(read.MustReadDatum("(#%top id)"))
 
-func transformTop(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformTop(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternTop.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%top: bad syntax")
@@ -122,14 +122,14 @@ func transformTop(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (C
 
 var patternSequence = common.MustCompileSimplePattern(read.MustReadDatum("(#%sequence forms ...)"))
 
-func transformSequence(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformSequence(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	var err error
 	result, ok := patternSequence.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("#%%sequence: bad syntax")
 	}
 	formsResults := result[common.Symbol("forms")].([]interface{})
-	forms := make([]CoreForm, len(formsResults))
+	forms := make([]common.CoreForm, len(formsResults))
 	for i := range formsResults {
 		forms[i], err = ctx.Expand(formsResults[i].(common.Syntax))
 		if err != nil {
@@ -141,7 +141,7 @@ func transformSequence(ctx ExpansionContext, syntax common.Syntax, mark *common.
 
 var patternIf = common.MustCompileSimplePattern(read.MustReadDatum("(if condition then otherwise)"))
 
-func transformIf(ctx ExpansionContext, syntax common.Syntax, mark *common.M) (CoreForm, error) {
+func transformIf(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	var err error
 	result, ok := patternIf.Match(syntax)
 	if !ok {

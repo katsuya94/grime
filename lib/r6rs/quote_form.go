@@ -13,6 +13,6 @@ func (f QuoteForm) Unexpand() common.Syntax {
 	return common.NewSyntax(list(QuoteId.WrappedSyntax, introduce(f.Datum)))
 }
 
-func (f QuoteForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
+func (f QuoteForm) CpsTransform(ctx *common.CpsTransformContext) (common.Expression, error) {
 	return NewQuote(f.Datum), nil
 }

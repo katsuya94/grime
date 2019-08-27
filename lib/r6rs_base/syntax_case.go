@@ -17,7 +17,7 @@ var (
 	patternSyntaxCaseClauseWithFender = common.MustCompileSimplePattern(read.MustReadDatum("(pattern fender output)"))
 )
 
-func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *common.M) (r6rs.CoreForm, error) {
+func transformSyntaxCase(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	result, ok := patternSyntaxCase.Match(syntax)
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
@@ -68,7 +68,7 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 			return nil, err
 		}
 		patternVariableIds := make([]common.Identifier, len(patternVariableInfos))
-		clauseCtx := r6rs.ExpansionContext{Expander: ctx.Expander, Env: ctx.Env}
+		clauseCtx := common.ExpansionContext{Expander: ctx.Expander, Env: ctx.Env}
 		for i, patternVariableInfo := range patternVariableInfos {
 			patternVariableIds[i] = patternVariableInfo.Binding.Identifier()
 			(&clauseCtx.Env).Extend(patternVariableInfo.Binding, common.NewPatternVariable(patternVariableInfo.Nesting))
@@ -91,16 +91,16 @@ func transformSyntaxCase(ctx r6rs.ExpansionContext, syntax common.Syntax, mark *
 type syntaxCaseFormClause struct {
 	pattern            common.Pattern
 	patternVariableIds []common.Identifier
-	fender             r6rs.CoreForm
-	output             r6rs.CoreForm
+	fender             common.CoreForm
+	output             common.CoreForm
 }
 
 type syntaxCaseForm struct {
-	input   r6rs.CoreForm
+	input   common.CoreForm
 	clauses []syntaxCaseFormClause
 }
 
-func (f syntaxCaseForm) CpsTransform(ctx *r6rs.CpsTransformContext) (common.Expression, error) {
+func (f syntaxCaseForm) CpsTransform(ctx *common.CpsTransformContext) (common.Expression, error) {
 	input, err := f.input.CpsTransform(ctx)
 	if err != nil {
 		return nil, err

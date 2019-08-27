@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testCoreLanguage(t *testing.T, marks []common.M, src string, expected CoreForm) {
+// TODO: move language tests into individual form files
+
+func testCoreLanguage(t *testing.T, marks []common.M, src string, expected common.CoreForm) {
 	syntax := Introduce(test.Syntax(src))
 	actual, err := ExpandWithMarks(syntax, marks)
 	require.NoError(t, err)
@@ -50,7 +52,7 @@ func TestCoreLanguageApplication(t *testing.T) {
 	id := Introduce(test.Syntax("id")).IdentifierOrDie()
 	expected := ApplicationForm{
 		Procedure: LoadForm{Id: id, Mark: &marks[1]},
-		Arguments: []CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: &marks[2]}},
+		Arguments: []common.CoreForm{QuoteForm{Datum: common.Boolean(true), Mark: &marks[2]}},
 		Mark:      &marks[0],
 	}
 	testCoreLanguage(t, marks, src, expected)
@@ -68,7 +70,7 @@ func TestCoreLanguageSequence(t *testing.T) {
 	marks := make([]common.M, 3)
 	src := "(#%sequence (quote #t) (quote #f))"
 	expected := SequenceForm{
-		Forms: []CoreForm{
+		Forms: []common.CoreForm{
 			QuoteForm{Datum: common.Boolean(true), Mark: &marks[1]},
 			QuoteForm{Datum: common.Boolean(false), Mark: &marks[2]},
 		},

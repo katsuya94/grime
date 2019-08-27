@@ -4,11 +4,7 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
-type CoreForm interface {
-	CpsTransform(*CpsTransformContext) (common.Expression, error)
-}
-
 type Unexpander interface {
-	CoreForm
+	common.CoreForm
 	Unexpand() common.Syntax
 }

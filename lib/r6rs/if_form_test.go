@@ -19,18 +19,18 @@ func TestIfForm_Unexpand(t *testing.T) {
 }
 
 func TestIfForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	condition := test.NewVoidExpression()
 	then := test.NewVoidExpression()
 	otherwise := test.NewVoidExpression()
 	coreForm := IfForm{
-		Condition: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Condition: spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 			return condition, nil
 		}},
-		Then: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Then: spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 			return then, nil
 		}},
-		Otherwise: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Otherwise: spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 			return otherwise, nil
 		}},
 		Mark: common.NewMark(),

@@ -13,7 +13,7 @@ var (
 	patternMacroUseSingletonIdentifier = common.MustCompileSimplePattern(read.MustReadDatum("keyword"))
 )
 
-func Expand(syntax common.Syntax, env common.Environment) (r6rs.CoreForm, error) {
+func Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {
 	return baseExpander{env}.Expand(syntax, env)
 }
 
@@ -21,12 +21,12 @@ type baseExpander struct {
 	globalEnv common.Environment
 }
 
-func (e baseExpander) globalCtx() r6rs.ExpansionContext {
-	return r6rs.ExpansionContext{Expander: e, Env: e.globalEnv}
+func (e baseExpander) globalCtx() common.ExpansionContext {
+	return common.ExpansionContext{Expander: e, Env: e.globalEnv}
 }
 
-func (e baseExpander) Expand(syntax common.Syntax, env common.Environment) (r6rs.CoreForm, error) {
-	ctx := r6rs.ExpansionContext{Expander: e, Env: env}
+func (e baseExpander) Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {
+	ctx := common.ExpansionContext{Expander: e, Env: env}
 	mark := common.NewMark()
 	switch transformer := matchTransformer(syntax, env).(type) {
 	case r6rs.CoreTransformer:

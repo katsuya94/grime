@@ -5,7 +5,7 @@ import (
 )
 
 type SequenceForm struct {
-	Forms []CoreForm
+	Forms []common.CoreForm
 	Mark  *common.M
 }
 
@@ -17,7 +17,7 @@ func (f SequenceForm) Unexpand() common.Syntax {
 	return common.NewSyntax(common.Pair{SequenceId.WrappedSyntax, list(forms...)})
 }
 
-func (f SequenceForm) CpsTransform(ctx *CpsTransformContext) (common.Expression, error) {
+func (f SequenceForm) CpsTransform(ctx *common.CpsTransformContext) (common.Expression, error) {
 	var err error
 	expressions := make([]common.Expression, len(f.Forms))
 	for i := range expressions {

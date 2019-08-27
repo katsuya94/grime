@@ -65,7 +65,7 @@ func (r PatternLiteral) Description() string {
 }
 
 type PatternVariable struct {
-	Nesting int
+	nesting int
 }
 
 func NewPatternVariable(nesting int) PatternVariable {
@@ -73,5 +73,5 @@ func NewPatternVariable(nesting int) PatternVariable {
 }
 
 func (r PatternVariable) Description() string {
-	return fmt.Sprintf("PatternVariable{%#v}", r.Nesting)
+	return fmt.Sprintf("PatternVariable{%#v}", r.nesting)
 }

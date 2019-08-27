@@ -19,7 +19,7 @@ func TestTopForm_Unexpand(t *testing.T) {
 func TestTopForm_CpsTransform(t *testing.T) {
 	id := test.Identifier("id")
 	location := common.NewLocation()
-	ctx := NewCpsTransformContext([]Global{{id, location}})
+	ctx := common.NewCpsTransformContext([]common.Global{{id, location}})
 	ctx.Add(id)
 	coreForm := TopForm{Id: id, Mark: common.NewMark()}
 	expected := NewTop(location)
@@ -27,7 +27,7 @@ func TestTopForm_CpsTransform(t *testing.T) {
 }
 
 func TestTopForm_CpsTransformOutOfContext(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	id := test.Identifier("id")
 	coreForm := TopForm{Id: id, Mark: common.NewMark()}
 	testCpsTransformError(t, ctx, coreForm, "cps transform: id not in context")

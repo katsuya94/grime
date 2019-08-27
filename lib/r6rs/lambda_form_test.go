@@ -22,12 +22,12 @@ func TestLambdaForm_Unexpand(t *testing.T) {
 }
 
 func TestLambdaForm_CpsTransform(t *testing.T) {
-	ctx := NewCpsTransformContext([]Global{})
+	ctx := common.NewCpsTransformContext([]common.Global{})
 	id := test.Identifier("id")
 	expression := test.NewVoidExpression()
 	coreForm := LambdaForm{
 		Formals: []common.Identifier{id},
-		Inner: spyForm{cpsTransform: func(ctx *CpsTransformContext) (common.Expression, error) {
+		Inner: spyForm{cpsTransform: func(ctx *common.CpsTransformContext) (common.Expression, error) {
 			assert.Equal(t, ctx.IndexOrDie(id), 0)
 			return expression, nil
 		}},
