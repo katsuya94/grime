@@ -36,6 +36,12 @@ func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, 
 	}
 }
 
+func ExpandBody(forms []common.Syntax, env common.Environment, scope *common.Scope) (common.CoreForm, error) {
+	ctx := common.ExpansionContext{baseExpander{env}, env}
+	mark := common.NewMark()
+	return expandBody(ctx, forms, mark, scope)
+}
+
 func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
 	if len(forms) == 0 {
 		return nil, fmt.Errorf("unexpected final form")

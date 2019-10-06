@@ -24,7 +24,12 @@ type Library struct {
 	importSpecs            []importSpec
 	exportSpecs            []identifierBinding
 	body                   []common.Syntax
-	nullSourceLocationTree common.SourceLocationTree
+	nullSourceLocationTree *common.SourceLocationTree
+}
+
+type identifierBinding struct {
+	internal common.Symbol
+	external common.Symbol
 }
 
 func NewLibrary(source common.Syntax) (*Library, error) {
@@ -82,7 +87,7 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 		pair, _ := null.Pair()
 		null = common.NewSyntax(pair.Rest)
 	}
-	library.nullSourceLocationTree = *null.SourceLocationTree()
+	library.nullSourceLocationTree = null.SourceLocationTree()
 	return library, nil
 }
 
