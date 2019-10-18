@@ -82,6 +82,9 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 				}
 			}
 		}
+		if err := transformer.error(); err != nil {
+			return err
+		}
 	}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
 	coreForm, err := r6rs_base.ExpandBody(body, common.Environment{}, scope)
