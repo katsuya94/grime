@@ -32,15 +32,15 @@ type identifierBinding struct {
 	external common.Symbol
 }
 
-func NewLibrary(source common.Syntax) (*Library, error) {
+func NewLibrary(source common.Syntax) (Library, error) {
 	library := &Library{}
 	result, ok := PatternLibrary.Match(source)
 	if !ok {
-		return nil, fmt.Errorf("runtime: malformed library")
+		return Library{}, fmt.Errorf("runtime: malformed library")
 	}
 	libraryName := result[common.Symbol("library-name")].([]interface{})
 	if len(libraryName) == 0 {
-		return nil, fmt.Errorf("runtime: malformed library")
+		return Library{}, fmt.Errorf("runtime: malformed library")
 	}
 	i := 0
 	for ; i < len(libraryName); i++ {
@@ -53,29 +53,29 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 	if i == len(libraryName)-1 {
 		result, ok := PatternVersion.Match(libraryName[i].(common.Syntax))
 		if !ok {
-			return nil, fmt.Errorf("runtime: malformed library name")
+			return Library{}, fmt.Errorf("runtime: malformed library name")
 		}
 		for _, d := range result[common.Symbol("sub-version")].([]interface{}) {
 			subV, err := newSubVersion(d.(common.Syntax))
 			if err != nil {
-				return nil, err
+				return Library{}, err
 			}
 			library.version = append(library.version, subV)
 		}
 	} else if i < len(libraryName)-1 {
-		return nil, fmt.Errorf("runtime: malformed library name")
+		return Library{}, fmt.Errorf("runtime: malformed library name")
 	}
 	for _, d := range result[common.Symbol("export-spec")].([]interface{}) {
 		exportSpecs, err := newExportSpecs(d.(common.Syntax))
 		if err != nil {
-			return nil, err
+			return Library{}, err
 		}
 		library.exportSpecs = append(library.exportSpecs, exportSpecs...)
 	}
 	for _, d := range result[common.Symbol("import-spec")].([]interface{}) {
 		importSpec, err := newImportSpec(d.(common.Syntax))
 		if err != nil {
-			return nil, err
+			return Library{}, err
 		}
 		library.importSpecs = append(library.importSpecs, importSpec)
 	}
@@ -88,14 +88,14 @@ func NewLibrary(source common.Syntax) (*Library, error) {
 		null = common.NewSyntax(pair.Rest)
 	}
 	library.nullSourceLocationTree = null.SourceLocationTree()
-	return library, nil
+	return Library{}, nil
 }
 
-func MustNewLibraryFromString(name string, src string) *Library {
+func MustNewLibraryFromString(name string, src string) Library {
 	return MustNewLibraryFromReader(name, strings.NewReader(src))
 }
 
-func MustNewLibraryFromFile(name string) *Library {
+func MustNewLibraryFromFile(name string) Library {
 	_, filename, _, ok := runtime.Caller(1)
 	if !ok {
 		panic(fmt.Sprintf("failed to load %v", name))
@@ -108,7 +108,7 @@ func MustNewLibraryFromFile(name string) *Library {
 	return MustNewLibraryFromReader(sourcePath, f)
 }
 
-func MustNewLibraryFromReader(name string, r io.Reader) *Library {
+func MustNewLibraryFromReader(name string, r io.Reader) Library {
 	syntaxes, _, err := read.Read(name, r)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load %v: %v", name, err))
@@ -119,7 +119,7 @@ func MustNewLibraryFromReader(name string, r io.Reader) *Library {
 	return MustNewLibrary(syntaxes[0])
 }
 
-func MustNewLibrary(source common.Syntax) *Library {
+func MustNewLibrary(source common.Syntax) Library {
 	library, err := NewLibrary(source)
 	if err != nil {
 		panic(err)

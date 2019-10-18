@@ -9,7 +9,7 @@ import (
 )
 
 type Runtime struct {
-	libraries []*Library
+	libraries []Library
 }
 
 func NewRuntime() *Runtime {
@@ -32,68 +32,86 @@ func (r *Runtime) Run(topLevelProgram []common.Syntax, nullSourceLocationTree co
 		importSpecs = append(importSpecs, importSpec)
 	}
 	body := topLevelProgram[1:]
-	return (&run{r, nil}).runWithImports(body, importSpecs)
+	scope := common.NewScope()
+	return (&run{r, nil}).runWithImports(body, &nullSourceLocationTree, importSpecs, scope)
 }
 
-func (r *Runtime) library(libraryName []common.Symbol) *Library {
+func (r *Runtime) library(libraryName []common.Symbol) (Library, bool) {
 	for _, library := range r.libraries {
 		if nameEqual(library.name, libraryName) {
-			return library
+			return library, true
 		}
 	}
-	return nil
+	return Library{}, false
 }
 
-type libraryScope struct {
+type libraryBindings struct {
 	name     []common.Symbol
 	bindings map[common.Symbol]*common.Binding
 }
 
 type run struct {
-	runtime       *Runtime
-	libraryScopes []libraryScope
+	runtime          *Runtime
+	libraryBindingss []libraryBindings
 }
 
-func (r *run) runWithImports(body []common.Syntax, importSpecs []importSpec) error {
+func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) error {
+	bindings := map[int]map[common.Symbol]*common.Binding{}
 	for _, importSpec := range importSpecs {
-		bindings, err := r.instantiate(importSpec.libraryName())
+		library, ok := r.runtime.library(importSpec.libraryName())
+		if !ok {
+			return fmt.Errorf("unknown library: %s", nameString(importSpec.libraryName()))
+		}
+		importSpecResolution, ok := importSpec.resolve(library)
+		if !ok {
+			return fmt.Errorf("version mismatch: %s", nameString(importSpec.libraryName()))
+		}
+		importBindings, err := r.instantiate(library)
 		if err != nil {
 			return err
 		}
+		transformer := importSpecResolution.identifierSpec.transformer()
+		for external, binding := range importBindings {
+			internal, ok := transformer.transform(external)
+			if ok {
+				for _, level := range importSpecResolution.levels {
+					if _, ok := bindings[level]; !ok {
+						bindings[level] = map[common.Symbol]*common.Binding{}
+					}
+					bindings[level][internal] = binding
+				}
+			}
+		}
+	}
+	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
+	coreForm, err := r6rs_base.ExpandBody(body, common.Environment{}, scope)
+	if err != nil {
+		return err
+	}
+	expression, err := coreForm.CpsTransform(common.NewCpsTransformContext(nil))
+	if err != nil {
+		return err
+	}
+	_, err = common.Evaluate(common.NewEvaluationContext(), expression)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func (r *run) instantiate(libraryName []common.Symbol) (map[common.Symbol]*common.Binding, error) {
-	for _, libraryScope := range r.libraryScopes {
-		if nameEqual(libraryScope.name, libraryName) {
-			if libraryScope.bindings == nil {
+func (r *run) instantiate(library Library) (map[common.Symbol]*common.Binding, error) {
+	for _, libraryBindings := range r.libraryBindingss {
+		if nameEqual(libraryBindings.name, library.Name()) {
+			if libraryBindings.bindings == nil {
 				return nil, fmt.Errorf("import cycle")
 			}
-			return libraryScope.bindings, nil
+			return libraryBindings.bindings, nil
 		}
 	}
-	r.libraryBindings = append(r.libraryBindings, libraryScope{libraryName, nil})
-	libvray
-	library := r.runtime.library(libraryName)
-	if library == nil {
-		return nil, fmt.Errorf("unknown library: %s", nameString)
-	}
+	r.libraryBindingss = append(r.libraryBindingss, libraryBindings{library.Name(), nil})
 	scope := common.NewScope()
-	body := append(library.body, common.NewSyntax(common.NewWrappedSyntax(common.Void, library.nullSourceLocationTree)))
-	coreForm, err := r6rs_base.ExpandBody(body, common.Environment{}, scope)
-	if err != nil {
-		return nil, err
-	}
-	expression, err := coreForm.CpsTransform(common.NewCpsTransformContext(nil))
-	if err != nil {
-		return nil, err
-	}
-	_, err = common.Evaluate(common.NewEvaluationContext(), expression)
-	if err != nil {
-		return nil, err
-	}
-
+	r.runWithImports(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
+	bindings := map[common.Symbol]*common.Binding{}
 	for _, idBinding := range library.exportSpecs {
 		id := common.NewIdentifier(idBinding.internal)
 		id = id.Push(scope).IdentifierOrDie()
@@ -101,8 +119,9 @@ func (r *run) instantiate(libraryName []common.Symbol) (map[common.Symbol]*commo
 		if binding == nil {
 			return nil, fmt.Errorf("cannot export unbound identifier: %s", idBinding.internal)
 		}
-
+		bindings[idBinding.external] = binding
 	}
+	return bindings, nil
 }
 
 func nameString(name []common.Symbol) string {

@@ -7,23 +7,28 @@ import (
 	"github.com/katsuya94/grime/common"
 )
 
+type identifierTransformer interface {
+	transform(common.Symbol) (common.Symbol, bool)
+	error() error
+}
+
 type identifierSpec interface {
-	common.IdentifierTransformerFactory
+	transformer() identifierTransformer
 }
 
 type identifierSpecAll struct{}
 
-func (spec identifierSpecAll) New() common.IdentifierTransformer {
+func (spec identifierSpecAll) transformer() identifierTransformer {
 	return identifierTransformerAll{}
 }
 
 type identifierTransformerAll struct{}
 
-func (spec identifierTransformerAll) Transform(name common.Symbol) (common.Symbol, bool) {
+func (spec identifierTransformerAll) transform(name common.Symbol) (common.Symbol, bool) {
 	return name, true
 }
 
-func (spec identifierTransformerAll) Error() error {
+func (spec identifierTransformerAll) error() error {
 	return nil
 }
 
@@ -32,22 +37,22 @@ type identifierSpecOnly struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecOnly) New() common.IdentifierTransformer {
+func (spec identifierSpecOnly) transformer() identifierTransformer {
 	unreferenced := make(map[common.Symbol]struct{}, len(spec.identifiers))
 	for _, id := range spec.identifiers {
 		unreferenced[id] = struct{}{}
 	}
-	return identifierTransformerOnly{spec, spec.identifierSpec.New(), unreferenced}
+	return identifierTransformerOnly{spec, spec.identifierSpec.transformer(), unreferenced}
 }
 
 type identifierTransformerOnly struct {
 	identifierSpecOnly
-	inner        common.IdentifierTransformer
+	inner        identifierTransformer
 	unreferenced map[common.Symbol]struct{}
 }
 
-func (spec identifierTransformerOnly) Transform(name common.Symbol) (common.Symbol, bool) {
-	name, ok := spec.inner.Transform(name)
+func (spec identifierTransformerOnly) transform(name common.Symbol) (common.Symbol, bool) {
+	name, ok := spec.inner.transform(name)
 	if !ok {
 		return common.Symbol(""), false
 	}
@@ -60,8 +65,8 @@ func (spec identifierTransformerOnly) Transform(name common.Symbol) (common.Symb
 	return common.Symbol(""), false
 }
 
-func (spec identifierTransformerOnly) Error() error {
-	err := spec.inner.Error()
+func (spec identifierTransformerOnly) error() error {
+	err := spec.inner.error()
 	if err != nil {
 		return err
 	}
@@ -76,22 +81,22 @@ type identifierSpecExcept struct {
 	identifiers    []common.Symbol
 }
 
-func (spec identifierSpecExcept) New() common.IdentifierTransformer {
+func (spec identifierSpecExcept) transformer() identifierTransformer {
 	unreferenced := make(map[common.Symbol]struct{}, len(spec.identifiers))
 	for _, id := range spec.identifiers {
 		unreferenced[id] = struct{}{}
 	}
-	return identifierTransformerExcept{spec, spec.identifierSpec.New(), unreferenced}
+	return identifierTransformerExcept{spec, spec.identifierSpec.transformer(), unreferenced}
 }
 
 type identifierTransformerExcept struct {
 	identifierSpecExcept
-	inner        common.IdentifierTransformer
+	inner        identifierTransformer
 	unreferenced map[common.Symbol]struct{}
 }
 
-func (spec identifierTransformerExcept) Transform(name common.Symbol) (common.Symbol, bool) {
-	name, ok := spec.inner.Transform(name)
+func (spec identifierTransformerExcept) transform(name common.Symbol) (common.Symbol, bool) {
+	name, ok := spec.inner.transform(name)
 	if !ok {
 		return common.Symbol(""), false
 	}
@@ -104,8 +109,8 @@ func (spec identifierTransformerExcept) Transform(name common.Symbol) (common.Sy
 	return name, true
 }
 
-func (spec identifierTransformerExcept) Error() error {
-	err := spec.inner.Error()
+func (spec identifierTransformerExcept) error() error {
+	err := spec.inner.error()
 	if err != nil {
 		return err
 	}
@@ -120,25 +125,25 @@ type identifierSpecPrefix struct {
 	identifier     common.Symbol
 }
 
-func (spec identifierSpecPrefix) New() common.IdentifierTransformer {
-	return identifierTransformerPrefix{spec, spec.identifierSpec.New()}
+func (spec identifierSpecPrefix) transformer() identifierTransformer {
+	return identifierTransformerPrefix{spec, spec.identifierSpec.transformer()}
 }
 
 type identifierTransformerPrefix struct {
 	identifierSpecPrefix
-	inner common.IdentifierTransformer
+	inner identifierTransformer
 }
 
-func (spec identifierTransformerPrefix) Transform(name common.Symbol) (common.Symbol, bool) {
-	name, ok := spec.inner.Transform(name)
+func (spec identifierTransformerPrefix) transform(name common.Symbol) (common.Symbol, bool) {
+	name, ok := spec.inner.transform(name)
 	if !ok {
 		return common.Symbol(""), false
 	}
 	return common.Symbol(spec.identifier + name), true
 }
 
-func (spec identifierTransformerPrefix) Error() error {
-	return spec.inner.Error()
+func (spec identifierTransformerPrefix) error() error {
+	return spec.inner.error()
 }
 
 type identifierSpecRename struct {
@@ -146,22 +151,22 @@ type identifierSpecRename struct {
 	identifierBindings []identifierBinding
 }
 
-func (spec identifierSpecRename) New() common.IdentifierTransformer {
+func (spec identifierSpecRename) transformer() identifierTransformer {
 	unreferenced := make(map[common.Symbol]struct{}, len(spec.identifierBindings))
 	for _, identifierBinding := range spec.identifierBindings {
 		unreferenced[identifierBinding.external] = struct{}{}
 	}
-	return identifierTransformerRename{spec, spec.identifierSpec.New(), unreferenced}
+	return identifierTransformerRename{spec, spec.identifierSpec.transformer(), unreferenced}
 }
 
 type identifierTransformerRename struct {
 	identifierSpecRename
-	inner        common.IdentifierTransformer
+	inner        identifierTransformer
 	unreferenced map[common.Symbol]struct{}
 }
 
-func (spec identifierTransformerRename) Transform(name common.Symbol) (common.Symbol, bool) {
-	name, ok := spec.inner.Transform(name)
+func (spec identifierTransformerRename) transform(name common.Symbol) (common.Symbol, bool) {
+	name, ok := spec.inner.transform(name)
 	if !ok {
 		return common.Symbol(""), false
 	}
@@ -174,8 +179,8 @@ func (spec identifierTransformerRename) Transform(name common.Symbol) (common.Sy
 	return name, true
 }
 
-func (spec identifierTransformerRename) Error() error {
-	err := spec.inner.Error()
+func (spec identifierTransformerRename) error() error {
+	err := spec.inner.error()
 	if err != nil {
 		return err
 	}

@@ -60,11 +60,11 @@ func newImportSpec(d common.Syntax) (importSpec, error) {
 }
 
 type importSpecResolution struct {
-	importSetResolution
-	levels []int
+	identifierSpec identifierSpec
+	levels         []int
 }
 
-func (spec importSpec) resolve(library *Library) (importSpecResolution, bool) {
+func (spec importSpec) resolve(library Library) (importSpecResolution, bool) {
 	importSetResolution, ok := spec.importSet.resolve(library)
 	return importSpecResolution{importSetResolution, spec.levels}, ok
 }
@@ -95,7 +95,7 @@ func newImportLevel(d common.Syntax) (int, error) {
 }
 
 type importSet interface {
-	resolve(*Library) (importSetResolution, bool)
+	resolve(Library) (identifierSpec, bool)
 	libraryName() []common.Symbol
 }
 
@@ -174,22 +174,16 @@ func newImportSet(d common.Syntax) (importSet, error) {
 	return newLibraryReference(d)
 }
 
-type importSetResolution struct {
-	identifierSpec identifierSpec
-}
-
 type importSetOnly struct {
 	importSet   importSet
 	identifiers []common.Symbol
 }
 
-func (set importSetOnly) resolve(library *Library) (importSetResolution, bool) {
-	subRes, ok := set.importSet.resolve(library)
-	return importSetResolution{
-		identifierSpecOnly{
-			subRes.identifierSpec,
-			set.identifiers,
-		},
+func (set importSetOnly) resolve(library Library) (identifierSpec, bool) {
+	subSpec, ok := set.importSet.resolve(library)
+	return identifierSpecOnly{
+		subSpec,
+		set.identifiers,
 	}, ok
 }
 
@@ -202,13 +196,11 @@ type importSetExcept struct {
 	identifiers []common.Symbol
 }
 
-func (set importSetExcept) resolve(library *Library) (importSetResolution, bool) {
-	subRes, ok := set.importSet.resolve(library)
-	return importSetResolution{
-		identifierSpecExcept{
-			subRes.identifierSpec,
-			set.identifiers,
-		},
+func (set importSetExcept) resolve(library Library) (identifierSpec, bool) {
+	subSpec, ok := set.importSet.resolve(library)
+	return identifierSpecExcept{
+		subSpec,
+		set.identifiers,
 	}, ok
 }
 
@@ -221,13 +213,11 @@ type importSetPrefix struct {
 	identifier common.Symbol
 }
 
-func (set importSetPrefix) resolve(library *Library) (importSetResolution, bool) {
-	subRes, ok := set.importSet.resolve(library)
-	return importSetResolution{
-		identifierSpecPrefix{
-			subRes.identifierSpec,
-			set.identifier,
-		},
+func (set importSetPrefix) resolve(library Library) (identifierSpec, bool) {
+	subSpec, ok := set.importSet.resolve(library)
+	return identifierSpecPrefix{
+		subSpec,
+		set.identifier,
 	}, ok
 }
 
@@ -240,13 +230,11 @@ type importSetRename struct {
 	identifierBindings []identifierBinding
 }
 
-func (set importSetRename) resolve(library *Library) (importSetResolution, bool) {
-	subRes, ok := set.importSet.resolve(library)
-	return importSetResolution{
-		identifierSpecRename{
-			subRes.identifierSpec,
-			set.identifierBindings,
-		},
+func (set importSetRename) resolve(library Library) (identifierSpec, bool) {
+	subSpec, ok := set.importSet.resolve(library)
+	return identifierSpecRename{
+		subSpec,
+		set.identifierBindings,
 	}, ok
 }
 
@@ -290,9 +278,9 @@ func newLibraryReference(d common.Syntax) (importSetLibraryReference, error) {
 	return ref, nil
 }
 
-func (set importSetLibraryReference) resolve(library *Library) (importSetResolution, bool) {
+func (set importSetLibraryReference) resolve(library Library) (identifierSpec, bool) {
 	ok := sameName(set.name, library.name) && set.versionReference.resolve(library)
-	return importSetResolution{identifierSpecAll{}}, ok
+	return identifierSpecAll{}, ok
 }
 
 func (set importSetLibraryReference) libraryName() []common.Symbol {
@@ -300,7 +288,7 @@ func (set importSetLibraryReference) libraryName() []common.Symbol {
 }
 
 type versionReference interface {
-	resolve(*Library) bool
+	resolve(Library) bool
 }
 
 func newVersionReference(d common.Syntax) (versionReference, error) {
@@ -351,7 +339,7 @@ type versionReferenceAnd struct {
 	versionReferences []versionReference
 }
 
-func (ref versionReferenceAnd) resolve(library *Library) bool {
+func (ref versionReferenceAnd) resolve(library Library) bool {
 	for _, subRef := range ref.versionReferences {
 		if !subRef.resolve(library) {
 			return false
@@ -364,7 +352,7 @@ type versionReferenceOr struct {
 	versionReferences []versionReference
 }
 
-func (ref versionReferenceOr) resolve(library *Library) bool {
+func (ref versionReferenceOr) resolve(library Library) bool {
 	for _, subRef := range ref.versionReferences {
 		if subRef.resolve(library) {
 			return true
@@ -377,7 +365,7 @@ type versionReferenceNot struct {
 	versionReference versionReference
 }
 
-func (ref versionReferenceNot) resolve(library *Library) bool {
+func (ref versionReferenceNot) resolve(library Library) bool {
 	return !ref.versionReference.resolve(library)
 }
 
@@ -385,7 +373,7 @@ type versionReferenceSubVersionReferences struct {
 	subVersionReferences []subVersionReference
 }
 
-func (ref versionReferenceSubVersionReferences) resolve(library *Library) bool {
+func (ref versionReferenceSubVersionReferences) resolve(library Library) bool {
 	if len(ref.subVersionReferences) > len(library.version) {
 		return false
 	}
