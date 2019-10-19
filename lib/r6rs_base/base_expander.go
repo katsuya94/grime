@@ -13,16 +13,17 @@ var (
 	patternMacroUseSingletonIdentifier = common.MustCompileSimplePattern(read.MustReadDatum("keyword"))
 )
 
-func Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {
-	return baseExpander{env}.Expand(syntax, env)
+func Expand(syntax common.Syntax, envProvider common.EnvironmentProvider) (common.CoreForm, error) {
+	expander := baseExpander{envProvider}
+	return expander.Expand(syntax, expander.TopContext().Env)
 }
 
 type baseExpander struct {
-	globalEnv common.Environment
+	envProvider common.EnvironmentProvider
 }
 
-func (e baseExpander) globalCtx() common.ExpansionContext {
-	return common.ExpansionContext{Expander: e, Env: e.globalEnv}
+func (e baseExpander) TopContext() common.ExpansionContext {
+	return common.ExpansionContext{Expander: e, Env: e.envProvider.Environment(0)}
 }
 
 func (e baseExpander) Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {

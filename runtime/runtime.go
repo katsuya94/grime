@@ -102,6 +102,8 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 	return nil
 }
 
+func (r *run) runWithBindings(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) error {
+
 func (r *run) instantiate(library Library) (map[common.Symbol]*common.Binding, error) {
 	for _, libraryBindings := range r.libraryBindingss {
 		if nameEqual(libraryBindings.name, library.Name()) {

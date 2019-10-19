@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+type EnvironmentProvider interface {
+	Environment(phase int) Environment
+}
+
 type Environment struct {
 	roles map[*Binding]Role
 }

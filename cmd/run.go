@@ -35,5 +35,5 @@ func run(path string) error {
 	if err != nil {
 		return err
 	}
-	return lib.Runtime.Execute(topLevelProgram, nullSourceLocationTree)
+	return lib.Runtime.Run(topLevelProgram, nullSourceLocationTree)
 }

@@ -36,10 +36,10 @@ func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, 
 	}
 }
 
-func ExpandBody(forms []common.Syntax, env common.Environment, scope *common.Scope) (common.CoreForm, error) {
-	ctx := common.ExpansionContext{baseExpander{env}, env}
+func ExpandBody(forms []common.Syntax, envProvider common.EnvironmentProvider, scope *common.Scope) (common.CoreForm, error) {
+	expander := baseExpander{envProvider}
 	mark := common.NewMark()
-	return expandBody(ctx, forms, mark, scope)
+	return expandBody(expander.TopContext(), forms, mark, scope)
 }
 
 func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
