@@ -78,7 +78,7 @@ func transformId(ctx common.ExpansionContext, syntax common.Syntax, mark *common
 		if role := ctx.Env.Lookup(binding); role == nil {
 			return nil, fmt.Errorf("out of context: %v at %v", id.Name(), id.SourceLocation())
 		} else if _, ok := role.(common.Variable); !ok {
-			return nil, fmt.Errorf("non-variable identifier in expression context: %v is %v at %v", id.Name(), role.Description(), id.SourceLocation())
+			return nil, fmt.Errorf("non-variable identifier in expression context: %v is %v at %v", id.Name(), role, id.SourceLocation())
 		}
 		output = list(r6rs.LoadId.Mark(mark).WrappedSyntax, binding.Identifier().WrappedSyntax)
 	} else {
