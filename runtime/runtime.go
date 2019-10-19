@@ -87,7 +87,7 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 		}
 	}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
-	coreForm, err := r6rs_base.ExpandBody(body, common.Environment{}, scope)
+	coreForm, environment, err := r6rs_base.ExpandBody(body, environments, scope)
 	if err != nil {
 		return err
 	}
@@ -95,6 +95,7 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 	if err != nil {
 		return err
 	}
+
 	_, err = common.Evaluate(common.NewEvaluationContext(), expression)
 	if err != nil {
 		return err
@@ -103,6 +104,7 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 }
 
 func (r *run) runWithBindings(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) error {
+}
 
 func (r *run) instantiate(library Library) (map[common.Symbol]*common.Binding, error) {
 	for _, libraryBindings := range r.libraryBindingss {

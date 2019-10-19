@@ -9,6 +9,7 @@ type CoreForm interface {
 type ExpansionContext struct {
 	Expander Expander
 	Env      Environment
+	Phase    int
 }
 
 func (ctx ExpansionContext) Expand(syntax Syntax) (CoreForm, error) {

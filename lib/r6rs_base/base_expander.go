@@ -15,15 +15,15 @@ var (
 
 func Expand(syntax common.Syntax, envProvider common.EnvironmentProvider) (common.CoreForm, error) {
 	expander := baseExpander{envProvider}
-	return expander.Expand(syntax, expander.TopContext().Env)
+	return expander.Expand(syntax, expander.Context(0).Env)
 }
 
 type baseExpander struct {
 	envProvider common.EnvironmentProvider
 }
 
-func (e baseExpander) TopContext() common.ExpansionContext {
-	return common.ExpansionContext{Expander: e, Env: e.envProvider.Environment(0)}
+func (e baseExpander) Context(phase int) common.ExpansionContext {
+	return common.ExpansionContext{Expander: e, Env: e.envProvider.Environment(phase), Phase: phase}
 }
 
 func (e baseExpander) Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {

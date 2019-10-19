@@ -8,25 +8,23 @@ type EnvironmentProvider interface {
 	Environment(phase int) Environment
 }
 
-type Environment struct {
-	roles map[*Binding]Role
-}
+type Environment map[*Binding]Role
 
 func NewEnvironment() Environment {
-	return Environment{map[*Binding]Role{}}
+	return make(Environment)
 }
 
 func (env *Environment) Extend(binding *Binding, role Role) {
-	extended := make(map[*Binding]Role, len(env.roles))
-	for b, r := range env.roles {
+	extended := make(Environment, len(*env))
+	for b, r := range *env {
 		extended[b] = r
 	}
 	extended[binding] = role
-	env.roles = extended
+	*env = extended
 }
 
 func (env Environment) Lookup(binding *Binding) Role {
-	role, _ := env.roles[binding]
+	role, _ := env[binding]
 	return role
 }
 

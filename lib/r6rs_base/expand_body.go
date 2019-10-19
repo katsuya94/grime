@@ -15,19 +15,19 @@ type BodyExpansionContext struct {
 
 type BodyTransformer interface {
 	r6rs.CoreTransformer
-	TransformBody(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)
+	TransformBody(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, common.Environment, error)
 }
 
 type bodyTransformerImpl struct {
 	r6rs.CoreTransformer
-	transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)
+	transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, common.Environment, error)
 }
 
-func (t bodyTransformerImpl) TransformBody(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
+func (t bodyTransformerImpl) TransformBody(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	return t.transformBody(ctx, syntax, mark, scope)
 }
 
-func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, error)) BodyTransformer {
+func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, *common.M, *common.Scope) (common.CoreForm, common.Environment, error)) BodyTransformer {
 	return bodyTransformerImpl{
 		r6rs.NewCoreTransformer(func(ctx common.ExpansionContext, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 			return nil, fmt.Errorf("body form in expression context: %v at %v", syntaxKeywordForErrMsg(syntax), syntax.SourceLocation())
@@ -36,19 +36,19 @@ func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, 
 	}
 }
 
-func ExpandBody(forms []common.Syntax, envProvider common.EnvironmentProvider, scope *common.Scope) (common.CoreForm, error) {
+func ExpandBody(forms []common.Syntax, env *common.Environment, envProvider common.EnvironmentProvider, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	expander := baseExpander{envProvider}
 	mark := common.NewMark()
-	return expandBody(expander.TopContext(), forms, mark, scope)
+	return expandBody(expander.Context(0), forms, mark, scope)
 }
 
-func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
+func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	if len(forms) == 0 {
-		return nil, fmt.Errorf("unexpected final form")
+		return nil, nil, fmt.Errorf("unexpected final form")
 	}
 	transformer, form, err := partiallyExpand(ctx, forms[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if transformer, ok := transformer.(BodyTransformer); ok {
 		ctx := BodyExpansionContext{ctx, forms[1:]}
@@ -56,7 +56,11 @@ func expandBody(ctx common.ExpansionContext, forms []common.Syntax, mark *common
 	}
 	forms = append([]common.Syntax{form}, forms[1:]...)
 	output := common.Pair{r6rs.SequenceId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)}
-	return ctx.Expand(common.NewSyntax(output))
+	coreForm, err := ctx.Expand(common.NewSyntax(output))
+	if err != nil {
+		return nil, nil, err
+	}
+	return coreForm, ctx.Env, nil
 }
 
 func partiallyExpand(ctx common.ExpansionContext, syntax common.Syntax) (common.Procedure, common.Syntax, error) {
@@ -89,13 +93,17 @@ func transformBegin(ctx common.ExpansionContext, syntax common.Syntax, mark *com
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
 		forms[i] = syntax.(common.Syntax).Push(scope)
 	}
-	return expandBody(ctx, forms, mark, scope)
+	coreForm, _, err := expandBody(ctx, forms, mark, scope)
+	if err != nil {
+		return nil, err
+	}
+	return coreForm, nil
 }
 
-func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
+func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	result, ok := patternBegin.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
+		return nil, nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	n := len(result[common.Symbol("body")].([]interface{}))
 	forms := make([]common.Syntax, n, n+len(ctx.Rest))
@@ -109,32 +117,32 @@ func transformBodyBegin(ctx BodyExpansionContext, syntax common.Syntax, mark *co
 var defineSyntaxTransformer = newBodyTransformer(transformBodyDefineSyntax)
 var patternDefineSyntax = common.MustCompileSimplePattern(read.MustReadDatum("(define-syntax id transformer)"))
 
-func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, error) {
+func transformBodyDefineSyntax(ctx BodyExpansionContext, syntax common.Syntax, mark *common.M, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	result, ok := patternDefineSyntax.Match(syntax)
 	if !ok {
-		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
+		return nil, nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	id, ok := result[common.Symbol("id")].(common.Syntax).Identifier()
 	if !ok {
-		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
+		return nil, nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	_, binding := common.Bind(id, scope)
 	syntax = result[common.Symbol("transformer")].(common.Syntax)
-	coreForm, err := ctx.Expander.(baseExpander).globalCtx().Expand(syntax)
+	coreForm, err := ctx.Expander.(baseExpander).Context(ctx.Phase + 1).Expand(syntax)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	expression, err := coreForm.CpsTransform(common.NewCpsTransformContext([]common.Global{}))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	datum, err := common.Evaluate(common.NewEvaluationContext(), expression)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	transformer, ok := datum.(common.Procedure)
 	if !ok {
-		return nil, fmt.Errorf("%v: transformer is not a procedure", syntaxKeywordForErrMsg(syntax))
+		return nil, nil, fmt.Errorf("%v: transformer is not a procedure", syntaxKeywordForErrMsg(syntax))
 	}
 	(&ctx.Env).Extend(binding, common.NewSyntacticAbstraction(transformer))
 	return expandBody(ctx.ExpansionContext, ctx.Rest, mark, scope)

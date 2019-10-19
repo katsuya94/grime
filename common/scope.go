@@ -13,6 +13,14 @@ func NewScope() *Scope {
 	return &Scope{[]substitution{}}
 }
 
+func (s Scope) Identifiers() []Identifier {
+	ids := make([]Identifier, len(s.substitutions))
+	for i, substitution := range s.substitutions {
+		ids[i] = substitution.id
+	}
+	return ids
+}
+
 func (s *Scope) add(id Identifier, binding *Binding) {
 	s.substitutions = append(s.substitutions, substitution{id, binding})
 }
