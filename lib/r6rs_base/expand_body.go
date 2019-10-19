@@ -36,7 +36,7 @@ func newBodyTransformer(transformBody func(BodyExpansionContext, common.Syntax, 
 	}
 }
 
-func ExpandBody(forms []common.Syntax, env *common.Environment, envProvider common.EnvironmentProvider, scope *common.Scope) (common.CoreForm, common.Environment, error) {
+func ExpandBody(forms []common.Syntax, envProvider common.EnvironmentProvider, scope *common.Scope) (common.CoreForm, common.Environment, error) {
 	expander := baseExpander{envProvider}
 	mark := common.NewMark()
 	return expandBody(expander.Context(0), forms, mark, scope)

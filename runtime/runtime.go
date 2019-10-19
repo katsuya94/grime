@@ -45,6 +45,12 @@ func (r *Runtime) library(libraryName []common.Symbol) (Library, bool) {
 	return Library{}, false
 }
 
+type envProviderImpl map[int]common.Environment
+
+func (epi envProviderImpl) Environment(phase int) common.Environment {
+	return epi[phase]
+}
+
 type libraryBindings struct {
 	name     []common.Symbol
 	bindings map[common.Symbol]*common.Binding
@@ -56,7 +62,8 @@ type run struct {
 }
 
 func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) error {
-	bindings := map[int]map[common.Symbol]*common.Binding{}
+	bindings := map[common.Symbol]*common.Binding{}
+	envProvider := envProviderImpl{}
 	for _, importSpec := range importSpecs {
 		library, ok := r.runtime.library(importSpec.libraryName())
 		if !ok {
@@ -71,14 +78,22 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 			return err
 		}
 		transformer := importSpecResolution.identifierSpec.transformer()
-		for external, binding := range importBindings {
+		for external := range importBindings {
 			internal, ok := transformer.transform(external)
 			if ok {
+				if _, ok := bindings[internal]; !ok {
+					id := common.NewIdentifier(internal)
+					_, binding := common.Bind(id, scope)
+					bindings[internal] = binding
+				}
+				binding := bindings[internal]
 				for _, level := range importSpecResolution.levels {
-					if _, ok := bindings[level]; !ok {
-						bindings[level] = map[common.Symbol]*common.Binding{}
+					// TODO: use exported levels of imports
+					phase := level
+					if _, ok := envProvider[phase]; !ok {
+						envProvider[phase] = common.Environment{}
 					}
-					bindings[level][internal] = binding
+					envProvider[phase][binding] = common.NewVariable()
 				}
 			}
 		}
@@ -87,11 +102,18 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 		}
 	}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
-	coreForm, environment, err := r6rs_base.ExpandBody(body, environments, scope)
+	coreForm, env, err := r6rs_base.ExpandBody(body, envProvider, scope)
 	if err != nil {
 		return err
 	}
-	expression, err := coreForm.CpsTransform(common.NewCpsTransformContext(nil))
+	ctx := common.NewCpsTransformContext(nil)
+	ids := scope.Identifiers()
+	exports := make([]common.Export, len(ids))
+	for i, id := range ids {
+		role := env[id.Binding()]
+		exports[i] = role.Export(ctx, id)
+	}
+	expression, err := coreForm.CpsTransform(ctx)
 	if err != nil {
 		return err
 	}

@@ -8,10 +8,11 @@ type EnvironmentProvider interface {
 	Environment(phase int) Environment
 }
 
+// TODO: make map private
 type Environment map[*Binding]Role
 
 func NewEnvironment() Environment {
-	return make(Environment)
+	return Environment{}
 }
 
 func (env *Environment) Extend(binding *Binding, role Role) {
@@ -29,7 +30,7 @@ func (env Environment) Lookup(binding *Binding) Role {
 }
 
 type Role interface {
-	Description() string
+	Export(*CpsTransformContext, Identifier) (Export, error)
 }
 
 type Variable struct{}
@@ -38,8 +39,9 @@ func NewVariable() Variable {
 	return Variable{}
 }
 
-func (r Variable) Description() string {
-	return "Variable{}"
+func (r Variable) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
+	index := ctx.Add(id)
+	return VariableTop{index}, nil
 }
 
 type SyntacticAbstraction struct {
@@ -50,8 +52,8 @@ func NewSyntacticAbstraction(transformer Procedure) SyntacticAbstraction {
 	return SyntacticAbstraction{transformer}
 }
 
-func (r SyntacticAbstraction) Description() string {
-	return fmt.Sprintf("SyntacticAbstraction{%#v}", r.Transformer)
+func (r SyntacticAbstraction) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
+	return SyntacticAbstractionTop{r.Transformer}, nil
 }
 
 type PatternLiteral struct {
@@ -62,8 +64,8 @@ func NewPatternLiteral(id Identifier) PatternLiteral {
 	return PatternLiteral{id}
 }
 
-func (r PatternLiteral) Description() string {
-	return fmt.Sprintf("PatternLiteral{%#v}", r.Id)
+func (r PatternLiteral) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
+	return nil, fmt.Errorf("top level pattern literal")
 }
 
 type PatternVariable struct {
@@ -74,6 +76,6 @@ func NewPatternVariable(nesting int) PatternVariable {
 	return PatternVariable{nesting}
 }
 
-func (r PatternVariable) Description() string {
-	return fmt.Sprintf("PatternVariable{%#v}", r.nesting)
+func (r PatternVariable) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
+	return nil, fmt.Errorf("top level pattern variable")
 }

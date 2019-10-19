@@ -1,10 +1,21 @@
 package common
 
-type Export struct {
-	id   Identifier
-	role Role
+type Export interface {
+	Portable(EvaluationContext) Portable
 }
 
-func NewExport(id Identifier, role Role) Export {
-	return Export{id, role}
+type VariableTop struct {
+	index int
+}
+
+func (t VariableTop) Portable(ctx EvaluationContext) Portable {
+	return VariablePortable{ctx.Get(t.index)}
+}
+
+type SyntacticAbstractionTop struct {
+	transformer Procedure
+}
+
+func (t SyntacticAbstractionTop) Portable(ctx EvaluationContext) Portable {
+	return SyntacticAbstractionPortable{t.transformer}
 }
