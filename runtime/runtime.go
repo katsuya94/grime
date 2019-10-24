@@ -33,7 +33,8 @@ func (r *Runtime) Run(topLevelProgram []common.Syntax, nullSourceLocationTree co
 	}
 	body := topLevelProgram[1:]
 	scope := common.NewScope()
-	return (&run{r, nil}).runWithImports(body, &nullSourceLocationTree, importSpecs, scope)
+	_, err := (&run{r, nil}).runWithImports(body, &nullSourceLocationTree, importSpecs, scope)
+	return err
 }
 
 func (r *Runtime) library(libraryName []common.Symbol) (Library, bool) {
@@ -61,21 +62,21 @@ type run struct {
 	libraryPortabless []libraryPortables
 }
 
-func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (common.Environment, common.EvaluationContext, error) {
+func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding]common.Portable, error) {
 	bindings := map[common.Symbol]*common.Binding{}
 	envProvider := envProviderImpl{}
 	for _, importSpec := range importSpecs {
 		library, ok := r.runtime.library(importSpec.libraryName())
 		if !ok {
-			return nil, common.EvaluationContext{}, fmt.Errorf("unknown library: %s", nameString(importSpec.libraryName()))
+			return nil, fmt.Errorf("unknown library: %s", nameString(importSpec.libraryName()))
 		}
 		importSpecResolution, ok := importSpec.resolve(library)
 		if !ok {
-			return nil, common.EvaluationContext{}, fmt.Errorf("version mismatch: %s", nameString(importSpec.libraryName()))
+			return nil, fmt.Errorf("version mismatch: %s", nameString(importSpec.libraryName()))
 		}
 		importBindings, err := r.instantiate(library)
 		if err != nil {
-			return nil, common.EvaluationContext{}, err
+			return nil, err
 		}
 		transformer := importSpecResolution.identifierSpec.transformer()
 		for external := range importBindings {
@@ -98,34 +99,38 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 			}
 		}
 		if err := transformer.error(); err != nil {
-			return nil, common.EvaluationContext{}, err
+			return nil, err
 		}
 	}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
 	coreForm, env, err := r6rs_base.ExpandBody(body, envProvider, scope)
 	if err != nil {
-		return nil, common.EvaluationContext{}, err
+		return nil, err
 	}
 	cpsCtx := common.NewCpsTransformContext(nil)
 	ids := scope.Identifiers()
 	exports := make([]common.Export, len(ids))
-	for i, id := range ids {
-		role := env[id.Binding()]
-		exports[i], err = role.Export(cpsCtx, id)
+	for i := range ids {
+		role := env[ids[i].Binding()]
+		exports[i], err = role.Export(cpsCtx, ids[i])
 		if err != nil {
-			return nil, common.EvaluationContext{}, err
+			return nil, err
 		}
 	}
 	expression, err := coreForm.CpsTransform(cpsCtx)
 	if err != nil {
-		return nil, common.EvaluationContext{}, err
+		return nil, err
 	}
 	evalCtx := cpsCtx.EvaluationContextTemplate().New()
 	_, err = common.Evaluate(evalCtx, expression)
 	if err != nil {
-		return nil, common.EvaluationContext{}, err
+		return nil, err
 	}
-	return env, evalCtx, nil
+	portables := map[*common.Binding]common.Portable{}
+	for i := range ids {
+		portables[ids[i].Binding()] = exports[i].Portable(evalCtx)
+	}
+	return portables, nil
 }
 
 func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, error) {
@@ -137,13 +142,13 @@ func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, e
 			return libraryPortables.portables, nil
 		}
 	}
-	r.libraryPortabless = append(r.libraryPortabless, libraryPortables{library.Name(), nil})
+	portables := map[common.Symbol]common.Portable{}
+	r.libraryPortabless = append(r.libraryPortabless, libraryPortables{library.Name(), portables})
 	scope := common.NewScope()
-	env, ctx, err := r.runWithImports(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
+	portablesByBinding, err := r.runWithImports(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
 	if err != nil {
 		return nil, err
 	}
-	portables := map[common.Symbol]common.Portable{}
 	for _, idBinding := range library.exportSpecs {
 		id := common.NewIdentifier(idBinding.internal)
 		id = id.Push(scope).IdentifierOrDie()
@@ -151,10 +156,9 @@ func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, e
 		if binding == nil {
 			return nil, fmt.Errorf("cannot export unbound identifier: %s", idBinding.internal)
 		}
-		env.Lookup(binding).Export(ctx, id)
-		portables[idBinding.external] = portable
+		portables[idBinding.external] = portablesByBinding[binding]
 	}
-	return bindings, nil
+	return portables, nil
 }
 
 func nameString(name []common.Symbol) string {
