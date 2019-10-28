@@ -33,7 +33,7 @@ func (r *Runtime) Run(topLevelProgram []common.Syntax, nullSourceLocationTree co
 	}
 	body := topLevelProgram[1:]
 	scope := common.NewScope()
-	_, err := (&run{r, nil}).runWithImports(body, &nullSourceLocationTree, importSpecs, scope)
+	_, err := (&run{r, nil}).runWithImportSpecs(body, &nullSourceLocationTree, importSpecs, scope)
 	return err
 }
 
@@ -52,21 +52,28 @@ func (epi envProviderImpl) Environment(phase int) common.Environment {
 	return epi[phase]
 }
 
-type libraryPortables struct {
-	name      []common.Symbol
-	portables map[common.Symbol]common.Portable
+type portableLevel struct {
+	portable common.Portable
+	level    int
+}
+
+type libraryPortableLevels struct {
+	name           []common.Symbol
+	portableLevels map[common.Symbol][]portableLevel
 }
 
 type run struct {
-	runtime           *Runtime
-	libraryPortabless []libraryPortables
+	runtime                *Runtime
+	libraryPortableLevelss []libraryPortableLevels
 }
 
-func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding]common.Portable, error) {
-	bindings := map[common.Symbol]*common.Binding{}
-	cpsCtx := common.NewCpsTransformContext(nil)
-	envProvider := envProviderImpl{}
-	var imports []common.Import
+type portablePhase struct {
+	portable common.Portable
+	phase    int
+}
+
+func (r *run) runWithImportSpecs(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
+	importablePhases := map[common.Symbol][]portablePhase{}
 	for _, importSpec := range importSpecs {
 		library, ok := r.runtime.library(importSpec.libraryName())
 		if !ok {
@@ -76,28 +83,19 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 		if !ok {
 			return nil, fmt.Errorf("version mismatch: %s", nameString(importSpec.libraryName()))
 		}
-		importables, err := r.instantiate(library)
+		importableLevels, err := r.instantiate(library)
 		if err != nil {
 			return nil, err
 		}
 		transformer := importSpecResolution.identifierSpec.transformer()
-		for external, importable := range importables {
+		for external, importableLevels := range importableLevels {
 			internal, ok := transformer.transform(external)
-			if ok {
-				id := common.NewIdentifier(internal)
-				if _, ok := bindings[internal]; !ok {
-					_, binding := common.Bind(id, scope)
-					bindings[internal] = binding
-				}
-				binding := bindings[internal]
-				for _, level := range importSpecResolution.levels {
-					// TODO: use exported levels of imports
-					phase := level
-					if _, ok := envProvider[phase]; !ok {
-						envProvider[phase] = common.Environment{}
-					}
-					imprt := importable.Import(cpsCtx, envProvider[phase], id, binding)
-					imports = append(imports, imprt)
+			if !ok {
+				continue
+			}
+			for _, importableLevel := range importableLevels {
+				for _, importLevel := range importSpecResolution.levels {
+					importablePhases[internal] = append(importablePhases[internal], portablePhase{importableLevel.portable, importableLevel.level + importLevel})
 				}
 			}
 		}
@@ -105,18 +103,54 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 			return nil, err
 		}
 	}
+	return r.runWithImportables(body, nullSourceLocationTree, importablePhases, scope)
+}
+
+type exportPhase struct {
+	export common.Export
+	phase  int
+}
+
+func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importablePhases map[common.Symbol][]portablePhase, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
+	bindings := map[common.Symbol]*common.Binding{}
+	cpsCtx := common.NewCpsTransformContext(nil)
+	envProvider := envProviderImpl{}
+	var imports []common.Import
+	for name, importablePhases := range importablePhases {
+		if _, ok := bindings[name]; !ok {
+			_, binding := common.Bind(common.NewIdentifier(name), scope)
+			bindings[name] = binding
+		}
+		binding := bindings[name]
+		id := binding.Identifier()
+		for _, importablePhase := range importablePhases {
+			if _, ok := envProvider[importablePhase.phase]; !ok {
+				envProvider[importablePhase.phase] = common.Environment{}
+			}
+			imprt := importablePhase.portable.Import(cpsCtx, envProvider[importablePhase.phase], id, binding)
+			imports = append(imports, imprt)
+		}
+	}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
 	coreForm, env, err := r6rs_base.ExpandBody(body, envProvider, scope)
 	if err != nil {
 		return nil, err
 	}
+	envProvider[0] = env
 	ids := scope.Identifiers()
-	exports := make([]common.Export, len(ids))
-	for i := range ids {
-		role := env[ids[i].Binding()]
-		exports[i], err = role.Export(cpsCtx, ids[i])
-		if err != nil {
-			return nil, err
+	exportPhases := map[*common.Binding][]exportPhase{}
+	for _, id := range ids {
+		binding := id.Binding()
+		for phase, env := range envProvider {
+			role := env[binding]
+			if role == nil {
+				continue
+			}
+			export, err := role.Export(cpsCtx, id)
+			if err != nil {
+				return nil, err
+			}
+			exportPhases[binding] = append(exportPhases[binding], exportPhase{export, phase})
 		}
 	}
 	expression, err := coreForm.CpsTransform(cpsCtx)
@@ -131,26 +165,29 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 	if err != nil {
 		return nil, err
 	}
-	exportables := map[*common.Binding]common.Portable{}
-	for i := range ids {
-		exportables[ids[i].Binding()] = exports[i].Portable(evalCtx)
-	}
-	return exportables, nil
-}
-
-func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, error) {
-	for _, libraryPortables := range r.libraryPortabless {
-		if nameEqual(libraryPortables.name, library.Name()) {
-			if libraryPortables.portables == nil {
-				return nil, fmt.Errorf("import cycle")
-			}
-			return libraryPortables.portables, nil
+	exportablePhases := map[*common.Binding][]portablePhase{}
+	for binding, exportPhases := range exportPhases {
+		exportablePhases[binding] = make([]portablePhase, len(exportPhases))
+		for i := range exportPhases {
+			exportablePhases[binding][i] = portablePhase{exportPhases[i].export.Portable(evalCtx), exportPhases[i].phase}
 		}
 	}
-	portables := map[common.Symbol]common.Portable{}
-	r.libraryPortabless = append(r.libraryPortabless, libraryPortables{library.Name(), portables})
+	return exportablePhases, nil
+}
+
+func (r *run) instantiate(library Library) (map[common.Symbol][]portableLevel, error) {
+	for _, libraryPortableLevels := range r.libraryPortableLevelss {
+		if nameEqual(libraryPortableLevels.name, library.Name()) {
+			if libraryPortableLevels.portableLevels == nil {
+				return nil, fmt.Errorf("import cycle")
+			}
+			return libraryPortableLevels.portableLevels, nil
+		}
+	}
+	portableLevels := map[common.Symbol][]portableLevel{}
+	r.libraryPortableLevelss = append(r.libraryPortableLevelss, libraryPortableLevels{library.Name(), portableLevels})
 	scope := common.NewScope()
-	portablesByBinding, err := r.runWithImports(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
+	exportablePhases, err := r.runWithImportSpecs(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -161,9 +198,11 @@ func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, e
 		if binding == nil {
 			return nil, fmt.Errorf("cannot export unbound identifier: %s", idBinding.internal)
 		}
-		portables[idBinding.external] = portablesByBinding[binding]
+		for _, exportablePhase := range exportablePhases[binding] {
+			portableLevels[idBinding.external] = append(portableLevels[idBinding.external], portableLevel{exportablePhase.portable, exportablePhase.phase})
+		}
 	}
-	return portables, nil
+	return portableLevels, nil
 }
 
 func nameString(name []common.Symbol) string {
