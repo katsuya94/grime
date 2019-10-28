@@ -64,7 +64,9 @@ type run struct {
 
 func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding]common.Portable, error) {
 	bindings := map[common.Symbol]*common.Binding{}
+	cpsCtx := common.NewCpsTransformContext(nil)
 	envProvider := envProviderImpl{}
+	var imports []common.Import
 	for _, importSpec := range importSpecs {
 		library, ok := r.runtime.library(importSpec.libraryName())
 		if !ok {
@@ -74,16 +76,16 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 		if !ok {
 			return nil, fmt.Errorf("version mismatch: %s", nameString(importSpec.libraryName()))
 		}
-		importBindings, err := r.instantiate(library)
+		importables, err := r.instantiate(library)
 		if err != nil {
 			return nil, err
 		}
 		transformer := importSpecResolution.identifierSpec.transformer()
-		for external := range importBindings {
+		for external, importable := range importables {
 			internal, ok := transformer.transform(external)
 			if ok {
+				id := common.NewIdentifier(internal)
 				if _, ok := bindings[internal]; !ok {
-					id := common.NewIdentifier(internal)
 					_, binding := common.Bind(id, scope)
 					bindings[internal] = binding
 				}
@@ -94,7 +96,8 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 					if _, ok := envProvider[phase]; !ok {
 						envProvider[phase] = common.Environment{}
 					}
-					envProvider[phase][binding] = common.NewVariable()
+					imprt := importable.Import(cpsCtx, envProvider[phase], id, binding)
+					imports = append(imports, imprt)
 				}
 			}
 		}
@@ -107,7 +110,6 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 	if err != nil {
 		return nil, err
 	}
-	cpsCtx := common.NewCpsTransformContext(nil)
 	ids := scope.Identifiers()
 	exports := make([]common.Export, len(ids))
 	for i := range ids {
@@ -122,15 +124,18 @@ func (r *run) runWithImports(body []common.Syntax, nullSourceLocationTree *commo
 		return nil, err
 	}
 	evalCtx := cpsCtx.EvaluationContextTemplate().New()
+	for _, imprt := range imports {
+		imprt.Provide(evalCtx)
+	}
 	_, err = common.Evaluate(evalCtx, expression)
 	if err != nil {
 		return nil, err
 	}
-	portables := map[*common.Binding]common.Portable{}
+	exportables := map[*common.Binding]common.Portable{}
 	for i := range ids {
-		portables[ids[i].Binding()] = exports[i].Portable(evalCtx)
+		exportables[ids[i].Binding()] = exports[i].Portable(evalCtx)
 	}
-	return portables, nil
+	return exportables, nil
 }
 
 func (r *run) instantiate(library Library) (map[common.Symbol]common.Portable, error) {
