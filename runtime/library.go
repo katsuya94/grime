@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	PatternLibrary      = common.MustCompileSimplePattern(read.MustReadDatum("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)"), common.Symbol("library"), common.Symbol("export"), common.Symbol("import"))
-	PatternVersion      = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version ...)"))
-	PatternExportRename = common.MustCompileSimplePattern(read.MustReadDatum("(rename (internal external) ...)"), common.Symbol("rename"))
+	patternLibrary      = common.MustCompileSimplePattern(read.MustReadDatum("(library (library-name ...) (export export-spec ...) (import import-spec ...) body ...)"), common.Symbol("library"), common.Symbol("export"), common.Symbol("import"))
+	patternVersion      = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version ...)"))
+	patternExportRename = common.MustCompileSimplePattern(read.MustReadDatum("(rename (internal external) ...)"), common.Symbol("rename"))
 )
 
 type Library struct {
@@ -34,8 +34,8 @@ type identifierBinding struct {
 }
 
 func NewLibrary(source common.Syntax) (Library, error) {
-	library := &Library{}
-	result, ok := PatternLibrary.Match(source)
+	library := Library{}
+	result, ok := patternLibrary.Match(source)
 	if !ok {
 		return Library{}, fmt.Errorf("runtime: malformed library")
 	}
@@ -52,7 +52,7 @@ func NewLibrary(source common.Syntax) (Library, error) {
 		}
 	}
 	if i == len(libraryName)-1 {
-		result, ok := PatternVersion.Match(libraryName[i].(common.Syntax))
+		result, ok := patternVersion.Match(libraryName[i].(common.Syntax))
 		if !ok {
 			return Library{}, fmt.Errorf("runtime: malformed library name")
 		}
@@ -89,7 +89,7 @@ func NewLibrary(source common.Syntax) (Library, error) {
 		null = common.NewSyntax(pair.Rest)
 	}
 	library.nullSourceLocationTree = null.SourceLocationTree()
-	return Library{}, nil
+	return library, nil
 }
 
 func MustNewLibraryFromString(name string, src string) Library {
@@ -157,7 +157,7 @@ func (l *Library) Builtin(portable common.Portable, phase int) {
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {
-	if result, ok := PatternExportRename.Match(d); ok {
+	if result, ok := patternExportRename.Match(d); ok {
 		var internalIdentifiers []common.Symbol
 		for _, d := range result[common.Symbol("internal")].([]interface{}) {
 			if id, ok := d.(common.Syntax).Unwrap().(common.Symbol); ok {

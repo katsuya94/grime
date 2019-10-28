@@ -9,25 +9,25 @@ import (
 )
 
 var (
-	PatternImportSpecFor          = common.MustCompileSimplePattern(read.MustReadDatum("(for import-set import-level ...)"), common.Symbol("for"))
-	PatternImportLevelMeta        = common.MustCompileSimplePattern(read.MustReadDatum("(meta n)"), common.Symbol("meta"))
-	PatternImportLevelRun         = common.MustCompileSimplePattern(read.MustReadDatum("run"), common.Symbol("run"))
-	PatternImportLevelExpand      = common.MustCompileSimplePattern(read.MustReadDatum("expand"), common.Symbol("expand"))
-	PatternLibraryReference       = common.MustCompileSimplePattern(read.MustReadDatum("(library-name ...)"))
-	PatternImportSetLibrary       = common.MustCompileSimplePattern(read.MustReadDatum("(library library-reference)"), common.Symbol("library"))
-	PatternImportSetOnly          = common.MustCompileSimplePattern(read.MustReadDatum("(only import-set identifier ...)"), common.Symbol("only"))
-	PatternImportSetExcept        = common.MustCompileSimplePattern(read.MustReadDatum("(except import-set identifier ...)"), common.Symbol("except"))
-	PatternImportSetPrefix        = common.MustCompileSimplePattern(read.MustReadDatum("(prefix import-set identifier)"), common.Symbol("prefix"))
-	PatternImportSetRename        = common.MustCompileSimplePattern(read.MustReadDatum("(rename import-set (external internal) ...)"), common.Symbol("rename"))
-	PatternSubVersionReferences   = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version-reference ...)"))
-	PatternVersionReferenceAnd    = common.MustCompileSimplePattern(read.MustReadDatum("(and version-reference ...)"), common.Symbol("and"))
-	PatternVersionReferenceOr     = common.MustCompileSimplePattern(read.MustReadDatum("(or version-reference ...)"), common.Symbol("or"))
-	PatternVersionReferenceNot    = common.MustCompileSimplePattern(read.MustReadDatum("(not version-reference)"), common.Symbol("not"))
-	PatternSubVersionReferenceGte = common.MustCompileSimplePattern(read.MustReadDatum("(>= sub-version)"), common.Symbol(">="))
-	PatternSubVersionReferenceLte = common.MustCompileSimplePattern(read.MustReadDatum("(<= sub-version)"), common.Symbol("<="))
-	PatternSubVersionReferenceAnd = common.MustCompileSimplePattern(read.MustReadDatum("(and sub-version-reference ...)"), common.Symbol("and"))
-	PatternSubVersionReferenceOr  = common.MustCompileSimplePattern(read.MustReadDatum("(or sub-version-reference ...)"), common.Symbol("or"))
-	PatternSubVersionReferenceNot = common.MustCompileSimplePattern(read.MustReadDatum("(not sub-version-reference)"), common.Symbol("not"))
+	patternImportSpecFor          = common.MustCompileSimplePattern(read.MustReadDatum("(for import-set import-level ...)"), common.Symbol("for"))
+	patternImportLevelMeta        = common.MustCompileSimplePattern(read.MustReadDatum("(meta n)"), common.Symbol("meta"))
+	patternImportLevelRun         = common.MustCompileSimplePattern(read.MustReadDatum("run"), common.Symbol("run"))
+	patternImportLevelExpand      = common.MustCompileSimplePattern(read.MustReadDatum("expand"), common.Symbol("expand"))
+	patternLibraryReference       = common.MustCompileSimplePattern(read.MustReadDatum("(library-name ...)"))
+	patternImportSetLibrary       = common.MustCompileSimplePattern(read.MustReadDatum("(library library-reference)"), common.Symbol("library"))
+	patternImportSetOnly          = common.MustCompileSimplePattern(read.MustReadDatum("(only import-set identifier ...)"), common.Symbol("only"))
+	patternImportSetExcept        = common.MustCompileSimplePattern(read.MustReadDatum("(except import-set identifier ...)"), common.Symbol("except"))
+	patternImportSetPrefix        = common.MustCompileSimplePattern(read.MustReadDatum("(prefix import-set identifier)"), common.Symbol("prefix"))
+	patternImportSetRename        = common.MustCompileSimplePattern(read.MustReadDatum("(rename import-set (external internal) ...)"), common.Symbol("rename"))
+	patternSubVersionReferences   = common.MustCompileSimplePattern(read.MustReadDatum("(sub-version-reference ...)"))
+	patternVersionReferenceAnd    = common.MustCompileSimplePattern(read.MustReadDatum("(and version-reference ...)"), common.Symbol("and"))
+	patternVersionReferenceOr     = common.MustCompileSimplePattern(read.MustReadDatum("(or version-reference ...)"), common.Symbol("or"))
+	patternVersionReferenceNot    = common.MustCompileSimplePattern(read.MustReadDatum("(not version-reference)"), common.Symbol("not"))
+	patternSubVersionReferenceGte = common.MustCompileSimplePattern(read.MustReadDatum("(>= sub-version)"), common.Symbol(">="))
+	patternSubVersionReferenceLte = common.MustCompileSimplePattern(read.MustReadDatum("(<= sub-version)"), common.Symbol("<="))
+	patternSubVersionReferenceAnd = common.MustCompileSimplePattern(read.MustReadDatum("(and sub-version-reference ...)"), common.Symbol("and"))
+	patternSubVersionReferenceOr  = common.MustCompileSimplePattern(read.MustReadDatum("(or sub-version-reference ...)"), common.Symbol("or"))
+	patternSubVersionReferenceNot = common.MustCompileSimplePattern(read.MustReadDatum("(not sub-version-reference)"), common.Symbol("not"))
 )
 
 type importSpec struct {
@@ -36,7 +36,7 @@ type importSpec struct {
 }
 
 func newImportSpec(d common.Syntax) (importSpec, error) {
-	if result, ok := PatternImportSpecFor.Match(d); ok {
+	if result, ok := patternImportSpecFor.Match(d); ok {
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return importSpec{}, err
@@ -74,7 +74,7 @@ func (spec importSpec) libraryName() []common.Symbol {
 }
 
 func newImportLevel(d common.Syntax) (int, error) {
-	if result, ok := PatternImportLevelMeta.Match(d); ok {
+	if result, ok := patternImportLevelMeta.Match(d); ok {
 		number, ok := result[common.Symbol("n")].(common.Syntax).Unwrap().(common.Number)
 		if !ok {
 			return 0, fmt.Errorf("runtime: malformed import level")
@@ -85,10 +85,10 @@ func newImportLevel(d common.Syntax) (int, error) {
 		}
 		return int(n), nil
 	}
-	if _, ok := PatternImportLevelRun.Match(d); ok {
+	if _, ok := patternImportLevelRun.Match(d); ok {
 		return 0, nil
 	}
-	if _, ok := PatternImportLevelExpand.Match(d); ok {
+	if _, ok := patternImportLevelExpand.Match(d); ok {
 		return 1, nil
 	}
 	return 0, fmt.Errorf("runtime: malformed import level")
@@ -100,10 +100,10 @@ type importSet interface {
 }
 
 func newImportSet(d common.Syntax) (importSet, error) {
-	if result, ok := PatternImportSetLibrary.Match(d); ok {
+	if result, ok := patternImportSetLibrary.Match(d); ok {
 		return newLibraryReference(result[common.Symbol("library-reference")].(common.Syntax))
 	}
-	if result, ok := PatternImportSetOnly.Match(d); ok {
+	if result, ok := patternImportSetOnly.Match(d); ok {
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
@@ -118,7 +118,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetOnly{iSet, ids}, nil
 	}
-	if result, ok := PatternImportSetExcept.Match(d); ok {
+	if result, ok := patternImportSetExcept.Match(d); ok {
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
@@ -133,7 +133,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetExcept{iSet, ids}, nil
 	}
-	if result, ok := PatternImportSetPrefix.Match(d); ok {
+	if result, ok := patternImportSetPrefix.Match(d); ok {
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
@@ -144,7 +144,7 @@ func newImportSet(d common.Syntax) (importSet, error) {
 		}
 		return importSetPrefix{iSet, id}, nil
 	}
-	if result, ok := PatternImportSetRename.Match(d); ok {
+	if result, ok := patternImportSetRename.Match(d); ok {
 		iSet, err := newImportSet(result[common.Symbol("import-set")].(common.Syntax))
 		if err != nil {
 			return nil, err
@@ -249,7 +249,7 @@ type importSetLibraryReference struct {
 
 func newLibraryReference(d common.Syntax) (importSetLibraryReference, error) {
 	var ref importSetLibraryReference
-	result, ok := PatternLibraryReference.Match(d)
+	result, ok := patternLibraryReference.Match(d)
 	if !ok {
 		return importSetLibraryReference{}, fmt.Errorf("runtime: malformed library reference")
 	}
@@ -292,7 +292,7 @@ type versionReference interface {
 }
 
 func newVersionReference(d common.Syntax) (versionReference, error) {
-	if result, ok := PatternVersionReferenceAnd.Match(d); ok {
+	if result, ok := patternVersionReferenceAnd.Match(d); ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
 			vRef, err := newVersionReference(d.(common.Syntax))
@@ -303,7 +303,7 @@ func newVersionReference(d common.Syntax) (versionReference, error) {
 		}
 		return versionReferenceAnd{vRefs}, nil
 	}
-	if result, ok := PatternVersionReferenceOr.Match(d); ok {
+	if result, ok := patternVersionReferenceOr.Match(d); ok {
 		var vRefs []versionReference
 		for _, d := range result[common.Symbol("version-reference")].([]interface{}) {
 			vRef, err := newVersionReference(d.(common.Syntax))
@@ -314,14 +314,14 @@ func newVersionReference(d common.Syntax) (versionReference, error) {
 		}
 		return versionReferenceOr{vRefs}, nil
 	}
-	if result, ok := PatternVersionReferenceNot.Match(d); ok {
+	if result, ok := patternVersionReferenceNot.Match(d); ok {
 		vRef, err := newVersionReference(result[common.Symbol("version-reference")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return versionReferenceNot{vRef}, nil
 	}
-	if result, ok := PatternSubVersionReferences.Match(d); ok {
+	if result, ok := patternSubVersionReferences.Match(d); ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
@@ -390,21 +390,21 @@ type subVersionReference interface {
 }
 
 func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
-	if result, ok := PatternSubVersionReferenceGte.Match(d); ok {
+	if result, ok := patternSubVersionReferenceGte.Match(d); ok {
 		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return subVersionReferenceGte{subV}, nil
 	}
-	if result, ok := PatternSubVersionReferenceLte.Match(d); ok {
+	if result, ok := patternSubVersionReferenceLte.Match(d); ok {
 		subV, err := newSubVersion(result[common.Symbol("sub-version")].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
 		return subVersionReferenceLte{subV}, nil
 	}
-	if result, ok := PatternSubVersionReferenceAnd.Match(d); ok {
+	if result, ok := patternSubVersionReferenceAnd.Match(d); ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
@@ -415,7 +415,7 @@ func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
 		}
 		return subVersionReferenceAnd{subVRefs}, nil
 	}
-	if result, ok := PatternSubVersionReferenceOr.Match(d); ok {
+	if result, ok := patternSubVersionReferenceOr.Match(d); ok {
 		var subVRefs []subVersionReference
 		for _, d := range result[common.Symbol("sub-version-reference")].([]interface{}) {
 			subVRef, err := newSubVersionReference(d.(common.Syntax))
@@ -426,7 +426,7 @@ func newSubVersionReference(d common.Syntax) (subVersionReference, error) {
 		}
 		return subVersionReferenceOr{subVRefs}, nil
 	}
-	if result, ok := PatternSubVersionReferenceNot.Match(d); ok {
+	if result, ok := patternSubVersionReferenceNot.Match(d); ok {
 		subVRef, err := newSubVersionReference(result[common.Symbol("sub-version-reference")].(common.Syntax))
 		if err != nil {
 			return nil, err
