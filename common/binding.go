@@ -19,12 +19,6 @@ func Bind(id Identifier, scope *Scope) (Identifier, *Binding) {
 	return id, binding
 }
 
-func Rebind(id Identifier, binding *Binding, scope *Scope, phase int) Identifier {
-	id = id.Push(scope).IdentifierOrDie()
-	scope.add(id, binding)
-	return id
-}
-
 func (b *Binding) Identifier() Identifier {
 	return b.id
 }

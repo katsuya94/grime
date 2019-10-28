@@ -71,6 +71,14 @@ type portablePhase struct {
 }
 
 func (r *run) runWithImportSpecs(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
+	importablePhases, err := r.resolveImportSpecs(importSpecs)
+	if err != nil {
+		return nil, err
+	}
+	return r.runWithImportables(body, nullSourceLocationTree, importablePhases, scope)
+}
+
+func (r *run) resolveImportSpecs(importSpecs []importSpec) (map[common.Symbol][]portablePhase, error) {
 	importablePhases := map[common.Symbol][]portablePhase{}
 	for _, importSpec := range importSpecs {
 		library, ok := r.runtime.library(importSpec.libraryName())
@@ -101,7 +109,7 @@ func (r *run) runWithImportSpecs(body []common.Syntax, nullSourceLocationTree *c
 			return nil, err
 		}
 	}
-	return r.runWithImportables(body, nullSourceLocationTree, importablePhases, scope)
+	return importablePhases, nil
 }
 
 type exportPhase struct {
@@ -175,6 +183,8 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 	return exportablePhases, nil
 }
 
+// TODO: accumulate a global environment that will allow identifiers introduced by syntax to resolve to roles
+
 func (r *run) instantiate(library Library) (map[common.Symbol][]portableLevel, error) {
 	for _, libraryPortableLevels := range r.libraryPortableLevelss {
 		if nameEqual(libraryPortableLevels.name, library.Name()) {
@@ -186,8 +196,15 @@ func (r *run) instantiate(library Library) (map[common.Symbol][]portableLevel, e
 	}
 	portableLevels := map[common.Symbol][]portableLevel{}
 	r.libraryPortableLevelss = append(r.libraryPortableLevelss, libraryPortableLevels{library.Name(), portableLevels})
+	importablePhases, err := r.resolveImportSpecs(library.importSpecs)
+	if err != nil {
+		return nil, err
+	}
+	for name, builtinImportablePhases := range library.builtin {
+		importablePhases[name] = append(importablePhases[name], builtinImportablePhases...)
+	}
 	scope := common.NewScope()
-	exportablePhases, err := r.runWithImportSpecs(library.body, library.nullSourceLocationTree, library.importSpecs, scope)
+	exportablePhases, err := r.runWithImportables(library.body, library.nullSourceLocationTree, importablePhases, scope)
 	if err != nil {
 		return nil, err
 	}

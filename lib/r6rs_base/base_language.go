@@ -15,31 +15,35 @@ var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
 var (
-	setId          = baseDefinition(common.Symbol("set!"), setTransformer)
-	lambdaId       = baseDefinition(common.Symbol("lambda"), lambdaTransformer)
-	beginId        = baseDefinition(common.Symbol("begin"), beginTransformer)
-	defineSyntaxId = baseDefinition(common.Symbol("define-syntax"), defineSyntaxTransformer)
-	quoteId        = coreDefinition(common.Symbol("quote"))
-	ifId           = coreDefinition(common.Symbol("if"))
-	syntaxId       = baseDefinition(common.Symbol("syntax"), syntaxTransformer)
-	syntaxCaseId   = baseDefinition(common.Symbol("syntax-case"), syntaxCaseTransformer)
-	underscoreId   = baseDefinition(common.Symbol("_"), common.UnderscoreTransformer)
-	ellipsisId     = baseDefinition(common.Symbol("..."), common.EllipsisTransformer)
+	setId          = baseSyntax(common.Symbol("set!"), setTransformer)
+	lambdaId       = baseSyntax(common.Symbol("lambda"), lambdaTransformer)
+	beginId        = baseSyntax(common.Symbol("begin"), beginTransformer)
+	defineSyntaxId = baseSyntax(common.Symbol("define-syntax"), defineSyntaxTransformer)
+	quoteId        = coreSyntax(common.Symbol("quote"))
+	ifId           = coreSyntax(common.Symbol("if"))
+	syntaxId       = baseSyntax(common.Symbol("syntax"), syntaxTransformer)
+	syntaxCaseId   = baseSyntax(common.Symbol("syntax-case"), syntaxCaseTransformer)
+	underscoreId   = baseSyntax(common.Symbol("_"), common.UnderscoreTransformer)
+	ellipsisId     = baseSyntax(common.Symbol("..."), common.EllipsisTransformer)
 )
 
-func baseDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
+func baseSyntax(name common.Symbol, transformer common.Procedure) common.Identifier {
 	id, binding := common.Bind(common.NewIdentifier(name), BaseScope)
-	(&BaseEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+	role := common.NewSyntacticAbstraction(transformer)
+	(&BaseEnvironment).Extend(binding, role)
+	portable := common.NewSyntacticAbstractionPortable(transformer)
+	Library.Builtin(name, portable, 0)
 	return id
 }
 
-// TODO: don't rebind quote and if, not sure why?
-func coreDefinition(name common.Symbol) common.Identifier {
+func coreSyntax(name common.Symbol) common.Identifier {
 	coreId := r6rs.Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
-	binding := coreId.Binding()
-	role := r6rs.CoreEnvironment.Lookup(binding)
-	id := common.Rebind(common.NewIdentifier(name), binding, BaseScope, 0)
+	coreBinding := coreId.Binding()
+	role := r6rs.CoreEnvironment.Lookup(coreBinding)
+	id, binding := common.Bind(common.NewIdentifier(name), BaseScope)
 	(&BaseEnvironment).Extend(binding, role)
+	portable := common.NewSyntacticAbstractionPortable(role.(common.SyntacticAbstraction).Transformer)
+	Library.Builtin(name, portable, 0)
 	return id
 }
 
@@ -51,6 +55,8 @@ func Introduce(syntax common.Syntax) common.Syntax {
 // it should also support easy marking of transformer introduced syntax, since its hard to enforce otherwise
 
 // TODO: move transformers and specs into individual files
+
+// TODO: the relationshop between core and base is slightly different than that of a library using the syntax of another library. Base uses identifiers bound in core's scope directly whereas libraries would use identifiers bound in their own scope, but pointing to transformers exported from another library. The issue being that since these transformers are written in go, they can't access scopes introduced by the library system. Further thought may be required to decouple core and base further.
 
 var applicationTransformer = r6rs.NewCoreTransformer(transformApplication)
 var patternApplication = common.MustCompileSimplePattern(read.MustReadDatum("(proc args ...)"))

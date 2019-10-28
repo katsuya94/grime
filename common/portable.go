@@ -18,6 +18,10 @@ type SyntacticAbstractionPortable struct {
 	transformer Procedure
 }
 
+func NewSyntacticAbstractionPortable(transformer Procedure) SyntacticAbstractionPortable {
+	return SyntacticAbstractionPortable{transformer}
+}
+
 func (p SyntacticAbstractionPortable) Import(ctx *CpsTransformContext, env Environment, id Identifier, binding *Binding) Import {
 	env[binding] = NewSyntacticAbstraction(p.transformer)
 	return SyntacticAbstractionImport{}

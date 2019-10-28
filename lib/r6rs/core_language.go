@@ -5,7 +5,10 @@ import (
 
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/runtime"
 )
+
+var Library = runtime.MustNewLibraryFromFile("r6rs")
 
 var CoreScope = common.NewScope()
 var CoreEnvironment = common.NewEnvironment()
