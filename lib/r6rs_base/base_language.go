@@ -33,6 +33,7 @@ func baseDefinition(name common.Symbol, transformer common.Procedure) common.Ide
 	return id
 }
 
+// TODO: don't rebind quote and if, not sure why?
 func coreDefinition(name common.Symbol) common.Identifier {
 	coreId := r6rs.Introduce(common.NewSyntax(common.NewIdentifier(name).WrappedSyntax)).IdentifierOrDie()
 	binding := coreId.Binding()
@@ -59,6 +60,10 @@ func transformApplication(ctx common.ExpansionContext, syntax common.Syntax, mar
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
+	err := checkInContext(ctx.Env, r6rs.ApplicationId, syntax)
+	if err != nil {
+		return nil, err
+	}
 	procedure := result[common.Symbol("proc")].(common.Syntax)
 	arguments := make([]common.Syntax, len(result[common.Symbol("args")].([]interface{})))
 	for i, syntax := range result[common.Symbol("args")].([]interface{}) {
@@ -74,6 +79,14 @@ func transformId(ctx common.ExpansionContext, syntax common.Syntax, mark *common
 	id, ok := syntax.Identifier()
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+	}
+	err := checkInContext(ctx.Env, r6rs.LoadId, syntax)
+	if err != nil {
+		return nil, err
+	}
+	err = checkInContext(ctx.Env, r6rs.TopId, syntax)
+	if err != nil {
+		return nil, err
 	}
 	var output common.Datum
 	if binding := id.Binding(); binding != nil {
@@ -95,6 +108,10 @@ func transformLiteral(ctx common.ExpansionContext, syntax common.Syntax, mark *c
 	wrappedSyntax, ok := syntax.Datum().(common.WrappedSyntax)
 	if !ok {
 		return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
+	}
+	err := checkInContext(ctx.Env, quoteId, syntax)
+	if err != nil {
+		return nil, err
 	}
 	switch wrappedSyntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
@@ -119,6 +136,14 @@ func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *co
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
+	err := checkInContext(ctx.Env, r6rs.LambdaId, syntax)
+	if err != nil {
+		return nil, err
+	}
+	err = checkInContext(ctx.Env, r6rs.SequenceId, syntax)
+	if err != nil {
+		return nil, err
+	}
 	scope := common.NewScope()
 	formals := make([]common.Identifier, len(result[common.Symbol("formals")].([]interface{})))
 	for i, formal := range result[common.Symbol("formals")].([]interface{}) {
@@ -139,4 +164,15 @@ func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *co
 	}
 	output := common.Pair{r6rs.LambdaId.Mark(mark).WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
 	return ctx.Expander.Expand(ctx, common.NewSyntax(output))
+}
+
+func checkInContext(env common.Environment, id common.Identifier, syntax common.Syntax) error {
+	role := env[id.Binding()]
+	if role != nil {
+		return nil
+	}
+	if _, ok := role.(common.SyntacticAbstraction); ok {
+		return nil
+	}
+	return fmt.Errorf("no %v syntax in context at %v", id.Name(), syntax.SourceLocation())
 }

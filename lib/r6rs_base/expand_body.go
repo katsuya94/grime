@@ -82,6 +82,10 @@ func transformBegin(ctx common.ExpansionContext, syntax common.Syntax, mark *com
 	if !ok {
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
+	err := checkInContext(ctx.Env, r6rs.SequenceId, syntax)
+	if err != nil {
+		return nil, err
+	}
 	scope := common.NewScope()
 	forms := make([]common.Syntax, len(result[common.Symbol("body")].([]interface{})))
 	for i, syntax := range result[common.Symbol("body")].([]interface{}) {
