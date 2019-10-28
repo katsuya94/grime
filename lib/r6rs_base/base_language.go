@@ -6,12 +6,14 @@ import (
 	"github.com/katsuya94/grime/common"
 	"github.com/katsuya94/grime/lib/r6rs"
 	"github.com/katsuya94/grime/read"
+	"github.com/katsuya94/grime/runtime"
 )
+
+var Library = runtime.MustNewLibraryFromFile("r6rs_base")
 
 var BaseScope = common.NewScope()
 var BaseEnvironment = r6rs.CoreEnvironment
 
-// TODO: quote should be used directly from core
 var (
 	setId          = baseDefinition(common.Symbol("set!"), setTransformer)
 	lambdaId       = baseDefinition(common.Symbol("lambda"), lambdaTransformer)
@@ -63,7 +65,7 @@ func transformApplication(ctx common.ExpansionContext, syntax common.Syntax, mar
 		arguments[i] = syntax.(common.Syntax)
 	}
 	output := common.Pair{r6rs.ApplicationId.Mark(mark).WrappedSyntax, common.Pair{procedure.Datum(), list(syntaxDatumSlice(arguments)...)}}
-	return ctx.Expand(common.NewSyntax(output))
+	return ctx.Expander.Expand(ctx, common.NewSyntax(output))
 }
 
 var idTransformer = r6rs.NewCoreTransformer(transformId)
@@ -78,13 +80,13 @@ func transformId(ctx common.ExpansionContext, syntax common.Syntax, mark *common
 		if role := ctx.Env.Lookup(binding); role == nil {
 			return nil, fmt.Errorf("out of context: %v at %v", id.Name(), id.SourceLocation())
 		} else if _, ok := role.(common.Variable); !ok {
-			return nil, fmt.Errorf("non-variable identifier in expression context: %v is %v at %v", id.Name(), role, id.SourceLocation())
+			return nil, fmt.Errorf("non-variable identifier in expression context: %v is %T at %v", id.Name(), role, id.SourceLocation())
 		}
 		output = list(r6rs.LoadId.Mark(mark).WrappedSyntax, binding.Identifier().WrappedSyntax)
 	} else {
 		output = list(r6rs.TopId.Mark(mark).WrappedSyntax, syntax.Datum())
 	}
-	return ctx.Expand(common.NewSyntax(output))
+	return ctx.Expander.Expand(ctx, common.NewSyntax(output))
 }
 
 var literalTransformer = r6rs.NewCoreTransformer(transformLiteral)
@@ -97,7 +99,7 @@ func transformLiteral(ctx common.ExpansionContext, syntax common.Syntax, mark *c
 	switch wrappedSyntax.Datum().(type) {
 	case common.Boolean, common.Number, common.Character, common.String:
 		output := list(quoteId.Mark(mark).WrappedSyntax, syntax.Datum())
-		return ctx.Expand(common.NewSyntax(output))
+		return ctx.Expander.Expand(ctx, common.NewSyntax(output))
 	}
 	return nil, fmt.Errorf("bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 }
@@ -136,5 +138,5 @@ func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *co
 		forms[i] = form.(common.Syntax).Push(scope)
 	}
 	output := common.Pair{r6rs.LambdaId.Mark(mark).WrappedSyntax, common.Pair{list(idDatumSlice(formals)...), list(common.Pair{beginId.Mark(mark).WrappedSyntax, list(syntaxDatumSlice(forms)...)})}}
-	return ctx.Expand(common.NewSyntax(output))
+	return ctx.Expander.Expand(ctx, common.NewSyntax(output))
 }

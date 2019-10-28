@@ -23,7 +23,7 @@ func transformSyntaxCase(ctx common.ExpansionContext, syntax common.Syntax, mark
 		return nil, fmt.Errorf("%v: bad syntax", syntaxKeywordForErrMsg(syntax))
 	}
 	input := result[common.Symbol("input")].(common.Syntax)
-	inputCoreForm, err := ctx.Expand(input)
+	inputCoreForm, err := ctx.Expander.Expand(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -74,12 +74,12 @@ func transformSyntaxCase(ctx common.ExpansionContext, syntax common.Syntax, mark
 			(&clauseCtx.Env).Extend(patternVariableInfo.Binding, common.NewPatternVariable(patternVariableInfo.Nesting))
 		}
 		fender = fender.Push(clauseScope)
-		fenderCoreForm, err := clauseCtx.Expand(fender)
+		fenderCoreForm, err := clauseCtx.Expander.Expand(clauseCtx, fender)
 		if err != nil {
 			return nil, err
 		}
 		output = output.Push(clauseScope)
-		outputCoreForm, err := clauseCtx.Expand(output)
+		outputCoreForm, err := clauseCtx.Expander.Expand(clauseCtx, output)
 		if err != nil {
 			return nil, err
 		}

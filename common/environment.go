@@ -8,6 +8,18 @@ type EnvironmentProvider interface {
 	Environment(phase int) Environment
 }
 
+type SingleEnvironmentProvider Environment
+
+func (ep SingleEnvironmentProvider) Environment(phase int) Environment {
+	return Environment(ep)
+}
+
+type MultiphaseEnvironmentProvider map[int]Environment
+
+func (ep MultiphaseEnvironmentProvider) Environment(phase int) Environment {
+	return ep[phase]
+}
+
 // TODO: make map private
 type Environment map[*Binding]Role
 

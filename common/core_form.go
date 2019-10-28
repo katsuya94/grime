@@ -12,10 +12,11 @@ type ExpansionContext struct {
 	Phase    int
 }
 
-func (ctx ExpansionContext) Expand(syntax Syntax) (CoreForm, error) {
-	return ctx.Expander.Expand(syntax, ctx.Env)
+type ExpanderFactory interface {
+	Expander(EnvironmentProvider) Expander
 }
 
 type Expander interface {
-	Expand(Syntax, Environment) (CoreForm, error)
+	Expand(ExpansionContext, Syntax) (CoreForm, error)
+	ExpandBody(ExpansionContext, []Syntax, *Scope) (CoreForm, Environment, error)
 }

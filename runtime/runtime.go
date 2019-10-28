@@ -4,19 +4,23 @@ import (
 	"fmt"
 
 	"github.com/katsuya94/grime/common"
-	"github.com/katsuya94/grime/lib/r6rs_base"
 	"github.com/katsuya94/grime/read"
 )
 
 type Runtime struct {
-	libraries []Library
+	expanderFactory common.ExpanderFactory
+	libraries       []Library
 }
 
-func NewRuntime() *Runtime {
-	return &Runtime{nil}
+func NewRuntime(expanderFactory common.ExpanderFactory) *Runtime {
+	return &Runtime{expanderFactory, nil}
 }
 
 var patternTopLevelProgramImportForm = common.MustCompileSimplePattern(read.MustReadDatum("(import import-spec ...)"), common.Symbol("import"))
+
+func (r *Runtime) Add(library Library) {
+	r.libraries = append(r.libraries, library)
+}
 
 func (r *Runtime) Run(topLevelProgram []common.Syntax, nullSourceLocationTree common.SourceLocationTree) error {
 	result, ok := patternTopLevelProgramImportForm.Match(topLevelProgram[0])
@@ -44,12 +48,6 @@ func (r *Runtime) library(libraryName []common.Symbol) (Library, bool) {
 		}
 	}
 	return Library{}, false
-}
-
-type envProviderImpl map[int]common.Environment
-
-func (epi envProviderImpl) Environment(phase int) common.Environment {
-	return epi[phase]
 }
 
 type portableLevel struct {
@@ -114,7 +112,7 @@ type exportPhase struct {
 func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importablePhases map[common.Symbol][]portablePhase, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
 	bindings := map[common.Symbol]*common.Binding{}
 	cpsCtx := common.NewCpsTransformContext(nil)
-	envProvider := envProviderImpl{}
+	envProvider := common.MultiphaseEnvironmentProvider{}
 	var imports []common.Import
 	for name, importablePhases := range importablePhases {
 		if _, ok := bindings[name]; !ok {
@@ -131,8 +129,10 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 			imports = append(imports, imprt)
 		}
 	}
+	expander := r.runtime.expanderFactory.Expander(envProvider)
+	expansionCtx := common.ExpansionContext{Expander: expander, Env: envProvider[0], Phase: 0}
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
-	coreForm, env, err := r6rs_base.ExpandBody(body, envProvider, scope)
+	coreForm, env, err := expander.ExpandBody(expansionCtx, body, scope)
 	if err != nil {
 		return nil, err
 	}

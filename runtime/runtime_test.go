@@ -3,7 +3,7 @@ package runtime_test
 import (
 	"testing"
 
-	"github.com/katsuya94/grime/lib/core"
+	"github.com/katsuya94/grime/lib/r6rs_base"
 	"github.com/katsuya94/grime/read"
 	. "github.com/katsuya94/grime/runtime"
 )
@@ -112,21 +112,17 @@ func TestRuntime_Execute(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runtime := NewRuntime(core.NewCompiler())
-			runtime.MustProvide(core.Library)
-			runtime.MustBind(core.Library.Name(), core.Bindings)
+			runtime := NewRuntime(r6rs_base.ExpanderFactory{})
+			runtime.Add(r6rs_base.Library)
 			for _, librarySource := range test.librarySources {
 				library, err := NewLibrary(read.MustReadSyntax(librarySource))
 				if err != nil {
 					t.Fatal(err)
 				}
-				err = runtime.Provide(library)
-				if err != nil {
-					t.Fatal(err)
-				}
+				runtime.Add(library)
 			}
 			program, nullSourceLocationTree := read.MustReadSyntaxes(test.source)
-			err := runtime.Execute(program, nullSourceLocationTree)
+			err := runtime.Run(program, nullSourceLocationTree)
 			if test.error != "" {
 				if err == nil || err.Error() != test.error {
 					t.Fatalf("\nexpected error: %v\n     got error: %v\n", test.error, err)

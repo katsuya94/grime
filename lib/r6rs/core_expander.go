@@ -30,29 +30,32 @@ func (t coreTransformerImpl) Transform(ctx common.ExpansionContext, syntax commo
 
 var patternMacroUseList = common.MustCompileSimplePattern(read.MustReadDatum("(keyword _ ...)"))
 
-type coreExpander struct {
-	newMark func() *common.M
-}
-
 func Expand(syntax common.Syntax) (common.CoreForm, error) {
-	return coreExpander{func() *common.M {
+	expander := coreExpander{func() *common.M {
 		return common.NewMark()
-	}}.Expand(syntax, CoreEnvironment)
+	}}
+	ctx := common.ExpansionContext{Expander: expander, Env: CoreEnvironment, Phase: 0}
+	return expander.Expand(ctx, syntax)
 }
 
 func ExpandWithMarks(syntax common.Syntax, marks []common.M) (common.CoreForm, error) {
 	i := 0
-	return coreExpander{func() *common.M {
+	expander := coreExpander{func() *common.M {
 		m := &marks[i]
 		i++
 		return m
-	}}.Expand(syntax, CoreEnvironment)
+	}}
+	ctx := common.ExpansionContext{Expander: expander, Env: CoreEnvironment, Phase: 0}
+	return expander.Expand(ctx, syntax)
 }
 
-func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (common.CoreForm, error) {
-	switch transformer := MatchTransformer(syntax, env, patternMacroUseList).(type) {
+type coreExpander struct {
+	newMark func() *common.M
+}
+
+func (e coreExpander) Expand(ctx common.ExpansionContext, syntax common.Syntax) (common.CoreForm, error) {
+	switch transformer := MatchTransformer(ctx.Env, syntax, patternMacroUseList).(type) {
 	case CoreTransformer:
-		ctx := common.ExpansionContext{Expander: e, Env: env}
 		// TODO: marks should record information about their introducing macro
 		mark := e.newMark()
 		return ExpandCoreTransformer(ctx, transformer, syntax, mark)
@@ -64,11 +67,19 @@ func (e coreExpander) Expand(syntax common.Syntax, env common.Environment) (comm
 	}
 }
 
+func (e coreExpander) ExpandBody(ctx common.ExpansionContext, forms []common.Syntax, scope *common.Scope) (common.CoreForm, common.Environment, error) {
+	if len(forms) != 1 {
+		return nil, nil, fmt.Errorf("expand: core expander only supports one form")
+	}
+	coreForm, err := e.Expand(ctx, forms[0])
+	return coreForm, ctx.Env, err
+}
+
 func ExpandCoreTransformer(ctx common.ExpansionContext, transformer CoreTransformer, syntax common.Syntax, mark *common.M) (common.CoreForm, error) {
 	return transformer.Transform(ctx, syntax, mark)
 }
 
-func MatchTransformer(syntax common.Syntax, env common.Environment, pattern common.SimplePattern) common.Procedure {
+func MatchTransformer(env common.Environment, syntax common.Syntax, pattern common.SimplePattern) common.Procedure {
 	result, ok := pattern.Match(syntax)
 	if !ok {
 		return nil

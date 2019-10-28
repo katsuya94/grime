@@ -12,13 +12,13 @@ func TestNewLibrary(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected *Library
+		expected Library
 		error    string
 	}{
 		{
 			"empty library",
 			"(library (name) (export) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 			},
 			"",
@@ -26,7 +26,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multiple-identifier name",
 			"(library (name id) (export) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name"), common.Symbol("id")},
 			},
 			"",
@@ -34,7 +34,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with empty version",
 			"(library (name ()) (export) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 			},
 			"",
@@ -42,7 +42,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with single-number version",
 			"(library (name (1)) (export) (import))",
-			&Library{
+			Library{
 				name:    []common.Symbol{common.Symbol("name")},
 				version: []subVersion{1},
 			},
@@ -51,7 +51,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multiple-number version",
 			"(library (name (1 0)) (export) (import))",
-			&Library{
+			Library{
 				name:    []common.Symbol{common.Symbol("name")},
 				version: []subVersion{1, 0},
 			},
@@ -60,7 +60,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"non-empty library",
 			"(library (name) (export) (import) id)",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				body: []common.Syntax{
 					common.NewSyntax(
@@ -85,7 +85,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with direct export",
 			"(library (name) (export id) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("id")},
@@ -96,7 +96,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with renamed export",
 			"(library (name) (export (rename (id name))) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
@@ -107,7 +107,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multiple renamed exports",
 			"(library (name) (export (rename (id name) (foo bar))) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
@@ -119,7 +119,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with renamed export and direct export",
 			"(library (name) (export (rename (id name)) foo) (import))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				exportSpecs: []identifierBinding{
 					{common.Symbol("id"), common.Symbol("name")},
@@ -131,7 +131,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with import",
 			"(library (name) (export) (import (rnrs)))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -148,7 +148,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multi-identifier import",
 			"(library (name) (export) (import (rnrs base)))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -165,7 +165,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with single-number version import",
 			"(library (name) (export) (import (rnrs (6))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -186,7 +186,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multiple-number version import",
 			"(library (name) (export) (import (rnrs (6 0))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -208,7 +208,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with and version import",
 			"(library (name) (export) (import (rnrs (and (6) (7)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -234,7 +234,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with or version import",
 			"(library (name) (export) (import (rnrs (or (6) (7)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -260,7 +260,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with not version import",
 			"(library (name) (export) (import (rnrs (not (6)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -281,7 +281,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with gte version import",
 			"(library (name) (export) (import (rnrs ((>= 6)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -302,7 +302,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with lte version import",
 			"(library (name) (export) (import (rnrs ((<= 6)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -323,7 +323,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with sub-version and version import",
 			"(library (name) (export) (import (rnrs ((and 6 7)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -349,7 +349,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with sub-version or version import",
 			"(library (name) (export) (import (rnrs ((or 6 7)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -375,7 +375,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with sub-version not version import",
 			"(library (name) (export) (import (rnrs ((not 6)))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -398,7 +398,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with meta import",
 			"(library (name) (export) (import (for (rnrs) (meta 3))))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -415,7 +415,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with run import",
 			"(library (name) (export) (import (for (rnrs) run)))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -432,7 +432,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with expand import",
 			"(library (name) (export) (import (for (rnrs) expand)))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -449,7 +449,7 @@ func TestNewLibrary(t *testing.T) {
 		{
 			"empty library with multiple imports",
 			"(library (name) (export) (import (for (rnrs) run expand)))",
-			&Library{
+			Library{
 				name: []common.Symbol{common.Symbol("name")},
 				importSpecs: []importSpec{
 					{
@@ -480,7 +480,7 @@ func TestNewLibrary(t *testing.T) {
 					pair, _ := null.Pair()
 					null = common.NewSyntax(pair.Rest)
 				}
-				test.expected.nullSourceLocationTree = *null.SourceLocationTree()
+				test.expected.nullSourceLocationTree = null.SourceLocationTree()
 				if !reflect.DeepEqual(actual, test.expected) {
 					t.Errorf("\nexpected: %#v\n     got: %#v", test.expected, actual)
 				}

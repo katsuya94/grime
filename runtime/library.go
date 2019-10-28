@@ -25,6 +25,7 @@ type Library struct {
 	exportSpecs            []identifierBinding
 	body                   []common.Syntax
 	nullSourceLocationTree *common.SourceLocationTree
+	builtin                []portablePhase
 }
 
 type identifierBinding struct {
@@ -150,6 +151,9 @@ func MustNewEmptyLibrary(name []common.Symbol, version []int) *Library {
 
 func (l *Library) Name() []common.Symbol {
 	return l.name
+}
+
+func (l *Library) Builtin(portable common.Portable, phase int) {
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {

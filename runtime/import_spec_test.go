@@ -9,7 +9,7 @@ import (
 )
 
 func TestImportSpec_resolve(t *testing.T) {
-	library := &Library{
+	library := Library{
 		name:    []common.Symbol{common.Symbol("rnrs"), common.Symbol("base")},
 		version: []subVersion{6, 4},
 	}
@@ -23,9 +23,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"name",
 			"(rnrs base)",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -40,9 +38,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"name with levels",
 			"(for (rnrs base) expand)",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{1},
 			},
 			true,
@@ -51,11 +47,9 @@ func TestImportSpec_resolve(t *testing.T) {
 			"only",
 			"(only (rnrs base) id)",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecOnly{
-						identifierSpecAll{},
-						[]common.Symbol{common.Symbol("id")},
-					},
+				identifierSpecOnly{
+					identifierSpecAll{},
+					[]common.Symbol{common.Symbol("id")},
 				},
 				[]int{0},
 			},
@@ -65,11 +59,9 @@ func TestImportSpec_resolve(t *testing.T) {
 			"except",
 			"(except (rnrs base) id)",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecExcept{
-						identifierSpecAll{},
-						[]common.Symbol{common.Symbol("id")},
-					},
+				identifierSpecExcept{
+					identifierSpecAll{},
+					[]common.Symbol{common.Symbol("id")},
 				},
 				[]int{0},
 			},
@@ -79,11 +71,9 @@ func TestImportSpec_resolve(t *testing.T) {
 			"prefix",
 			"(prefix (rnrs base) id)",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecPrefix{
-						identifierSpecAll{},
-						common.Symbol("id"),
-					},
+				identifierSpecPrefix{
+					identifierSpecAll{},
+					common.Symbol("id"),
 				},
 				[]int{0},
 			},
@@ -93,14 +83,12 @@ func TestImportSpec_resolve(t *testing.T) {
 			"rename",
 			"(rename (rnrs base) (id thing))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecRename{
-						identifierSpecAll{},
-						[]identifierBinding{
-							identifierBinding{
-								common.Symbol("thing"),
-								common.Symbol("id"),
-							},
+				identifierSpecRename{
+					identifierSpecAll{},
+					[]identifierBinding{
+						identifierBinding{
+							common.Symbol("thing"),
+							common.Symbol("id"),
 						},
 					},
 				},
@@ -112,9 +100,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"empty version",
 			"(rnrs base ())",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -123,9 +109,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"partial version",
 			"(rnrs base (6))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -140,9 +124,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"full version",
 			"(rnrs base (6 4))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -157,9 +139,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"and version",
 			"(rnrs base (and (6) ((>= 5))))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -174,9 +154,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"or version",
 			"(rnrs base (or (6) (4)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -191,9 +169,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"not version",
 			"(rnrs base (not (4)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -208,9 +184,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			">= sub-version",
 			"(rnrs base ((>= 4)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -225,9 +199,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"<= sub-version",
 			"(rnrs base ((<= 7)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -242,9 +214,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"and sub-version",
 			"(rnrs base ((and 6 (>= 4))))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -259,9 +229,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"or sub-version",
 			"(rnrs base ((or 6 4)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,
@@ -276,9 +244,7 @@ func TestImportSpec_resolve(t *testing.T) {
 			"not sub-version",
 			"(rnrs base ((not 4)))",
 			importSpecResolution{
-				importSetResolution{
-					identifierSpecAll{},
-				},
+				identifierSpecAll{},
 				[]int{0},
 			},
 			true,

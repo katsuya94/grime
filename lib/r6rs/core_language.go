@@ -77,7 +77,7 @@ func transformLambda(ctx common.ExpansionContext, syntax common.Syntax, mark *co
 		return nil, fmt.Errorf("#%%lambda: bad syntax")
 	}
 	innerSyntax := result[common.Symbol("inner")].(common.Syntax)
-	inner, err := ctx.Expand(innerSyntax)
+	inner, err := ctx.Expander.Expand(ctx, innerSyntax)
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +91,14 @@ func transformApplication(ctx common.ExpansionContext, syntax common.Syntax, mar
 	if !ok {
 		return nil, fmt.Errorf("#%%application: bad syntax %v at %v", common.Write(syntax.Datum()), syntax.SourceLocation())
 	}
-	proc, err := ctx.Expand(result[common.Symbol("proc")].(common.Syntax))
+	proc, err := ctx.Expander.Expand(ctx, result[common.Symbol("proc")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
 	argsResults := result[common.Symbol("args")].([]interface{})
 	args := make([]common.CoreForm, len(argsResults))
 	for i := range argsResults {
-		args[i], err = ctx.Expand(argsResults[i].(common.Syntax))
+		args[i], err = ctx.Expander.Expand(ctx, argsResults[i].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func transformSequence(ctx common.ExpansionContext, syntax common.Syntax, mark *
 	formsResults := result[common.Symbol("forms")].([]interface{})
 	forms := make([]common.CoreForm, len(formsResults))
 	for i := range formsResults {
-		forms[i], err = ctx.Expand(formsResults[i].(common.Syntax))
+		forms[i], err = ctx.Expander.Expand(ctx, formsResults[i].(common.Syntax))
 		if err != nil {
 			return nil, err
 		}
@@ -147,15 +147,15 @@ func transformIf(ctx common.ExpansionContext, syntax common.Syntax, mark *common
 	if !ok {
 		return nil, fmt.Errorf("if")
 	}
-	condition, err := ctx.Expand(result[common.Symbol("condition")].(common.Syntax))
+	condition, err := ctx.Expander.Expand(ctx, result[common.Symbol("condition")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
-	then, err := ctx.Expand(result[common.Symbol("then")].(common.Syntax))
+	then, err := ctx.Expander.Expand(ctx, result[common.Symbol("then")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
-	otherwise, err := ctx.Expand(result[common.Symbol("otherwise")].(common.Syntax))
+	otherwise, err := ctx.Expander.Expand(ctx, result[common.Symbol("otherwise")].(common.Syntax))
 	if err != nil {
 		return nil, err
 	}
