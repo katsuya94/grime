@@ -1,4 +1,4 @@
-(library (rnrs)
+(library (core)
   (export
     #%application
     if

@@ -10,4 +10,4 @@
     syntax-case
     _
     ...)
-  (import))
+  (import (core)))

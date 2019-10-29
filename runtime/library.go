@@ -26,6 +26,7 @@ type Library struct {
 	body                   []common.Syntax
 	nullSourceLocationTree *common.SourceLocationTree
 	builtin                map[common.Symbol][]portablePhase
+	scope                  *common.Scope
 }
 
 type identifierBinding struct {
@@ -89,6 +90,7 @@ func NewLibrary(source common.Syntax) (Library, error) {
 		null = common.NewSyntax(pair.Rest)
 	}
 	library.nullSourceLocationTree = null.SourceLocationTree()
+	library.scope = common.NewScope()
 	return library, nil
 }
 
@@ -158,6 +160,10 @@ func (l *Library) Builtin(name common.Symbol, portable common.Portable, phase in
 		l.builtin = map[common.Symbol][]portablePhase{}
 	}
 	l.builtin[name] = append(l.builtin[name], portablePhase{portable, phase})
+}
+
+func (l *Library) Scope() *common.Scope {
+	return l.scope
 }
 
 func newExportSpecs(d common.Syntax) ([]identifierBinding, error) {

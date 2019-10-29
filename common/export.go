@@ -4,18 +4,18 @@ type Export interface {
 	Portable(EvaluationContext) Portable
 }
 
-type VariableTop struct {
+type VariableExport struct {
 	index int
 }
 
-func (t VariableTop) Portable(ctx EvaluationContext) Portable {
+func (t VariableExport) Portable(ctx EvaluationContext) Portable {
 	return VariablePortable{ctx.Get(t.index)}
 }
 
-type SyntacticAbstractionTop struct {
+type SyntacticAbstractionExport struct {
 	transformer Procedure
 }
 
-func (t SyntacticAbstractionTop) Portable(ctx EvaluationContext) Portable {
+func (t SyntacticAbstractionExport) Portable(ctx EvaluationContext) Portable {
 	return SyntacticAbstractionPortable{t.transformer}
 }

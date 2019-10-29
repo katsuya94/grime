@@ -28,12 +28,17 @@ func NewEnvironment() Environment {
 }
 
 func (env *Environment) Extend(binding *Binding, role Role) {
-	extended := make(Environment, len(*env))
-	for b, r := range *env {
-		extended[b] = r
-	}
+	extended := env.Clone()
 	extended[binding] = role
 	*env = extended
+}
+
+func (env Environment) Clone() Environment {
+	clone := make(Environment, len(env))
+	for b, r := range env {
+		clone[b] = r
+	}
+	return clone
 }
 
 func (env Environment) Lookup(binding *Binding) Role {
@@ -53,7 +58,7 @@ func NewVariable() Variable {
 
 func (r Variable) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
 	index := ctx.Add(id)
-	return VariableTop{index}, nil
+	return VariableExport{index}, nil
 }
 
 type SyntacticAbstraction struct {
@@ -65,7 +70,7 @@ func NewSyntacticAbstraction(transformer Procedure) SyntacticAbstraction {
 }
 
 func (r SyntacticAbstraction) Export(ctx *CpsTransformContext, id Identifier) (Export, error) {
-	return SyntacticAbstractionTop{r.Transformer}, nil
+	return SyntacticAbstractionExport{r.Transformer}, nil
 }
 
 type PatternLiteral struct {

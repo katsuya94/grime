@@ -37,8 +37,7 @@ func (r *Runtime) Run(topLevelProgram []common.Syntax, nullSourceLocationTree co
 	}
 	body := topLevelProgram[1:]
 	scope := common.NewScope()
-	_, err := (&run{r, nil}).runWithImportSpecs(body, &nullSourceLocationTree, importSpecs, scope)
-	return err
+	return (&run{r, nil, common.NewEnvironment()}).runWithImportSpecs(body, &nullSourceLocationTree, importSpecs, scope)
 }
 
 func (r *Runtime) library(libraryName []common.Symbol) (Library, bool) {
@@ -63,19 +62,23 @@ type libraryPortableLevels struct {
 type run struct {
 	runtime                *Runtime
 	libraryPortableLevelss []libraryPortableLevels
+	env                    common.Environment
 }
+
+// TODO: use a better data structure to detect duplicate imports at a given phase
 
 type portablePhase struct {
 	portable common.Portable
 	phase    int
 }
 
-func (r *run) runWithImportSpecs(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
+func (r *run) runWithImportSpecs(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importSpecs []importSpec, scope *common.Scope) error {
 	importablePhases, err := r.resolveImportSpecs(importSpecs)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return r.runWithImportables(body, nullSourceLocationTree, importablePhases, scope)
+	_, _, err = r.runWithImportables(body, nullSourceLocationTree, importablePhases, scope)
+	return err
 }
 
 func (r *run) resolveImportSpecs(importSpecs []importSpec) (map[common.Symbol][]portablePhase, error) {
@@ -117,10 +120,10 @@ type exportPhase struct {
 	phase  int
 }
 
-func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importablePhases map[common.Symbol][]portablePhase, scope *common.Scope) (map[*common.Binding][]portablePhase, error) {
+func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *common.SourceLocationTree, importablePhases map[common.Symbol][]portablePhase, scope *common.Scope) (map[*common.Binding][]portablePhase, common.Environment, error) {
 	bindings := map[common.Symbol]*common.Binding{}
 	cpsCtx := common.NewCpsTransformContext(nil)
-	envProvider := common.MultiphaseEnvironmentProvider{}
+	envProvider := common.MultiphaseEnvironmentProvider{0: r.env.Clone()}
 	var imports []common.Import
 	for name, importablePhases := range importablePhases {
 		if _, ok := bindings[name]; !ok {
@@ -142,7 +145,7 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 	body = append(body, common.NewSyntax(common.NewWrappedSyntax(common.Void, nullSourceLocationTree)))
 	coreForm, env, err := expander.ExpandBody(expansionCtx, body, scope)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	envProvider[0] = env
 	ids := scope.Identifiers()
@@ -156,14 +159,14 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 			}
 			export, err := role.Export(cpsCtx, id)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			exportPhases[binding] = append(exportPhases[binding], exportPhase{export, phase})
 		}
 	}
 	expression, err := coreForm.CpsTransform(cpsCtx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	evalCtx := cpsCtx.EvaluationContextTemplate().New()
 	for _, imprt := range imports {
@@ -171,7 +174,7 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 	}
 	_, err = common.Evaluate(evalCtx, expression)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	exportablePhases := map[*common.Binding][]portablePhase{}
 	for binding, exportPhases := range exportPhases {
@@ -180,7 +183,7 @@ func (r *run) runWithImportables(body []common.Syntax, nullSourceLocationTree *c
 			exportablePhases[binding][i] = portablePhase{exportPhases[i].export.Portable(evalCtx), exportPhases[i].phase}
 		}
 	}
-	return exportablePhases, nil
+	return exportablePhases, env, nil
 }
 
 // TODO: accumulate a global environment that will allow identifiers introduced by syntax to resolve to roles
@@ -203,14 +206,13 @@ func (r *run) instantiate(library Library) (map[common.Symbol][]portableLevel, e
 	for name, builtinImportablePhases := range library.builtin {
 		importablePhases[name] = append(importablePhases[name], builtinImportablePhases...)
 	}
-	scope := common.NewScope()
-	exportablePhases, err := r.runWithImportables(library.body, library.nullSourceLocationTree, importablePhases, scope)
+	exportablePhases, env, err := r.runWithImportables(library.body, library.nullSourceLocationTree, importablePhases, library.scope)
 	if err != nil {
 		return nil, err
 	}
 	for _, idBinding := range library.exportSpecs {
 		id := common.NewIdentifier(idBinding.internal)
-		id = id.Push(scope).IdentifierOrDie()
+		id = id.Push(library.scope).IdentifierOrDie()
 		binding := id.Binding()
 		if binding == nil {
 			return nil, fmt.Errorf("cannot export unbound identifier: %s", idBinding.internal)
@@ -218,6 +220,9 @@ func (r *run) instantiate(library Library) (map[common.Symbol][]portableLevel, e
 		for _, exportablePhase := range exportablePhases[binding] {
 			portableLevels[idBinding.external] = append(portableLevels[idBinding.external], portableLevel{exportablePhase.portable, exportablePhase.phase})
 		}
+	}
+	for binding, role := range env {
+		r.env[binding] = role
 	}
 	return portableLevels, nil
 }
