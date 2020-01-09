@@ -28,6 +28,7 @@ var coreBindings []*common.Binding
 func coreDefinition(name common.Symbol, transformer common.Procedure) common.Identifier {
 	id, binding := common.Bind(common.NewIdentifier(name), CoreScope)
 	(&CoreEnvironment).Extend(binding, common.NewSyntacticAbstraction(transformer))
+	Library.Builtin(name, common.NewSyntacticAbstractionPortable(transformer), 0)
 	coreBindings = append(coreBindings, binding)
 	return id
 }

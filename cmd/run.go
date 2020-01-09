@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/katsuya94/grime/lib"
@@ -16,9 +17,13 @@ func init() {
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a Grime top-level program",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := run(args[0])
+		path := ""
+		if len(args) == 1 {
+			path = args[0]
+		}
+		err := run(path)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -27,11 +32,17 @@ var runCmd = &cobra.Command{
 }
 
 func run(path string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
+	var (
+		r   io.Reader = os.Stdin
+		err error
+	)
+	if path != "" {
+		r, err = os.Open(path)
+		if err != nil {
+			return err
+		}
 	}
-	topLevelProgram, nullSourceLocationTree, err := read.Read(path, f)
+	topLevelProgram, nullSourceLocationTree, err := read.Read(path, r)
 	if err != nil {
 		return err
 	}

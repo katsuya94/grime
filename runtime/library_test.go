@@ -481,6 +481,7 @@ func TestNewLibrary(t *testing.T) {
 					null = common.NewSyntax(pair.Rest)
 				}
 				test.expected.nullSourceLocationTree = null.SourceLocationTree()
+				test.expected.scope = common.NewScope()
 				if !reflect.DeepEqual(actual, test.expected) {
 					t.Errorf("\nexpected: %#v\n     got: %#v", test.expected, actual)
 				}

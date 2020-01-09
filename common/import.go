@@ -10,7 +10,7 @@ type VariableImport struct {
 }
 
 func (i VariableImport) Provide(ctx EvaluationContext) {
-	// TODO
+	ctx.locations[i.index] = i.location
 }
 
 type SyntacticAbstractionImport struct{}
